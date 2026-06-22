@@ -1,0 +1,81 @@
+name: Enforce Branch Protection
+
+on:
+  workflow_dispatch:
+
+jobs:
+  protect-branches:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate ADMIN_TOKEN secret
+        env:
+          ADMIN_TOKEN: ${{ secrets.ADMIN_TOKEN }}
+        run: |
+          if [ -z "$ADMIN_TOKEN" ]; then
+            echo "::error::Missing required secret ADMIN_TOKEN. Create it with repo admin permissions before running this workflow."
+            exit 1
+          fi
+
+      - name: Configure develop protection
+        env:
+          GH_TOKEN: ${{ secrets.ADMIN_TOKEN }}
+        run: |
+          gh api \
+            --method PUT \
+            -H "Accept: application/vnd.github+json" \
+            "/repos/${{ github.repository }}/branches/develop/protection" \
+            --input - <<'JSON'
+          {
+            "required_status_checks": {
+              "strict": true,
+              "contexts": ["build-and-test"]
+            },
+            "enforce_admins": true,
+            "required_pull_request_reviews": {
+              "required_approving_review_count": 1,
+              "dismiss_stale_reviews": true,
+              "require_code_owner_reviews": false,
+              "require_last_push_approval": false
+            },
+            "restrictions": null,
+            "allow_force_pushes": false,
+            "allow_deletions": false,
+            "block_creations": false,
+            "required_conversation_resolution": true,
+            "required_linear_history": true,
+            "lock_branch": false,
+            "allow_fork_syncing": true
+          }
+          JSON
+
+      - name: Configure master protection
+        env:
+          GH_TOKEN: ${{ secrets.ADMIN_TOKEN }}
+        run: |
+          gh api \
+            --method PUT \
+            -H "Accept: application/vnd.github+json" \
+            "/repos/${{ github.repository }}/branches/master/protection" \
+            --input - <<'JSON'
+          {
+            "required_status_checks": {
+              "strict": true,
+              "contexts": ["build-and-test"]
+            },
+            "enforce_admins": true,
+            "required_pull_request_reviews": {
+              "required_approving_review_count": 1,
+              "dismiss_stale_reviews": true,
+              "require_code_owner_reviews": false,
+              "require_last_push_approval": false
+            },
+            "restrictions": null,
+            "allow_force_pushes": false,
+            "allow_deletions": false,
+            "block_creations": false,
+            "required_conversation_resolution": true,
+            "required_linear_history": true,
+            "lock_branch": false,
+            "allow_fork_syncing": true
+          }
+          JSON

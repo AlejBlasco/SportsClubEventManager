@@ -1,0 +1,30 @@
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - develop
+      - master
+  workflow_dispatch:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Restore
+        run: dotnet restore SportsClubEventManager.sln
+
+      - name: Build
+        run: dotnet build SportsClubEventManager.sln --configuration Release --no-restore
+
+      - name: Test
+        run: dotnet test SportsClubEventManager.sln --configuration Release --no-build --verbosity normal
