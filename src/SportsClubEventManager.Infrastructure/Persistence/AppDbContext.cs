@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using SportsClubEventManager.Application.Common.Interfaces;
 using SportsClubEventManager.Domain.Entities;
 
 namespace SportsClubEventManager.Infrastructure.Persistence;
@@ -6,7 +7,7 @@ namespace SportsClubEventManager.Infrastructure.Persistence;
 /// <summary>
 /// Application database context for Entity Framework Core.
 /// </summary>
-public sealed class AppDbContext : DbContext
+public sealed class AppDbContext : DbContext, IApplicationDbContext
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="AppDbContext"/> class.
