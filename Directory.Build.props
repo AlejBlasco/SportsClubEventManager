@@ -9,4 +9,10 @@
     <Authors>BlitzSliceForge Team</Authors>
     <Version>1.0.0</Version>
   </PropertyGroup>
+
+  <!-- Suppress known EF Core transitive dependency advisories until a patched version ships -->
+  <ItemGroup>
+    <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-37gx-xxp4-5rgx" />
+    <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-w3x6-4m5h-cxqf" />
+  </ItemGroup>
 </Project>
