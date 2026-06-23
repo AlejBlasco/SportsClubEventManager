@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using SportsClubEventManager.Application.Common.Interfaces;
 using SportsClubEventManager.Infrastructure.Persistence;
 
 namespace SportsClubEventManager.Infrastructure;
@@ -30,6 +31,9 @@ public static class DependencyInjection
                         errorNumbersToAdd: null);
                 });
         });
+
+        services.AddScoped<IApplicationDbContext>(provider =>
+            provider.GetRequiredService<AppDbContext>());
 
         return services;
     }
