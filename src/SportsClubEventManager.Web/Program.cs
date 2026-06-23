@@ -1,3 +1,4 @@
+using SportsClubEventManager.Infrastructure;
 using SportsClubEventManager.Web.Components;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -6,7 +7,12 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
+// Add Infrastructure layer services
+builder.Services.AddInfrastructure(builder.Configuration);
+
 var app = builder.Build();
+
+await app.Services.MigrateDatabaseAsync();
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())

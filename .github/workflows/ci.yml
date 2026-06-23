@@ -14,6 +14,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          clean: true
 
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@v5
@@ -26,5 +28,13 @@ jobs:
       - name: Build
         run: dotnet build SportsClubEventManager.sln --configuration Release --no-restore
 
+      - name: Clean test results
+        run: |
+          rm -rf TestResults
+          mkdir -p TestResults
+
       - name: Test
-        run: dotnet test SportsClubEventManager.sln --configuration Release --no-build --verbosity normal
+        run: |
+          dotnet test tests/SportsClubEventManager.Domain/SportsClubEventManager.Domain.csproj --configuration Release --no-build --verbosity normal --collect:"XPlat Code Coverage" --results-directory ./TestResults
+          dotnet test tests/SportsClubEventManager.Application/SportsClubEventManager.Application.csproj --configuration Release --no-build --verbosity normal --collect:"XPlat Code Coverage" --results-directory ./TestResults
+          dotnet test tests/SportsClubEventManager.Infrastructure/SportsClubEventManager.Infrastructure.csproj --configuration Release --no-build --verbosity normal --collect:"XPlat Code Coverage" --results-directory ./TestResults
