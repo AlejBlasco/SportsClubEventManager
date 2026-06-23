@@ -1,3 +1,4 @@
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Respawn;
 using SportsClubEventManager.Infrastructure.Persistence;
@@ -51,8 +52,7 @@ public sealed class DatabaseFixture : IAsyncLifetime
             throw new InvalidOperationException("Database has not been initialized. Call InitializeAsync first.");
         }
 
-        await using var context = CreateContext();
-        var connection = context.Database.GetDbConnection();
+        await using var connection = new SqlConnection(ConnectionString);
         await connection.OpenAsync();
         await _respawner.ResetAsync(connection);
     }
@@ -65,12 +65,10 @@ public sealed class DatabaseFixture : IAsyncLifetime
     {
         await _container.StartAsync();
 
-        // Apply migrations
         await using var context = CreateContext();
         await context.Database.MigrateAsync();
 
-        // Initialize Respawner — connection must be explicitly opened as EF closes it after MigrateAsync
-        var connection = context.Database.GetDbConnection();
+        await using var connection = new SqlConnection(ConnectionString);
         await connection.OpenAsync();
         _respawner = await Respawner.CreateAsync(connection, new RespawnerOptions
         {
