@@ -1,7 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using SportsClubEventManager.Domain.Entities;
-using SportsClubEventManager.Domain.Enums;
 
 namespace SportsClubEventManager.Infrastructure.Persistence.Configurations;
 
