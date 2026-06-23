@@ -52,7 +52,9 @@ public sealed class DatabaseFixture : IAsyncLifetime
         }
 
         await using var context = CreateContext();
-        await _respawner.ResetAsync(context.Database.GetDbConnection()!);
+        var connection = context.Database.GetDbConnection();
+        await connection.OpenAsync();
+        await _respawner.ResetAsync(connection);
     }
 
     /// <summary>
@@ -67,8 +69,10 @@ public sealed class DatabaseFixture : IAsyncLifetime
         await using var context = CreateContext();
         await context.Database.MigrateAsync();
 
-        // Initialize Respawner
-        _respawner = await Respawner.CreateAsync(context.Database.GetDbConnection()!, new RespawnerOptions
+        // Initialize Respawner — connection must be explicitly opened as EF closes it after MigrateAsync
+        var connection = context.Database.GetDbConnection();
+        await connection.OpenAsync();
+        _respawner = await Respawner.CreateAsync(connection, new RespawnerOptions
         {
             DbAdapter = DbAdapter.SqlServer
         });
