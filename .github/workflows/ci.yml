@@ -35,4 +35,4 @@ jobs:
 
       - name: Test
         run: |
-          dotnet test SportsClubEventManager.sln --configuration Release --no-build --verbosity normal --collect:"XPlat Code Coverage" --results-directory ./TestResults
+          dotnet test tests/SportsClubEventManager.Domain/SportsClubEventManager.Domain.csproj tests/SportsClubEventManager.Application/SportsClubEventManager.Application.csproj tests/SportsClubEventManager.Infrastructure/SportsClubEventManager.Infrastructure.csproj --configuration Release --no-build --verbosity normal --collect:"XPlat Code Coverage" --results-directory ./TestResults
