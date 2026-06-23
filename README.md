@@ -1,7 +1,7 @@
 # SportsClubEventManager
 
 ![Build](https://github.com/AlejBlasco/SportsClubEventManager/actions/workflows/ci.yml/badge.svg)
-![License](https://img.shields.io/badge/License-Unlicensed-lightgrey)
+[![License: Academic-NC](https://img.shields.io/badge/License-Academic--NC-orange.svg)](LICENSE)
 ![.NET](https://img.shields.io/badge/.NET-10-blue)
 ![Coverage](https://img.shields.io/badge/Coverage-92%25-brightgreen)
 ![SQL Server](https://img.shields.io/badge/SQL%20Server-2022-red)
@@ -26,3 +26,7 @@ Make sure you have the following prerequisites installed before working with thi
 ## Getting Started
 
 1. Clone the repository:
+
+## License
+
+This project is licensed for academic and non-commercial use only. See the [LICENSE](LICENSE) file for details and commercial-use restrictions.
