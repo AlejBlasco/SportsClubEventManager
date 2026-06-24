@@ -10,6 +10,7 @@
   <ItemGroup>
     <PackageReference Include="coverlet.collector" Version="6.0.4" />
     <PackageReference Include="FluentAssertions" Version="7.1.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.1" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.1" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
     <PackageReference Include="Respawn" Version="7.0.0" />
@@ -19,8 +20,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\SportsClubEventManager.Api\SportsClubEventManager.Api.csproj" />
     <ProjectReference Include="..\..\src\SportsClubEventManager.Domain\SportsClubEventManager.Domain.csproj" />
     <ProjectReference Include="..\..\src\SportsClubEventManager.Infrastructure\SportsClubEventManager.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\SportsClubEventManager.Shared\SportsClubEventManager.Shared.csproj" />
   </ItemGroup>
 
   <ItemGroup>

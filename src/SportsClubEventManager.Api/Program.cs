@@ -56,3 +56,9 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+
+/// <summary>
+/// Entry point class for the API application.
+/// Made partial and public to allow WebApplicationFactory access in integration tests.
+/// </summary>
+public partial class Program { }
