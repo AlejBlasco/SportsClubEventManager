@@ -51,6 +51,11 @@ public class Event : BaseEntity
     public ICollection<Registration> Registrations { get; set; } = new List<Registration>();
 
     /// <summary>
+    /// Gets or sets the row version for optimistic concurrency control.
+    /// </summary>
+    public byte[]? RowVersion { get; set; }
+
+    /// <summary>
     /// Gets the current number of active registrations for this event.
     /// Only counts registrations that are not cancelled.
     /// </summary>
