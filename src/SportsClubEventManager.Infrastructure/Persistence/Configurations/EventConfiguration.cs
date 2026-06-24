@@ -46,6 +46,9 @@ internal sealed class EventConfiguration : IEntityTypeConfiguration<Event>
 
         builder.Property(e => e.UpdatedAt);
 
+        builder.Property(e => e.RowVersion)
+            .IsRowVersion();
+
         builder.HasMany(e => e.Registrations)
             .WithOne(r => r.Event)
             .HasForeignKey(r => r.EventId)
