@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using SportsClubEventManager.Api.Models;
+using SportsClubEventManager.Application.Events.Commands.CancelRegistration;
 using SportsClubEventManager.Application.Events.Commands.RegisterForEvent;
 using SportsClubEventManager.Application.Events.Queries.GetEventById;
 using SportsClubEventManager.Application.Events.Queries.GetEvents;
@@ -153,6 +154,61 @@ public sealed class EventsController(ISender sender) : ControllerBase
             return BadRequest(new ProblemDetails
             {
                 Title = "Invalid registration request",
+                Detail = ex.Message,
+                Status = StatusCodes.Status400BadRequest
+            });
+        }
+    }
+
+    /// <summary>
+    /// Cancels a user's registration for a specific event.
+    /// </summary>
+    /// <param name="id">The unique identifier of the event.</param>
+    /// <param name="request">The cancellation request containing the user identifier.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>No content on success.</returns>
+    /// <response code="204">Registration cancelled successfully.</response>
+    /// <response code="400">Invalid request (e.g., event date is in the past, invalid identifiers).</response>
+    /// <response code="404">Event or registration not found with the specified identifiers.</response>
+    /// <response code="409">Conflict occurred (e.g., concurrency conflict).</response>
+    /// <response code="500">Internal server error.</response>
+    [HttpDelete("{id:guid}/register")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> CancelRegistration(
+        Guid id,
+        [FromBody] CancelRegistrationRequest request,
+        CancellationToken cancellationToken)
+    {
+        var command = new CancelRegistrationCommand
+        {
+            EventId = id,
+            UserId = request.UserId
+        };
+
+        try
+        {
+            await sender.Send(command, cancellationToken);
+
+            return NoContent();
+        }
+        catch (EntityNotFoundException ex)
+        {
+            return NotFound(new ProblemDetails
+            {
+                Title = "Resource not found",
+                Detail = ex.Message,
+                Status = StatusCodes.Status404NotFound
+            });
+        }
+        catch (DomainException ex)
+        {
+            return BadRequest(new ProblemDetails
+            {
+                Title = "Invalid cancellation request",
                 Detail = ex.Message,
                 Status = StatusCodes.Status400BadRequest
             });
