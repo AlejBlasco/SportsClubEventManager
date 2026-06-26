@@ -1,0 +1,50 @@
+.event-calendar {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 1rem;
+}
+
+.calendar-controls {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    justify-content: center;
+}
+
+::deep .rz-scheduler {
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+::deep .rz-scheduler .rz-event {
+    border-radius: 4px;
+}
+
+::deep .rz-scheduler .rz-event.full-event {
+    background-color: #dc3545 !important;
+    border-color: #bd2130 !important;
+}
+
+@media (max-width: 768px) {
+    .event-calendar {
+        padding: 0.5rem;
+    }
+
+    ::deep .rz-scheduler {
+        font-size: 0.875rem;
+    }
+
+    ::deep .rz-scheduler .rz-event-title {
+        font-size: 0.75rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .calendar-controls {
+        flex-direction: column;
+    }
+
+    ::deep .rz-scheduler {
+        font-size: 0.75rem;
+    }
+}

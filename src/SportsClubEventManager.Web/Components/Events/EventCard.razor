@@ -1,0 +1,36 @@
+@using SportsClubEventManager.Shared.DTOs
+
+<div class="event-card">
+    <div class="event-card-header">
+        <h4 class="event-title">@Event.Title</h4>
+        @if (Event.AvailableSlots == 0)
+        {
+            <span class="badge-full">Full</span>
+        }
+    </div>
+    <div class="event-card-body">
+        <div class="event-detail">
+            <span class="event-label">Date:</span>
+            <span class="event-value">@Event.Date.ToLocalTime().ToString("MMM dd, yyyy h:mm tt")</span>
+        </div>
+        <div class="event-detail">
+            <span class="event-label">Location:</span>
+            <span class="event-value">@Event.Location</span>
+        </div>
+        <div class="event-detail">
+            <span class="event-label">Available Slots:</span>
+            <span class="event-value">@Event.AvailableSlots / @Event.MaxCapacity</span>
+        </div>
+    </div>
+    <div class="event-card-footer">
+        <span class="event-link-disabled" title="Event details will be available soon">View Details</span>
+    </div>
+</div>
+
+@code {
+    /// <summary>
+    /// Gets or sets the event to display.
+    /// </summary>
+    [Parameter]
+    public required EventDto Event { get; set; }
+}
