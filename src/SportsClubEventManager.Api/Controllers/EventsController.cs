@@ -1,4 +1,5 @@
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SportsClubEventManager.Api.Models;
 using SportsClubEventManager.Application.Events.Commands.CancelRegistration;
@@ -29,6 +30,7 @@ public sealed class EventsController(ISender sender) : ControllerBase
     /// <response code="400">Invalid query parameters (e.g., startDate > endDate).</response>
     /// <response code="500">Internal server error.</response>
     [HttpGet]
+    [AllowAnonymous]
     [ProducesResponseType(typeof(List<EventDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]

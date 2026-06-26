@@ -1,0 +1,18 @@
+.event-list {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 1rem;
+}
+
+.no-events {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: #666;
+    font-size: 1.125rem;
+}
+
+@media (max-width: 768px) {
+    .event-list {
+        padding: 0.5rem;
+    }
+}

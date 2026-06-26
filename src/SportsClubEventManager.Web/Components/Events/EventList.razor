@@ -1,0 +1,25 @@
+@using SportsClubEventManager.Shared.DTOs
+
+<div class="event-list">
+    @if (Events.Count == 0)
+    {
+        <div class="no-events">
+            <p>No events available at the moment.</p>
+        </div>
+    }
+    else
+    {
+        @foreach (var eventItem in Events.OrderBy(e => e.Date))
+        {
+            <EventCard Event="eventItem" />
+        }
+    }
+</div>
+
+@code {
+    /// <summary>
+    /// Gets or sets the list of events to display.
+    /// </summary>
+    [Parameter]
+    public required List<EventDto> Events { get; set; }
+}

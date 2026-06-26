@@ -12,10 +12,12 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+    <PackageReference Include="Radzen.Blazor" Version="5.*" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\SportsClubEventManager.Infrastructure\SportsClubEventManager.Infrastructure.csproj" />
+    <ProjectReference Include="..\SportsClubEventManager.Shared\SportsClubEventManager.Shared.csproj" />
   </ItemGroup>
 
 </Project>
