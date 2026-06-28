@@ -8,8 +8,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 
 // Add Swagger/OpenAPI
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddOpenApi();
 
 // Add Application layer services (MediatR, FluentValidation)
 builder.Services.AddApplication();
@@ -33,16 +32,19 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
+await app.Services.MigrateDatabaseAsync();
+
 // Configure the HTTP request pipeline
 if (app.Environment.IsDevelopment())
 {
-    app.UseSwagger();
-    app.UseSwaggerUI(options =>
-    {
-        options.SwaggerEndpoint("/swagger/v1/swagger.json", "Sports Club Event Manager API v1");
-        options.RoutePrefix = "swagger";
-    });
+    app.MapOpenApi();
 }
+
+app.MapGet("/", () => Results.Ok(new
+{
+    Name = "Sports Club Event Manager API",
+    OpenApi = "/openapi/v1.json"
+}));
 
 // Global exception handling
 app.UseMiddleware<ExceptionHandlingMiddleware>();
