@@ -1,0 +1,118 @@
+.users-page {
+    min-height: 70vh;
+}
+
+.page-header {
+    background: linear-gradient(135deg, #0d0d0d 0%, var(--club-forest-deep) 100%);
+    color: #fff;
+    padding: 3.5rem 0 3rem;
+}
+
+.page-header-inner {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 2rem;
+}
+
+.page-eyebrow {
+    display: inline-block;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--club-gold);
+    margin-bottom: 0.75rem;
+    border-left: 3px solid var(--club-gold);
+    padding-left: 0.75rem;
+}
+
+.page-header h1 {
+    font-family: 'Merriweather', Georgia, serif;
+    font-size: clamp(1.8rem, 4vw, 2.75rem);
+    font-weight: 900;
+    color: #fff;
+    margin: 0 0 0.75rem;
+}
+
+.page-subtitle {
+    font-size: 1rem;
+    color: rgba(255, 255, 255, 0.68);
+    margin: 0;
+}
+
+.users-content {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 4rem 2rem;
+}
+
+.coming-soon-wrap {
+    max-width: 520px;
+    margin: 0 auto;
+    text-align: center;
+    padding: 3rem 2rem;
+    border: 1px solid #e8e8e8;
+    border-radius: 4px;
+}
+
+.coming-soon-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 88px;
+    height: 88px;
+    border-radius: 50%;
+    background: rgba(31, 77, 58, 0.08);
+    color: var(--club-forest);
+    margin-bottom: 1.5rem;
+}
+
+.coming-soon-wrap h2 {
+    font-family: 'Merriweather', Georgia, serif;
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--club-ink);
+    margin: 0 0 1rem;
+}
+
+.coming-soon-wrap p {
+    font-size: 0.97rem;
+    line-height: 1.65;
+    color: var(--club-muted);
+    margin: 0 0 2rem;
+}
+
+.btn-back {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.75rem 1.75rem;
+    background: var(--club-forest);
+    color: #fff;
+    font-weight: 700;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    text-decoration: none;
+    border-radius: 3px;
+    transition: background-color 0.2s ease;
+}
+
+.btn-back:hover {
+    background: var(--club-forest-deep);
+    color: #fff;
+    text-decoration: none;
+}
+
+@media (max-width: 640px) {
+    .page-header {
+        padding: 2.5rem 0 2rem;
+    }
+
+    .page-header-inner {
+        padding: 0 1.25rem;
+    }
+
+    .users-content {
+        padding: 2.5rem 1.25rem;
+    }
+}

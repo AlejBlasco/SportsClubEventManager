@@ -24,6 +24,9 @@ builder.Services.AddHttpClient<IEventService, EventService>(client =>
     client.Timeout = TimeSpan.FromSeconds(30);
 });
 
+// Add utility services
+builder.Services.AddSingleton<IGuidProvider, GuidProvider>();
+
 var app = builder.Build();
 
 await app.Services.MigrateDatabaseAsync();
