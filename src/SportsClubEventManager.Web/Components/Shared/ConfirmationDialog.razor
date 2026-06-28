@@ -1,0 +1,27 @@
+<div class="confirmation-dialog-overlay" @onclick="OnCancelClicked">
+    <div class="confirmation-dialog" @onclick:stopPropagation="true">
+        <div class="confirmation-dialog-header">
+            <h2>@Title</h2>
+        </div>
+
+        <div class="confirmation-dialog-body">
+            <p>@Message</p>
+        </div>
+
+        <div class="confirmation-dialog-actions">
+            <button type="button" class="btn-cancel" @onclick="OnCancelClicked" disabled="@IsProcessing">
+                Cancel
+            </button>
+            <button type="button" class="btn-confirm" @onclick="OnConfirmClicked" disabled="@IsProcessing">
+                @if (IsProcessing)
+                {
+                    <span>Processing...</span>
+                }
+                else
+                {
+                    <span>Confirm</span>
+                }
+            </button>
+        </div>
+    </div>
+</div>

@@ -14,14 +14,17 @@ namespace SportsClubEventManager.Web.Tests.Components;
 public sealed class EventDetailsPageTests : TestContext
 {
     private readonly IEventService _eventService;
+    private readonly IGuidProvider _guidProvider;
 
     /// <summary>
-    /// Initializes the test with a mocked event service.
+    /// Initializes the test with mocked dependencies.
     /// </summary>
     public EventDetailsPageTests()
     {
         _eventService = Substitute.For<IEventService>();
+        _guidProvider = Substitute.For<IGuidProvider>();
         Services.AddSingleton(_eventService);
+        Services.AddSingleton(_guidProvider);
     }
 
     /// <summary>

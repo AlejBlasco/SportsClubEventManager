@@ -1,6 +1,9 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text;
+using System.Text.Json;
 using FluentAssertions;
+using SportsClubEventManager.Domain.Enums;
 using SportsClubEventManager.Shared.DTOs;
 using SportsClubEventManager.Web.Services;
 
@@ -302,6 +305,280 @@ public sealed class EventServiceTests
         {
             await Task.Delay(TimeSpan.FromSeconds(10), cancellationToken);
             return new HttpResponseMessage(HttpStatusCode.OK);
+        }
+    }
+
+    /// <summary>
+    /// Tests that RegisterForEventAsync returns registration details when the API responds successfully.
+    /// </summary>
+    [Fact]
+    public async Task RegisterForEventAsync_WhenApiReturns201_ReturnsRegistrationCreatedDto()
+    {
+        // Arrange
+        var eventId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        var registrationCreated = new RegistrationCreatedDto
+        {
+            RegistrationId = Guid.NewGuid(),
+            EventId = eventId,
+            UserId = userId,
+            RegisteredAt = DateTime.UtcNow,
+            Status = RegistrationStatus.Registered,
+            Event = new EventDetailDto
+            {
+                Id = eventId,
+                Title = "Test Event",
+                Date = DateTime.UtcNow,
+                Location = "Test Location",
+                MaxCapacity = 50,
+                CurrentRegistrations = 31,
+                AvailableSlots = 19,
+                IsFullyBooked = false
+            }
+        };
+
+        var httpClient = CreateHttpClientWithRegistrationResponse(HttpStatusCode.Created, registrationCreated);
+        var service = new EventService(httpClient);
+
+        // Act
+        var result = await service.RegisterForEventAsync(eventId, userId);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Should().BeEquivalentTo(registrationCreated);
+    }
+
+    /// <summary>
+    /// Tests that RegisterForEventAsync returns null when the API returns 404 Not Found.
+    /// </summary>
+    [Fact]
+    public async Task RegisterForEventAsync_WhenApiReturns404_ReturnsNull()
+    {
+        // Arrange
+        var eventId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        var httpClient = CreateHttpClientWithRegistrationResponse(HttpStatusCode.NotFound, null);
+        var service = new EventService(httpClient);
+
+        // Act
+        var result = await service.RegisterForEventAsync(eventId, userId);
+
+        // Assert
+        result.Should().BeNull();
+    }
+
+    /// <summary>
+    /// Tests that RegisterForEventAsync returns null when the API returns 409 Conflict due to duplicate registration.
+    /// </summary>
+    [Fact]
+    public async Task RegisterForEventAsync_WhenApiReturns409Conflict_ReturnsNull()
+    {
+        // Arrange
+        var eventId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        var httpClient = CreateHttpClientWithRegistrationResponse(HttpStatusCode.Conflict, null);
+        var service = new EventService(httpClient);
+
+        // Act
+        var result = await service.RegisterForEventAsync(eventId, userId);
+
+        // Assert
+        result.Should().BeNull();
+    }
+
+    /// <summary>
+    /// Tests that RegisterForEventAsync returns null when the API returns 400 Bad Request.
+    /// </summary>
+    [Fact]
+    public async Task RegisterForEventAsync_WhenApiReturns400BadRequest_ReturnsNull()
+    {
+        // Arrange
+        var eventId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        var httpClient = CreateHttpClientWithRegistrationResponse(HttpStatusCode.BadRequest, null);
+        var service = new EventService(httpClient);
+
+        // Act
+        var result = await service.RegisterForEventAsync(eventId, userId);
+
+        // Assert
+        result.Should().BeNull();
+    }
+
+    /// <summary>
+    /// Tests that RegisterForEventAsync throws HttpRequestException when the API returns 500 Server Error.
+    /// </summary>
+    [Fact]
+    public async Task RegisterForEventAsync_WhenApiReturns500_ThrowsHttpRequestException()
+    {
+        // Arrange
+        var eventId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        var httpClient = CreateHttpClientWithRegistrationResponse(HttpStatusCode.InternalServerError, null);
+        var service = new EventService(httpClient);
+
+        // Act
+        var act = async () => await service.RegisterForEventAsync(eventId, userId);
+
+        // Assert
+        await act.Should().ThrowAsync<HttpRequestException>();
+    }
+
+    /// <summary>
+    /// Tests that RegisterForEventAsync respects cancellation token.
+    /// </summary>
+    [Fact]
+    public async Task RegisterForEventAsync_WhenCancelled_ThrowsOperationCanceledException()
+    {
+        // Arrange
+        var eventId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        var httpClient = CreateHttpClientWithDelay();
+        var service = new EventService(httpClient);
+        using var cts = new CancellationTokenSource();
+        cts.Cancel();
+
+        // Act
+        var act = async () => await service.RegisterForEventAsync(eventId, userId, cts.Token);
+
+        // Assert
+        await act.Should().ThrowAsync<OperationCanceledException>();
+    }
+
+    /// <summary>
+    /// Tests that CancelRegistrationAsync returns true when the API returns 204 No Content.
+    /// </summary>
+    [Fact]
+    public async Task CancelRegistrationAsync_WhenApiReturns204_ReturnsTrue()
+    {
+        // Arrange
+        var eventId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        var httpClient = CreateHttpClientWithCancellationResponse(HttpStatusCode.NoContent);
+        var service = new EventService(httpClient);
+
+        // Act
+        var result = await service.CancelRegistrationAsync(eventId, userId);
+
+        // Assert
+        result.Should().BeTrue();
+    }
+
+    /// <summary>
+    /// Tests that CancelRegistrationAsync returns false when the API returns 404 Not Found.
+    /// </summary>
+    [Fact]
+    public async Task CancelRegistrationAsync_WhenApiReturns404_ReturnsFalse()
+    {
+        // Arrange
+        var eventId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        var httpClient = CreateHttpClientWithCancellationResponse(HttpStatusCode.NotFound);
+        var service = new EventService(httpClient);
+
+        // Act
+        var result = await service.CancelRegistrationAsync(eventId, userId);
+
+        // Assert
+        result.Should().BeFalse();
+    }
+
+    /// <summary>
+    /// Tests that CancelRegistrationAsync returns false when the API returns 400 Bad Request.
+    /// </summary>
+    [Fact]
+    public async Task CancelRegistrationAsync_WhenApiReturns400BadRequest_ReturnsFalse()
+    {
+        // Arrange
+        var eventId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        var httpClient = CreateHttpClientWithCancellationResponse(HttpStatusCode.BadRequest);
+        var service = new EventService(httpClient);
+
+        // Act
+        var result = await service.CancelRegistrationAsync(eventId, userId);
+
+        // Assert
+        result.Should().BeFalse();
+    }
+
+    /// <summary>
+    /// Tests that CancelRegistrationAsync throws HttpRequestException when the API returns 500 Server Error.
+    /// </summary>
+    [Fact]
+    public async Task CancelRegistrationAsync_WhenApiReturns500_ThrowsHttpRequestException()
+    {
+        // Arrange
+        var eventId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        var httpClient = CreateHttpClientWithCancellationResponse(HttpStatusCode.InternalServerError);
+        var service = new EventService(httpClient);
+
+        // Act
+        var act = async () => await service.CancelRegistrationAsync(eventId, userId);
+
+        // Assert
+        await act.Should().ThrowAsync<HttpRequestException>();
+    }
+
+    /// <summary>
+    /// Tests that CancelRegistrationAsync respects cancellation token.
+    /// </summary>
+    [Fact]
+    public async Task CancelRegistrationAsync_WhenCancelled_ThrowsOperationCanceledException()
+    {
+        // Arrange
+        var eventId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        var httpClient = CreateHttpClientWithDelay();
+        var service = new EventService(httpClient);
+        using var cts = new CancellationTokenSource();
+        cts.Cancel();
+
+        // Act
+        var act = async () => await service.CancelRegistrationAsync(eventId, userId, cts.Token);
+
+        // Assert
+        await act.Should().ThrowAsync<OperationCanceledException>();
+    }
+
+    private static HttpClient CreateHttpClientWithRegistrationResponse(HttpStatusCode statusCode, RegistrationCreatedDto? registration)
+    {
+        var handler = new TestHttpMessageHandlerForRegistration(statusCode, registration);
+        return new HttpClient(handler)
+        {
+            BaseAddress = new Uri("https://localhost:7001")
+        };
+    }
+
+    private static HttpClient CreateHttpClientWithCancellationResponse(HttpStatusCode statusCode)
+    {
+        var handler = new TestHttpMessageHandlerForCancellation(statusCode);
+        return new HttpClient(handler)
+        {
+            BaseAddress = new Uri("https://localhost:7001")
+        };
+    }
+
+    private sealed class TestHttpMessageHandlerForRegistration(HttpStatusCode statusCode, RegistrationCreatedDto? registration) : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            var response = new HttpResponseMessage(statusCode);
+            if (statusCode == HttpStatusCode.Created && registration is not null)
+            {
+                response.Content = JsonContent.Create(registration);
+            }
+            return Task.FromResult(response);
+        }
+    }
+
+    private sealed class TestHttpMessageHandlerForCancellation(HttpStatusCode statusCode) : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            var response = new HttpResponseMessage(statusCode);
+            return Task.FromResult(response);
         }
     }
 }
