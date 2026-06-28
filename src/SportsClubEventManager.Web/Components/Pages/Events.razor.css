@@ -1,8 +1,7 @@
 .events-page {
-    padding: 1rem;
-    border-radius: 14px;
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.65) 0%, rgba(242, 239, 229, 0.65) 100%);
-    border: 1px solid rgba(178, 135, 46, 0.15);
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem;
 }
 
 .events-header {

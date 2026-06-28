@@ -15,10 +15,7 @@
 html,
 body {
     font-family: 'Source Sans 3', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background:
-        radial-gradient(circle at 15% 20%, rgba(178, 135, 46, 0.08), transparent 35%),
-        radial-gradient(circle at 80% 10%, rgba(31, 77, 58, 0.1), transparent 30%),
-        linear-gradient(180deg, #faf8f2 0%, #f4f0e6 100%);
+    background: #ffffff;
     color: var(--club-ink);
 }
 

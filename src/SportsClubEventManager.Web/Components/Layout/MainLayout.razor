@@ -1,15 +1,20 @@
-﻿@inherits LayoutComponentBase
+@inherits LayoutComponentBase
 
-<div class="page">
-    <div class="sidebar">
+<div class="page-wrapper">
+    <header class="site-header">
         <NavMenu />
-    </div>
+    </header>
 
-    <main>
-        <article class="content px-4">
-            @Body
-        </article>
+    <main class="site-main">
+        @Body
     </main>
+
+    <footer class="site-footer">
+        <div class="footer-inner">
+            <span class="footer-brand">Sports Club Event Manager</span>
+            <span class="footer-copy">&copy; @DateTime.Now.Year &mdash; All rights reserved.</span>
+        </div>
+    </footer>
 </div>
 
 <div id="blazor-error-ui" data-nosnippet>
