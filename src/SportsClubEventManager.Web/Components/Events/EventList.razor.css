@@ -7,7 +7,7 @@
 .no-events {
     text-align: center;
     padding: 3rem 1rem;
-    color: #666;
+    color: var(--club-muted);
     font-size: 1.125rem;
 }
 

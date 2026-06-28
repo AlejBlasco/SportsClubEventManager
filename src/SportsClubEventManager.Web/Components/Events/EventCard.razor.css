@@ -1,15 +1,16 @@
 .event-card {
-    border: 1px solid #ddd;
-    border-radius: 8px;
+    border: 1px solid rgba(178, 135, 46, 0.24);
+    border-radius: 12px;
     padding: 1rem;
     margin-bottom: 1rem;
-    background-color: #fff;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    transition: box-shadow 0.2s ease-in-out;
+    background: linear-gradient(180deg, #ffffff 0%, #faf8f2 100%);
+    box-shadow: 0 4px 12px rgba(31, 45, 40, 0.1);
+    transition: box-shadow 0.2s ease-in-out, transform 0.2s ease-in-out;
 }
 
 .event-card:hover {
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 12px 22px rgba(31, 45, 40, 0.16);
+    transform: translateY(-2px);
 }
 
 .event-card-header {
@@ -18,18 +19,18 @@
     align-items: center;
     margin-bottom: 0.75rem;
     padding-bottom: 0.75rem;
-    border-bottom: 1px solid #eee;
+    border-bottom: 1px solid var(--club-sand-strong);
 }
 
 .event-title {
     margin: 0;
     font-size: 1.25rem;
     font-weight: 600;
-    color: #333;
+    color: var(--club-ink);
 }
 
 .badge-full {
-    background-color: #dc3545;
+    background-color: var(--club-danger);
     color: #fff;
     padding: 0.25rem 0.75rem;
     border-radius: 12px;
@@ -48,21 +49,21 @@
 
 .event-label {
     font-weight: 600;
-    color: #555;
+    color: var(--club-muted);
     min-width: 120px;
 }
 
 .event-value {
-    color: #333;
+    color: var(--club-ink);
 }
 
 .event-card-footer {
     padding-top: 0.75rem;
-    border-top: 1px solid #eee;
+    border-top: 1px solid var(--club-sand-strong);
 }
 
 .event-link {
-    color: #4a90e2;
+    color: var(--club-forest);
     text-decoration: none;
     font-size: 0.875rem;
     font-weight: 600;
@@ -70,7 +71,7 @@
 }
 
 .event-link:hover {
-    color: #357abd;
+    color: var(--club-gold-deep);
     text-decoration: underline;
 }
 

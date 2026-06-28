@@ -1,5 +1,8 @@
 .events-page {
     padding: 1rem;
+    border-radius: 14px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.65) 0%, rgba(242, 239, 229, 0.65) 100%);
+    border: 1px solid rgba(178, 135, 46, 0.15);
 }
 
 .events-header {
@@ -8,14 +11,14 @@
     align-items: center;
     margin-bottom: 2rem;
     padding-bottom: 1rem;
-    border-bottom: 2px solid #eee;
+    border-bottom: 2px solid var(--club-sand-strong);
 }
 
 .events-header h1 {
     margin: 0;
     font-size: 2rem;
     font-weight: 700;
-    color: #333;
+    color: var(--club-ink);
 }
 
 .view-toggle {
@@ -34,7 +37,7 @@
 
 .loading-container p {
     font-size: 1.125rem;
-    color: #666;
+    color: var(--club-muted);
     margin: 0;
 }
 
@@ -49,7 +52,7 @@
 
 .error-message {
     font-size: 1.125rem;
-    color: #dc3545;
+    color: var(--club-danger);
     margin: 0;
     text-align: center;
 }

@@ -1,6 +1,7 @@
 @using SportsClubEventManager.Shared.DTOs
 @using Radzen
 @using Radzen.Blazor
+@inject NavigationManager NavigationManager
 
 <div class="event-calendar">
     <div class="calendar-controls">
@@ -70,8 +71,7 @@
     /// </summary>
     private void OnAppointmentSelect(SchedulerAppointmentSelectEventArgs<EventSchedulerItem> args)
     {
-        // Navigation to event details is disabled for US-9 (stub for US-10)
-        // When US-10 is implemented, navigate to /events/{args.Data.Id}
+        NavigationManager.NavigateTo($"/events/{args.Data.Id}");
     }
 
     /// <summary>

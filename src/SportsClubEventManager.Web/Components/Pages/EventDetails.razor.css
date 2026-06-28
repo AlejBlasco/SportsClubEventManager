@@ -6,13 +6,14 @@
 
 .event-details-container {
     background-color: #fff;
-    border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    border-radius: 12px;
+    border: 1px solid rgba(178, 135, 46, 0.22);
+    box-shadow: 0 10px 24px rgba(20, 44, 35, 0.12);
     overflow: hidden;
 }
 
 .event-details-header {
-    background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
+    background: linear-gradient(130deg, var(--club-forest-deep) 0%, var(--club-forest) 62%, var(--club-gold) 100%);
     color: #fff;
     padding: 2rem;
     position: relative;
@@ -33,7 +34,7 @@
 }
 
 .badge-fully-booked {
-    background-color: #dc3545;
+    background-color: var(--club-danger);
     color: #fff;
     padding: 0.5rem 1rem;
     border-radius: 12px;
@@ -72,14 +73,14 @@
 .event-section h2 {
     font-size: 1.5rem;
     font-weight: 600;
-    color: #333;
+    color: var(--club-ink);
     margin: 0 0 1rem 0;
     padding-bottom: 0.5rem;
-    border-bottom: 2px solid #e9ecef;
+    border-bottom: 2px solid var(--club-sand-strong);
 }
 
 .event-description {
-    color: #555;
+    color: var(--club-muted);
     line-height: 1.6;
     font-size: 1rem;
     white-space: pre-wrap;
@@ -97,7 +98,7 @@
     grid-template-columns: 150px 1fr;
     gap: 1rem;
     padding: 0.75rem 0;
-    border-bottom: 1px solid #f0f0f0;
+    border-bottom: 1px solid var(--club-sand-strong);
 }
 
 .info-item:last-child {
@@ -106,12 +107,12 @@
 
 .info-item dt {
     font-weight: 600;
-    color: #555;
+    color: var(--club-muted);
 }
 
 .info-item dd {
     margin: 0;
-    color: #333;
+    color: var(--club-ink);
 }
 
 .registration-section {
@@ -129,15 +130,15 @@
 }
 
 .alert-success {
-    background-color: #d4edda;
-    border: 1px solid #c3e6cb;
-    color: #155724;
+    background-color: #e3efe8;
+    border: 1px solid #bdd7c8;
+    color: #1a4d36;
 }
 
 .alert-error {
-    background-color: #f8d7da;
-    border: 1px solid #f5c6cb;
-    color: #721c24;
+    background-color: #fae2e2;
+    border: 1px solid #edc1c1;
+    color: #842626;
 }
 
 .alert-close {
@@ -164,9 +165,9 @@
 }
 
 .registered-message {
-    background-color: #d4edda;
-    border: 1px solid #c3e6cb;
-    color: #155724;
+    background-color: #e3efe8;
+    border: 1px solid #bdd7c8;
+    color: #1a4d36;
     padding: 0.75rem 1rem;
     border-radius: 4px;
     margin: 0;
@@ -185,14 +186,14 @@
 }
 
 .btn-register {
-    background-color: #28a745;
+    background: linear-gradient(135deg, var(--club-forest) 0%, var(--club-forest-deep) 100%);
     color: white;
 }
 
 .btn-register:hover:not(:disabled) {
-    background-color: #218838;
+    background: linear-gradient(135deg, #245843 0%, #133125 100%);
     transform: translateY(-1px);
-    box-shadow: 0 4px 8px rgba(40, 167, 69, 0.3);
+    box-shadow: 0 8px 16px rgba(23, 58, 45, 0.28);
 }
 
 .btn-register:disabled {
@@ -202,7 +203,7 @@
 }
 
 .btn-cancel-registration {
-    background-color: #dc3545;
+    background-color: var(--club-danger);
     color: white;
 }
 
