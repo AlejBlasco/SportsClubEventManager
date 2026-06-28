@@ -1,0 +1,29 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Launch API (https)",
+      "type": "dotnet",
+      "request": "launch",
+      "projectPath": "${workspaceFolder}/src/SportsClubEventManager.Api/SportsClubEventManager.Api.csproj",
+      "launchSettingsProfile": "https"
+    },
+    {
+      "name": "Launch Web (https)",
+      "type": "dotnet",
+      "request": "launch",
+      "projectPath": "${workspaceFolder}/src/SportsClubEventManager.Web/SportsClubEventManager.Web.csproj",
+      "launchSettingsProfile": "https"
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Launch Web + API",
+      "configurations": [
+        "Launch API (https)",
+        "Launch Web (https)"
+      ],
+      "stopAll": true
+    }
+  ]
+}
