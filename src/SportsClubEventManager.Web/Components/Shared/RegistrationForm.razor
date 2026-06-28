@@ -1,0 +1,51 @@
+@using SportsClubEventManager.Web.Models
+
+<div class="registration-form-overlay" @onclick="OnCancelClicked">
+    <div class="registration-form-dialog" @onclick:stopPropagation="true">
+        <div class="registration-form-header">
+            <h2>Register for Event</h2>
+            <button type="button" class="close-button" @onclick="OnCancelClicked" aria-label="Close">×</button>
+        </div>
+
+        <div class="registration-form-body">
+            <p class="mvp-notice">
+                <strong>Note:</strong> For this early version, please enter your name and email.
+                Full authentication is coming soon!
+            </p>
+
+            <EditForm Model="@FormModel" OnValidSubmit="OnValidSubmitAsync">
+                <DataAnnotationsValidator />
+
+                <div class="form-group">
+                    <label for="name">Name</label>
+                    <InputText id="name" class="form-control" @bind-Value="FormModel.Name"
+                               placeholder="Enter your name" disabled="@IsSubmitting" />
+                    <ValidationMessage For="@(() => FormModel.Name)" class="validation-error" />
+                </div>
+
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <InputText id="email" type="email" class="form-control" @bind-Value="FormModel.Email"
+                               placeholder="Enter your email" disabled="@IsSubmitting" />
+                    <ValidationMessage For="@(() => FormModel.Email)" class="validation-error" />
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" class="btn-secondary" @onclick="OnCancelClicked" disabled="@IsSubmitting">
+                        Cancel
+                    </button>
+                    <button type="submit" class="btn-primary" disabled="@IsSubmitting">
+                        @if (IsSubmitting)
+                        {
+                            <span>Registering...</span>
+                        }
+                        else
+                        {
+                            <span>Register</span>
+                        }
+                    </button>
+                </div>
+            </EditForm>
+        </div>
+    </div>
+</div>

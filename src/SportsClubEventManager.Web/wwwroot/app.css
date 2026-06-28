@@ -1,19 +1,59 @@
-html, body {
-    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+@import url('https://fonts.googleapis.com/css2?family=Merriweather:wght@700;900&family=Source+Sans+3:wght@400;500;600;700&display=swap');
+
+:root {
+    --club-forest: #1f4d3a;
+    --club-forest-deep: #173a2d;
+    --club-sand: #f2efe5;
+    --club-sand-strong: #e8e0cf;
+    --club-gold: #b2872e;
+    --club-gold-deep: #8d6620;
+    --club-ink: #1e2b29;
+    --club-muted: #5b6a66;
+    --club-danger: #b63a3a;
+}
+
+html,
+body {
+    font-family: 'Source Sans 3', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #ffffff;
+    color: var(--club-ink);
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+    font-family: 'Merriweather', Georgia, 'Times New Roman', serif;
+    color: var(--club-ink);
 }
 
 a, .btn-link {
-    color: #006bb7;
+    color: var(--club-forest);
+}
+
+a:hover,
+.btn-link:hover {
+    color: var(--club-forest-deep);
 }
 
 .btn-primary {
     color: #fff;
-    background-color: #1b6ec2;
-    border-color: #1861ac;
+    background: linear-gradient(135deg, var(--club-forest) 0%, var(--club-forest-deep) 100%);
+    border-color: var(--club-forest-deep);
+    box-shadow: 0 10px 18px rgba(23, 58, 45, 0.24);
+}
+
+.btn-primary:hover,
+.btn-primary:focus,
+.btn-primary:active {
+    background: linear-gradient(135deg, #245843 0%, #133125 100%);
+    border-color: #133125;
 }
 
 .btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
-  box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
+  box-shadow: 0 0 0 0.1rem #fff, 0 0 0 0.25rem rgba(178, 135, 46, 0.45);
 }
 
 .content {
@@ -33,7 +73,7 @@ h1:focus {
 }
 
 .validation-message {
-    color: #e50000;
+    color: var(--club-danger);
 }
 
 .blazor-error-boundary {

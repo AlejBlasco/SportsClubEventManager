@@ -1,0 +1,55 @@
+@using SportsClubEventManager.Shared.DTOs
+
+<div class="capacity-indicator">
+    <div class="capacity-header">
+        <span class="capacity-label">Capacity</span>
+        <span class="capacity-value">@AvailableSlots / @MaxCapacity</span>
+    </div>
+    <div class="capacity-bar-container">
+        <div class="capacity-bar"
+             role="progressbar"
+             aria-valuenow="@CurrentRegistrations"
+             aria-valuemin="0"
+             aria-valuemax="@MaxCapacity"
+             aria-label="Event capacity: @CurrentRegistrations out of @MaxCapacity slots filled"
+             style="width: @PercentageFilled%">
+        </div>
+    </div>
+    @if (IsFullyBooked)
+    {
+        <span class="fully-booked-badge">Fully Booked</span>
+    }
+</div>
+
+@code {
+    /// <summary>
+    /// Gets or sets the maximum capacity of the event.
+    /// </summary>
+    [Parameter]
+    public int MaxCapacity { get; set; }
+
+    /// <summary>
+    /// Gets or sets the current number of registrations.
+    /// </summary>
+    [Parameter]
+    public int CurrentRegistrations { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of available slots.
+    /// </summary>
+    [Parameter]
+    public int AvailableSlots { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the event is fully booked.
+    /// </summary>
+    [Parameter]
+    public bool IsFullyBooked { get; set; }
+
+    /// <summary>
+    /// Gets the percentage of capacity that is filled.
+    /// </summary>
+    private int PercentageFilled => MaxCapacity > 0
+        ? (int)((double)CurrentRegistrations / MaxCapacity * 100)
+        : 0;
+}

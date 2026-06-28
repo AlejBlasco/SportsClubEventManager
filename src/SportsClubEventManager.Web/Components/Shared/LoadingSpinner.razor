@@ -1,0 +1,15 @@
+@using Radzen.Blazor
+
+<div class="loading-spinner-container">
+    <RadzenProgressBarCircular ProgressBarStyle="ProgressBarStyle.Primary"
+                               Value="100" ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
+    <p class="loading-message">@Message</p>
+</div>
+
+@code {
+    /// <summary>
+    /// Gets or sets the loading message to display.
+    /// </summary>
+    [Parameter]
+    public string Message { get; set; } = "Loading...";
+}

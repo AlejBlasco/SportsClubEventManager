@@ -1,0 +1,146 @@
+@page "/events/{id:guid}"
+@rendermode InteractiveServer
+@using SportsClubEventManager.Shared.DTOs
+
+<PageTitle>@(eventDetail?.Title ?? "Event Details")</PageTitle>
+
+<div class="event-details-page">
+    @if (isLoading)
+    {
+        <LoadingSpinner Message="Loading event details..." />
+    }
+    else if (isNotFound)
+    {
+        <NotFoundPage />
+    }
+    else if (hasError)
+    {
+        <ErrorMessage Message="Unable to load event details. Please try again."
+                      OnRetry="@LoadEventDetailsAsync" />
+    }
+    else if (eventDetail is not null)
+    {
+        <div class="event-details-container">
+            <div class="event-details-header">
+                <div class="header-content">
+                    <h1 class="event-title">@eventDetail.Title</h1>
+                    @if (eventDetail.IsFullyBooked)
+                    {
+                        <span class="badge-fully-booked">Fully Booked</span>
+                    }
+                </div>
+                <a href="/events" class="back-link">← Back to Events</a>
+            </div>
+
+            <article class="event-details-content">
+                @if (!string.IsNullOrWhiteSpace(eventDetail.Description))
+                {
+                    <section class="event-section">
+                        <h2>Description</h2>
+                        <p class="event-description">@eventDetail.Description</p>
+                    </section>
+                }
+
+                <section class="event-section">
+                    <h2>Event Information</h2>
+                    <dl class="event-info-list">
+                        <div class="info-item">
+                            <dt>Date & Time</dt>
+                            <dd>@eventDetail.Date.ToLocalTime().ToString("dddd, MMMM dd, yyyy 'at' h:mm tt")</dd>
+                        </div>
+                        <div class="info-item">
+                            <dt>Location</dt>
+                            <dd>@eventDetail.Location</dd>
+                        </div>
+                        <div class="info-item">
+                            <dt>Total Capacity</dt>
+                            <dd>@eventDetail.MaxCapacity participants</dd>
+                        </div>
+                        <div class="info-item">
+                            <dt>Available Slots</dt>
+                            <dd>@eventDetail.AvailableSlots</dd>
+                        </div>
+                    </dl>
+                </section>
+
+                <section class="event-section">
+                    <CapacityIndicator MaxCapacity="@eventDetail.MaxCapacity"
+                                       CurrentRegistrations="@eventDetail.CurrentRegistrations"
+                                       AvailableSlots="@eventDetail.AvailableSlots"
+                                       IsFullyBooked="@eventDetail.IsFullyBooked" />
+                </section>
+
+                <section class="event-section registration-section">
+                    @if (successMessage is not null)
+                    {
+                        <div class="alert alert-success">
+                            <span>@successMessage</span>
+                            <button type="button" class="alert-close" @onclick="ClearSuccessMessage" aria-label="Close">×</button>
+                        </div>
+                    }
+
+                    @if (errorMessage is not null)
+                    {
+                        <div class="alert alert-error">
+                            <span>@errorMessage</span>
+                            <button type="button" class="alert-close" @onclick="ClearErrorMessage" aria-label="Close">×</button>
+                        </div>
+                    }
+
+                    @if (isRegistered)
+                    {
+                        <div class="registration-status">
+                            <p class="registered-message">You are registered for this event</p>
+                            <button type="button" class="btn-cancel-registration" @onclick="ShowCancelConfirmation" disabled="@isCancellationInProgress">
+                                @if (isCancellationInProgress)
+                                {
+                                    <span>Cancelling...</span>
+                                }
+                                else
+                                {
+                                    <span>Cancel Registration</span>
+                                }
+                            </button>
+                        </div>
+                    }
+                    else
+                    {
+                        <button type="button" class="btn-register" @onclick="ShowRegistrationForm"
+                                disabled="@(eventDetail.IsFullyBooked || isRegistrationInProgress)">
+                            @if (eventDetail.IsFullyBooked)
+                            {
+                                <span>Event Full</span>
+                            }
+                            else if (isRegistrationInProgress)
+                            {
+                                <span>Registering...</span>
+                            }
+                            else
+                            {
+                                <span>Register for Event</span>
+                            }
+                        </button>
+                    }
+                </section>
+            </article>
+        </div>
+    }
+
+    @if (showRegistrationForm)
+    {
+        <RegistrationForm @key="@("registration-form")"
+                          IsSubmitting="@isRegistrationInProgress"
+                          OnSubmit="@HandleRegistrationSubmit"
+                          OnCancel="@HideRegistrationForm" />
+    }
+
+    @if (showCancelConfirmation)
+    {
+        <ConfirmationDialog @key="@("cancel-confirmation")"
+                            Title="Cancel Registration"
+                            Message="Are you sure you want to cancel your registration for this event?"
+                            IsProcessing="@isCancellationInProgress"
+                            OnConfirm="@HandleCancellationConfirm"
+                            OnCancel="@HideCancelConfirmation" />
+    }
+</div>

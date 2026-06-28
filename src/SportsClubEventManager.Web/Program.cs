@@ -1,4 +1,7 @@
+using Radzen;
+using SportsClubEventManager.Infrastructure;
 using SportsClubEventManager.Web.Components;
+using SportsClubEventManager.Web.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -6,7 +9,27 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
+// Add Infrastructure layer services
+builder.Services.AddInfrastructure(builder.Configuration);
+
+// Add Radzen services
+builder.Services.AddRadzenComponents();
+
+// Add HTTP client for API
+builder.Services.AddHttpClient<IEventService, EventService>(client =>
+{
+    var baseUrl = builder.Configuration["ApiSettings:BaseUrl"]
+        ?? throw new InvalidOperationException("ApiSettings:BaseUrl not configured");
+    client.BaseAddress = new Uri(baseUrl);
+    client.Timeout = TimeSpan.FromSeconds(30);
+});
+
+// Add utility services
+builder.Services.AddSingleton<IGuidProvider, GuidProvider>();
+
 var app = builder.Build();
+
+await app.Services.MigrateDatabaseAsync();
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())

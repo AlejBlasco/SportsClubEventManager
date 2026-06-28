@@ -1,0 +1,89 @@
+@using SportsClubEventManager.Shared.DTOs
+@using Radzen
+@using Radzen.Blazor
+@inject NavigationManager NavigationManager
+
+<div class="event-calendar">
+    <div class="calendar-controls">
+        <RadzenButton Text="Month" Click="@(() => currentView = CalendarView.Month)"
+                      Variant="@(currentView == CalendarView.Month ? Variant.Filled : Variant.Outlined)"
+                      ButtonStyle="ButtonStyle.Primary" Size="ButtonSize.Small" />
+        <RadzenButton Text="Year" Click="@(() => currentView = CalendarView.Year)"
+                      Variant="@(currentView == CalendarView.Year ? Variant.Filled : Variant.Outlined)"
+                      ButtonStyle="ButtonStyle.Primary" Size="ButtonSize.Small" />
+    </div>
+
+    <RadzenScheduler @ref="scheduler" Data="@schedulerData" TItem="EventSchedulerItem"
+                     StartProperty="Start" EndProperty="End" TextProperty="Text"
+                     SelectedIndex="@((int)currentView)" SlotSelect="@OnSlotSelect"
+                     AppointmentSelect="@OnAppointmentSelect">
+        <RadzenMonthView />
+        <RadzenYearView />
+    </RadzenScheduler>
+</div>
+
+@code {
+    private RadzenScheduler<EventSchedulerItem>? scheduler;
+    private CalendarView currentView = CalendarView.Month;
+    private List<EventSchedulerItem> schedulerData = [];
+
+    /// <summary>
+    /// Gets or sets the list of events to display in the calendar.
+    /// </summary>
+    [Parameter]
+    public required List<EventDto> Events { get; set; }
+
+    /// <summary>
+    /// Represents the calendar view options.
+    /// </summary>
+    private enum CalendarView
+    {
+        Month = 0,
+        Year = 1
+    }
+
+    /// <summary>
+    /// Initializes the component after parameters are set.
+    /// </summary>
+    protected override void OnParametersSet()
+    {
+        schedulerData = Events.Select(e => new EventSchedulerItem
+        {
+            Id = e.Id,
+            Start = e.Date.ToLocalTime(),
+            End = e.Date.ToLocalTime().AddHours(2),
+            Text = e.AvailableSlots == 0 ? $"{e.Title} - Full" : e.Title,
+            IsFull = e.AvailableSlots == 0,
+            OriginalEvent = e
+        }).ToList();
+    }
+
+    /// <summary>
+    /// Handles slot selection in the calendar.
+    /// </summary>
+    private void OnSlotSelect(SchedulerSlotSelectEventArgs args)
+    {
+        // Prevent creating new appointments
+    }
+
+    /// <summary>
+    /// Handles appointment selection in the calendar.
+    /// </summary>
+    private void OnAppointmentSelect(SchedulerAppointmentSelectEventArgs<EventSchedulerItem> args)
+    {
+        NavigationManager.NavigateTo($"/events/{args.Data.Id}");
+    }
+
+    /// <summary>
+    /// Represents an event item for the RadzenScheduler.
+    /// </summary>
+    private sealed class EventSchedulerItem
+    {
+        public Guid Id { get; set; }
+        public DateTime Start { get; set; }
+        public DateTime End { get; set; }
+        public string Text { get; set; } = string.Empty;
+        public bool IsFull { get; set; }
+        public EventDto? OriginalEvent { get; set; }
+    }
+}

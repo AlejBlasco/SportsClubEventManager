@@ -1,0 +1,46 @@
+@page "/events"
+@rendermode InteractiveServer
+@using SportsClubEventManager.Shared.DTOs
+
+<PageTitle>Events</PageTitle>
+
+<div class="events-page">
+    <div class="events-header">
+        <h1>Events</h1>
+        <div class="view-toggle">
+            <RadzenButton Text="Calendar" Click="@(() => SwitchView(ViewMode.Calendar))"
+                          Variant="@(currentView == ViewMode.Calendar ? Variant.Filled : Variant.Outlined)"
+                          ButtonStyle="ButtonStyle.Primary" Size="ButtonSize.Medium" />
+            <RadzenButton Text="List" Click="@(() => SwitchView(ViewMode.List))"
+                          Variant="@(currentView == ViewMode.List ? Variant.Filled : Variant.Outlined)"
+                          ButtonStyle="ButtonStyle.Primary" Size="ButtonSize.Medium" />
+        </div>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="loading-container">
+            <RadzenProgressBarCircular ProgressBarStyle="ProgressBarStyle.Primary"
+                                       Value="100" ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
+            <p>Loading events...</p>
+        </div>
+    }
+    else if (hasError)
+    {
+        <div class="error-container">
+            <p class="error-message">Unable to load events. Please try again.</p>
+            <RadzenButton Text="Retry" Click="@LoadEventsAsync" ButtonStyle="ButtonStyle.Danger" />
+        </div>
+    }
+    else
+    {
+        @if (currentView == ViewMode.Calendar)
+        {
+            <EventCalendar Events="@events" />
+        }
+        else
+        {
+            <EventList Events="@events" />
+        }
+    }
+</div>

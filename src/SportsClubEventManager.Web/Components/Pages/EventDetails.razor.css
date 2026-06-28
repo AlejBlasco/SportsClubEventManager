@@ -1,0 +1,284 @@
+.event-details-page {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 2rem 1rem;
+}
+
+.event-details-container {
+    background-color: #fff;
+    border-radius: 12px;
+    border: 1px solid rgba(178, 135, 46, 0.22);
+    box-shadow: 0 10px 24px rgba(20, 44, 35, 0.12);
+    overflow: hidden;
+}
+
+.event-details-header {
+    background: linear-gradient(130deg, var(--club-forest-deep) 0%, var(--club-forest) 62%, var(--club-gold) 100%);
+    color: #fff;
+    padding: 2rem;
+    position: relative;
+}
+
+.header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.event-title {
+    margin: 0;
+    font-size: 2rem;
+    font-weight: 700;
+    flex: 1;
+}
+
+.badge-fully-booked {
+    background-color: var(--club-danger);
+    color: #fff;
+    padding: 0.5rem 1rem;
+    border-radius: 12px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    white-space: nowrap;
+    margin-left: 1rem;
+}
+
+.back-link {
+    color: #fff;
+    text-decoration: none;
+    font-size: 0.875rem;
+    display: inline-flex;
+    align-items: center;
+    transition: opacity 0.2s ease-in-out;
+}
+
+.back-link:hover {
+    opacity: 0.8;
+    text-decoration: underline;
+}
+
+.event-details-content {
+    padding: 2rem;
+}
+
+.event-section {
+    margin-bottom: 2rem;
+}
+
+.event-section:last-child {
+    margin-bottom: 0;
+}
+
+.event-section h2 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--club-ink);
+    margin: 0 0 1rem 0;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid var(--club-sand-strong);
+}
+
+.event-description {
+    color: var(--club-muted);
+    line-height: 1.6;
+    font-size: 1rem;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}
+
+.event-info-list {
+    display: grid;
+    gap: 1rem;
+}
+
+.info-item {
+    display: grid;
+    grid-template-columns: 150px 1fr;
+    gap: 1rem;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid var(--club-sand-strong);
+}
+
+.info-item:last-child {
+    border-bottom: none;
+}
+
+.info-item dt {
+    font-weight: 600;
+    color: var(--club-muted);
+}
+
+.info-item dd {
+    margin: 0;
+    color: var(--club-ink);
+}
+
+.registration-section {
+    padding-top: 1rem;
+}
+
+.alert {
+    padding: 1rem;
+    border-radius: 4px;
+    margin-bottom: 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+}
+
+.alert-success {
+    background-color: #e3efe8;
+    border: 1px solid #bdd7c8;
+    color: #1a4d36;
+}
+
+.alert-error {
+    background-color: #fae2e2;
+    border: 1px solid #edc1c1;
+    color: #842626;
+}
+
+.alert-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0;
+    color: inherit;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+}
+
+.alert-close:hover {
+    opacity: 1;
+}
+
+.registration-status {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    align-items: flex-start;
+}
+
+.registered-message {
+    background-color: #e3efe8;
+    border: 1px solid #bdd7c8;
+    color: #1a4d36;
+    padding: 0.75rem 1rem;
+    border-radius: 4px;
+    margin: 0;
+    font-weight: 500;
+}
+
+.btn-register,
+.btn-cancel-registration {
+    padding: 0.875rem 2rem;
+    font-size: 1rem;
+    font-weight: 600;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-register {
+    background: linear-gradient(135deg, var(--club-forest) 0%, var(--club-forest-deep) 100%);
+    color: white;
+}
+
+.btn-register:hover:not(:disabled) {
+    background: linear-gradient(135deg, #245843 0%, #133125 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 8px 16px rgba(23, 58, 45, 0.28);
+}
+
+.btn-register:disabled {
+    background-color: #6c757d;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.btn-cancel-registration {
+    background-color: var(--club-danger);
+    color: white;
+}
+
+.btn-cancel-registration:hover:not(:disabled) {
+    background-color: #c82333;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(220, 53, 69, 0.3);
+}
+
+.btn-cancel-registration:disabled {
+    background-color: #6c757d;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+@media (max-width: 768px) {
+    .event-details-page {
+        padding: 1rem 0.5rem;
+    }
+
+    .event-details-header {
+        padding: 1.5rem 1rem;
+    }
+
+    .header-content {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.75rem;
+    }
+
+    .event-title {
+        font-size: 1.5rem;
+    }
+
+    .badge-fully-booked {
+        margin-left: 0;
+    }
+
+    .event-details-content {
+        padding: 1.5rem 1rem;
+    }
+
+    .event-section h2 {
+        font-size: 1.25rem;
+    }
+
+    .info-item {
+        grid-template-columns: 1fr;
+        gap: 0.25rem;
+    }
+
+    .info-item dt {
+        font-size: 0.875rem;
+    }
+
+    .registration-status {
+        width: 100%;
+    }
+
+    .btn-register,
+    .btn-cancel-registration {
+        width: 100%;
+    }
+}
+
+@media (max-width: 320px) {
+    .event-title {
+        font-size: 1.25rem;
+    }
+
+    .event-details-header {
+        padding: 1rem 0.75rem;
+    }
+
+    .event-details-content {
+        padding: 1rem 0.75rem;
+    }
+}

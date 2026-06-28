@@ -1,0 +1,68 @@
+.event-calendar {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 1rem;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.78) 0%, rgba(242, 239, 229, 0.72) 100%);
+    border-radius: 12px;
+    border: 1px solid rgba(178, 135, 46, 0.18);
+}
+
+.calendar-controls {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    justify-content: center;
+}
+
+::deep .rz-scheduler {
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid rgba(178, 135, 46, 0.2);
+    box-shadow: 0 10px 22px rgba(24, 43, 35, 0.12);
+}
+
+::deep .rz-scheduler .rz-button {
+    background: var(--club-forest);
+    border-color: var(--club-forest);
+}
+
+::deep .rz-scheduler .rz-button:hover {
+    background: var(--club-forest-deep);
+    border-color: var(--club-forest-deep);
+}
+
+::deep .rz-scheduler .rz-event {
+    border-radius: 4px;
+    cursor: pointer;
+    background: linear-gradient(130deg, var(--club-forest) 0%, var(--club-forest-deep) 100%);
+    border-color: var(--club-forest-deep);
+}
+
+::deep .rz-scheduler .rz-event.full-event {
+    background-color: var(--club-danger) !important;
+    border-color: #8f2424 !important;
+}
+
+@media (max-width: 768px) {
+    .event-calendar {
+        padding: 0.5rem;
+    }
+
+    ::deep .rz-scheduler {
+        font-size: 0.875rem;
+    }
+
+    ::deep .rz-scheduler .rz-event-title {
+        font-size: 0.75rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .calendar-controls {
+        flex-direction: column;
+    }
+
+    ::deep .rz-scheduler {
+        font-size: 0.75rem;
+    }
+}

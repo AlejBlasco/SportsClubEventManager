@@ -2,7 +2,14 @@
 
   <ItemGroup>
     <ProjectReference Include="..\SportsClubEventManager.Domain\SportsClubEventManager.Domain.csproj" />
-    <ProjectReference Include="..\SportsClubEventManager.Infrastructure\SportsClubEventManager.Infrastructure.csproj" />
+    <ProjectReference Include="..\SportsClubEventManager.Shared\SportsClubEventManager.Shared.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="FluentValidation" Version="11.11.0" />
+    <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="11.11.0" />
+    <PackageReference Include="MediatR" Version="12.4.1" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.1" />
   </ItemGroup>
 
   <PropertyGroup>

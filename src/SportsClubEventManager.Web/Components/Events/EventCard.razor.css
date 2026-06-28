@@ -1,0 +1,95 @@
+.event-card {
+    border: 1px solid rgba(178, 135, 46, 0.24);
+    border-radius: 12px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    background: linear-gradient(180deg, #ffffff 0%, #faf8f2 100%);
+    box-shadow: 0 4px 12px rgba(31, 45, 40, 0.1);
+    transition: box-shadow 0.2s ease-in-out, transform 0.2s ease-in-out;
+}
+
+.event-card:hover {
+    box-shadow: 0 12px 22px rgba(31, 45, 40, 0.16);
+    transform: translateY(-2px);
+}
+
+.event-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--club-sand-strong);
+}
+
+.event-title {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--club-ink);
+}
+
+.badge-full {
+    background-color: var(--club-danger);
+    color: #fff;
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+.event-card-body {
+    margin-bottom: 1rem;
+}
+
+.event-detail {
+    display: flex;
+    margin-bottom: 0.5rem;
+}
+
+.event-label {
+    font-weight: 600;
+    color: var(--club-muted);
+    min-width: 120px;
+}
+
+.event-value {
+    color: var(--club-ink);
+}
+
+.event-card-footer {
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--club-sand-strong);
+}
+
+.event-link {
+    color: var(--club-forest);
+    text-decoration: none;
+    font-size: 0.875rem;
+    font-weight: 600;
+    transition: color 0.2s ease-in-out;
+}
+
+.event-link:hover {
+    color: var(--club-gold-deep);
+    text-decoration: underline;
+}
+
+@media (max-width: 576px) {
+    .event-card-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .badge-full {
+        margin-top: 0.5rem;
+    }
+
+    .event-detail {
+        flex-direction: column;
+    }
+
+    .event-label {
+        margin-bottom: 0.25rem;
+    }
+}

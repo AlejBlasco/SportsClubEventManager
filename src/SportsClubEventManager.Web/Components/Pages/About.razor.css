@@ -1,0 +1,236 @@
+.about-page {
+    min-height: 70vh;
+}
+
+.page-header {
+    background: linear-gradient(135deg, #0d0d0d 0%, var(--club-forest-deep) 100%);
+    color: #fff;
+    padding: 3.5rem 0 3rem;
+}
+
+.page-header-inner {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 2rem;
+}
+
+.page-eyebrow {
+    display: inline-block;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--club-gold);
+    margin-bottom: 0.75rem;
+    border-left: 3px solid var(--club-gold);
+    padding-left: 0.75rem;
+}
+
+.page-header h1 {
+    font-family: 'Merriweather', Georgia, serif;
+    font-size: clamp(1.8rem, 4vw, 2.75rem);
+    font-weight: 900;
+    color: #fff;
+    margin: 0 0 0.75rem;
+}
+
+.page-subtitle {
+    font-size: 1rem;
+    color: rgba(255, 255, 255, 0.68);
+    margin: 0;
+}
+
+.about-content {
+    background: #fff;
+}
+
+.about-inner {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 4rem 2rem 5rem;
+}
+
+.about-section {
+    margin-bottom: 3.5rem;
+    padding-bottom: 3.5rem;
+    border-bottom: 1px solid #ebebeb;
+}
+
+.about-section:last-child {
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: none;
+}
+
+.about-section h2 {
+    font-family: 'Merriweather', Georgia, serif;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--club-ink);
+    margin: 0 0 1rem;
+}
+
+.about-section p {
+    font-size: 1rem;
+    line-height: 1.75;
+    color: var(--club-muted);
+    margin: 0 0 1rem;
+}
+
+.about-section p:last-child {
+    margin-bottom: 0;
+}
+
+.about-section--lead {
+    border-bottom: 3px solid var(--club-gold);
+    padding-bottom: 2.5rem;
+    margin-bottom: 3rem;
+}
+
+.lead-text {
+    font-family: 'Merriweather', Georgia, serif;
+    font-size: 1.2rem !important;
+    line-height: 1.7 !important;
+    color: var(--club-ink) !important;
+    font-weight: 400;
+}
+
+/* About grid: text + values side by side */
+.about-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 3rem;
+    align-items: start;
+}
+
+.about-text-block h2 {
+    margin-bottom: 1rem;
+}
+
+.about-values {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+.value-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 1.25rem;
+    border: 1px solid #e8e8e8;
+    border-radius: 4px;
+    transition: box-shadow 0.2s ease;
+}
+
+.value-card:hover {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.07);
+}
+
+.value-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 4px;
+    background: rgba(31, 77, 58, 0.08);
+    color: var(--club-forest);
+    flex-shrink: 0;
+}
+
+.value-card h3 {
+    font-family: 'Merriweather', Georgia, serif;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--club-ink);
+    margin: 0 0 0.3rem;
+}
+
+.value-card p {
+    font-size: 0.875rem;
+    line-height: 1.5;
+    color: var(--club-muted);
+    margin: 0;
+}
+
+/* CTA section */
+.about-section--cta {
+    background: #f9f9f9;
+    border: 1px solid #e8e8e8;
+    border-radius: 4px;
+    padding: 2.5rem;
+    margin-bottom: 0;
+}
+
+.about-actions {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-top: 1.5rem;
+}
+
+.btn-primary-about {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.75rem 1.75rem;
+    background: var(--club-forest);
+    color: #fff;
+    font-weight: 700;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    text-decoration: none;
+    border-radius: 3px;
+    transition: background-color 0.2s ease;
+}
+
+.btn-primary-about:hover {
+    background: var(--club-forest-deep);
+    color: #fff;
+    text-decoration: none;
+}
+
+.btn-secondary-about {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.75rem 1.75rem;
+    border: 1.5px solid var(--club-forest);
+    color: var(--club-forest);
+    font-weight: 700;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    text-decoration: none;
+    border-radius: 3px;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.btn-secondary-about:hover {
+    background: var(--club-forest);
+    color: #fff;
+    text-decoration: none;
+}
+
+@media (max-width: 768px) {
+    .about-grid {
+        grid-template-columns: 1fr;
+        gap: 2rem;
+    }
+
+    .page-header {
+        padding: 2.5rem 0 2rem;
+    }
+
+    .page-header-inner {
+        padding: 0 1.25rem;
+    }
+
+    .about-inner {
+        padding: 2.5rem 1.25rem 3rem;
+    }
+
+    .about-section--cta {
+        padding: 1.75rem 1.25rem;
+    }
+}
