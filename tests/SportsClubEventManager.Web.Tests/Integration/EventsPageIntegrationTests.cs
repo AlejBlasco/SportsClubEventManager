@@ -95,10 +95,10 @@ public sealed class EventsPageIntegrationTests : TestContext
     }
 
     /// <summary>
-    /// Verifies that EventCard displays a disabled View Details link.
+    /// Verifies that EventCard displays an active View Details link.
     /// </summary>
     [Fact]
-    public void EventCard_WhenRendered_DisplaysDisabledViewDetailsLink()
+    public void EventCard_WhenRendered_DisplaysActiveViewDetailsLink()
     {
         // Arrange
         var eventDto = new EventDto
@@ -116,9 +116,9 @@ public sealed class EventsPageIntegrationTests : TestContext
             parameters.Add(p => p.Event, eventDto));
 
         // Assert
-        cut.Markup.Should().Contain("event-link-disabled");
+        cut.Markup.Should().Contain("event-link");
         cut.Markup.Should().Contain("View Details");
-        cut.Markup.Should().NotContain("href=\"/events/");
+        cut.Markup.Should().Contain($"href=\"/events/{eventDto.Id}\"");
     }
 
     /// <summary>

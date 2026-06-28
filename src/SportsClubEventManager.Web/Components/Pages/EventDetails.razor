@@ -1,0 +1,79 @@
+@page "/events/{id:guid}"
+@rendermode InteractiveServer
+@using SportsClubEventManager.Shared.DTOs
+
+<PageTitle>@(eventDetail?.Title ?? "Event Details")</PageTitle>
+
+<div class="event-details-page">
+    @if (isLoading)
+    {
+        <LoadingSpinner Message="Loading event details..." />
+    }
+    else if (isNotFound)
+    {
+        <NotFoundPage />
+    }
+    else if (hasError)
+    {
+        <ErrorMessage Message="Unable to load event details. Please try again."
+                      OnRetry="@LoadEventDetailsAsync" />
+    }
+    else if (eventDetail is not null)
+    {
+        <div class="event-details-container">
+            <div class="event-details-header">
+                <div class="header-content">
+                    <h1 class="event-title">@eventDetail.Title</h1>
+                    @if (eventDetail.IsFullyBooked)
+                    {
+                        <span class="badge-fully-booked">Fully Booked</span>
+                    }
+                </div>
+                <a href="/events" class="back-link">← Back to Events</a>
+            </div>
+
+            <article class="event-details-content">
+                @if (!string.IsNullOrWhiteSpace(eventDetail.Description))
+                {
+                    <section class="event-section">
+                        <h2>Description</h2>
+                        <p class="event-description">@eventDetail.Description</p>
+                    </section>
+                }
+
+                <section class="event-section">
+                    <h2>Event Information</h2>
+                    <dl class="event-info-list">
+                        <div class="info-item">
+                            <dt>Date & Time</dt>
+                            <dd>@eventDetail.Date.ToLocalTime().ToString("dddd, MMMM dd, yyyy 'at' h:mm tt")</dd>
+                        </div>
+                        <div class="info-item">
+                            <dt>Location</dt>
+                            <dd>@eventDetail.Location</dd>
+                        </div>
+                        <div class="info-item">
+                            <dt>Total Capacity</dt>
+                            <dd>@eventDetail.MaxCapacity participants</dd>
+                        </div>
+                        <div class="info-item">
+                            <dt>Available Slots</dt>
+                            <dd>@eventDetail.AvailableSlots</dd>
+                        </div>
+                    </dl>
+                </section>
+
+                <section class="event-section">
+                    <CapacityIndicator MaxCapacity="@eventDetail.MaxCapacity"
+                                       CurrentRegistrations="@eventDetail.CurrentRegistrations"
+                                       AvailableSlots="@eventDetail.AvailableSlots"
+                                       IsFullyBooked="@eventDetail.IsFullyBooked" />
+                </section>
+
+                <section class="event-section registration-placeholder">
+                    <!-- Reserved space for future registration buttons (US-11) -->
+                </section>
+            </article>
+        </div>
+    }
+</div>

@@ -1,0 +1,24 @@
+@using Radzen.Blazor
+
+<div class="error-message-container">
+    <div class="error-icon">⚠️</div>
+    <p class="error-text">@Message</p>
+    @if (OnRetry.HasDelegate)
+    {
+        <RadzenButton Text="Retry" Click="@OnRetry" ButtonStyle="ButtonStyle.Danger" Size="ButtonSize.Medium" />
+    }
+</div>
+
+@code {
+    /// <summary>
+    /// Gets or sets the error message to display.
+    /// </summary>
+    [Parameter]
+    public string Message { get; set; } = "An error occurred. Please try again.";
+
+    /// <summary>
+    /// Gets or sets the callback to invoke when the retry button is clicked.
+    /// </summary>
+    [Parameter]
+    public EventCallback OnRetry { get; set; }
+}
