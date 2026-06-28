@@ -46,6 +46,11 @@ namespace SportsClubEventManager.Infrastructure.Migrations
                     b.Property<int>("MaxCapacity")
                         .HasColumnType("int");
 
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasMaxLength(200)
