@@ -1,0 +1,82 @@
+.notfound-page {
+    min-height: 70vh;
+}
+
+.notfound-content {
+    background: #fff;
+}
+
+.notfound-inner {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 4rem 2rem 5rem;
+    text-align: center;
+}
+
+.notfound-icon {
+    color: var(--club-gold);
+    margin-bottom: 2rem;
+}
+
+.notfound-message {
+    font-size: 1.05rem;
+    line-height: 1.75;
+    color: var(--club-muted);
+    margin: 0 0 2rem;
+}
+
+.notfound-actions {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-bottom: 3rem;
+}
+
+.notfound-links {
+    text-align: left;
+    background: #f9f9f9;
+    border: 1px solid #ebebeb;
+    border-radius: 4px;
+    padding: 1.5rem 2rem;
+}
+
+.notfound-links-label {
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--club-muted);
+    margin: 0 0 0.75rem;
+}
+
+.notfound-links ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+}
+
+.notfound-links li a {
+    color: var(--club-forest);
+    font-weight: 600;
+    font-size: 0.9rem;
+    text-decoration: none;
+}
+
+.notfound-links li a:hover {
+    color: var(--club-forest-deep);
+    text-decoration: underline;
+}
+
+@media (max-width: 576px) {
+    .notfound-inner {
+        padding: 2.5rem 1.25rem 3rem;
+    }
+
+    .notfound-links ul {
+        grid-template-columns: 1fr;
+    }
+}
