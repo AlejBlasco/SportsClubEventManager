@@ -1,0 +1,28 @@
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+WORKDIR /src
+
+COPY global.json Directory.Build.props ./
+
+COPY src/SportsClubEventManager.Domain/SportsClubEventManager.Domain.csproj src/SportsClubEventManager.Domain/
+COPY src/SportsClubEventManager.Application/SportsClubEventManager.Application.csproj src/SportsClubEventManager.Application/
+COPY src/SportsClubEventManager.Infrastructure/SportsClubEventManager.Infrastructure.csproj src/SportsClubEventManager.Infrastructure/
+COPY src/SportsClubEventManager.Shared/SportsClubEventManager.Shared.csproj src/SportsClubEventManager.Shared/
+COPY src/SportsClubEventManager.Web/SportsClubEventManager.Web.csproj src/SportsClubEventManager.Web/
+
+RUN dotnet restore src/SportsClubEventManager.Web/SportsClubEventManager.Web.csproj
+
+COPY src/SportsClubEventManager.Domain/ src/SportsClubEventManager.Domain/
+COPY src/SportsClubEventManager.Application/ src/SportsClubEventManager.Application/
+COPY src/SportsClubEventManager.Infrastructure/ src/SportsClubEventManager.Infrastructure/
+COPY src/SportsClubEventManager.Shared/ src/SportsClubEventManager.Shared/
+COPY src/SportsClubEventManager.Web/ src/SportsClubEventManager.Web/
+
+RUN dotnet publish src/SportsClubEventManager.Web/SportsClubEventManager.Web.csproj \
+    -c Release -o /app/publish
+
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
+WORKDIR /app
+EXPOSE 8080
+ENV ASPNETCORE_URLS=http://+:8080
+COPY --from=build /app/publish .
+ENTRYPOINT ["dotnet", "SportsClubEventManager.Web.dll"]

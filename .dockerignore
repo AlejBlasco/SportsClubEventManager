@@ -1,0 +1,14 @@
+**/.git
+**/.gitignore
+**/.vs
+**/.vscode
+**/bin
+**/obj
+**/*.user
+**/*.suo
+**/TestResults
+tests/
+.env
+build-output.log
+integration_test_output.log
+dotnet-format-report.json
