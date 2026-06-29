@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <title>Maintenance &mdash; Sports Club Event Manager</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Merriweather:wght@700;900&family=Source+Sans+3:wght@400;600;700&display=swap');
+
+        :root {
+            --forest: #1f4d3a;
+            --forest-deep: #173a2d;
+            --gold: #b2872e;
+            --ink: #1e2b29;
+            --muted: #5b6a66;
+        }
+
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html, body {
+            height: 100%;
+            font-family: 'Source Sans 3', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #0d0d0d;
+            color: #fff;
+        }
+
+        .page {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        /* Header */
+        .header {
+            padding: 1.5rem 2rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            text-decoration: none;
+            color: #fff;
+        }
+
+        .brand-text {
+            font-family: 'Merriweather', Georgia, serif;
+            font-weight: 900;
+            font-size: 0.95rem;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: #fff;
+        }
+
+        /* Main */
+        .main {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 4rem 2rem;
+        }
+
+        .card {
+            max-width: 560px;
+            width: 100%;
+            text-align: center;
+        }
+
+        .icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: rgba(178, 135, 46, 0.15);
+            border: 1.5px solid rgba(178, 135, 46, 0.4);
+            color: var(--gold);
+            margin-bottom: 2rem;
+        }
+
+        .eyebrow {
+            display: inline-block;
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            color: var(--gold);
+            margin-bottom: 1rem;
+            border-left: 3px solid var(--gold);
+            padding-left: 0.75rem;
+        }
+
+        h1 {
+            font-family: 'Merriweather', Georgia, serif;
+            font-size: clamp(1.6rem, 5vw, 2.25rem);
+            font-weight: 900;
+            color: #fff;
+            margin-bottom: 1.25rem;
+            line-height: 1.2;
+        }
+
+        .message {
+            font-size: 1rem;
+            line-height: 1.75;
+            color: rgba(255, 255, 255, 0.6);
+            margin-bottom: 2.5rem;
+        }
+
+        .divider {
+            width: 48px;
+            height: 2px;
+            background: var(--gold);
+            margin: 0 auto 2.5rem;
+            border: none;
+        }
+
+        .status {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.5);
+            letter-spacing: 0.04em;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--gold);
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.35; }
+        }
+
+        /* Footer */
+        .footer {
+            padding: 1.5rem 2rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.07);
+            text-align: center;
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.3);
+        }
+
+        @media (max-width: 480px) {
+            .main {
+                padding: 3rem 1.25rem;
+                align-items: flex-start;
+                padding-top: 4rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <header class="header">
+            <a class="brand" href="/">
+                <svg width="24" height="24" viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                    <circle cx="13" cy="13" r="12" stroke="#b2872e" stroke-width="1.5" />
+                    <polygon points="13,4 15.7,9.8 22,10.6 17.5,14.9 18.7,21.2 13,18 7.3,21.2 8.5,14.9 4,10.6 10.3,9.8" fill="#b2872e" />
+                </svg>
+                <span class="brand-text">Sports Club</span>
+            </a>
+        </header>
+
+        <main class="main">
+            <div class="card">
+                <div class="icon" aria-hidden="true">
+                    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.5" />
+                        <path d="M12 6v6l4 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                </div>
+                <span class="eyebrow">Planned Maintenance</span>
+                <h1>Back Soon</h1>
+                <p class="message">
+                    We are performing scheduled maintenance to improve the platform.
+                    We will be back online shortly &mdash; thank you for your patience.
+                </p>
+                <hr class="divider" />
+                <p class="status">
+                    <span class="status-dot" aria-hidden="true"></span>
+                    Maintenance in progress
+                </p>
+            </div>
+        </main>
+
+        <footer class="footer">
+            <p>&copy; <script>document.write(new Date().getFullYear())</script> Sports Club Event Manager &mdash; All rights reserved.</p>
+        </footer>
+    </div>
+</body>
+</html>
