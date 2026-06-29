@@ -4,6 +4,7 @@
 [![License: Academic-NC](https://img.shields.io/badge/License-Academic--NC-orange.svg)](LICENSE)
 ![.NET](https://img.shields.io/badge/.NET-10-blue)
 ![Coverage](https://img.shields.io/badge/Coverage-92%25-brightgreen)
+![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)
 ![SQL Server](https://img.shields.io/badge/SQL%20Server-2022-red)
 
 Welcome to **SportsClubEventManager**, a solution automatically generated with Blitz Slice Forge.

@@ -33,8 +33,32 @@ jobs:
           rm -rf TestResults
           mkdir -p TestResults
 
-      - name: Test
+      - name: Unit Tests
         run: |
           dotnet test tests/SportsClubEventManager.Domain/SportsClubEventManager.Domain.csproj --configuration Release --no-build --verbosity normal --collect:"XPlat Code Coverage" --results-directory ./TestResults
           dotnet test tests/SportsClubEventManager.Application/SportsClubEventManager.Application.csproj --configuration Release --no-build --verbosity normal --collect:"XPlat Code Coverage" --results-directory ./TestResults
           dotnet test tests/SportsClubEventManager.Infrastructure/SportsClubEventManager.Infrastructure.csproj --configuration Release --no-build --verbosity normal --collect:"XPlat Code Coverage" --results-directory ./TestResults
+          dotnet test tests/SportsClubEventManager.Web.Tests/SportsClubEventManager.Web.Tests.csproj --configuration Release --no-build --verbosity normal --collect:"XPlat Code Coverage" --results-directory ./TestResults
+
+      - name: Integration Tests
+        run: dotnet test tests/SportsClubEventManager.IntegrationTests/SportsClubEventManager.IntegrationTests.csproj --configuration Release --no-build --verbosity normal --collect:"XPlat Code Coverage" --results-directory ./TestResults
+
+      - name: Install ReportGenerator
+        run: dotnet tool install --global dotnet-reportgenerator-globaltool
+
+      - name: Generate coverage report
+        run: |
+          reportgenerator \
+            -reports:"./TestResults/**/coverage.cobertura.xml" \
+            -targetdir:"./TestResults/CoverageReport" \
+            -reporttypes:"Html;Cobertura;TextSummary" \
+            -assemblyfilters:"+SportsClubEventManager.*;-*Tests*;-*IntegrationTests*"
+          cat ./TestResults/CoverageReport/Summary.txt
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-report
+          path: ./TestResults/CoverageReport/
+
