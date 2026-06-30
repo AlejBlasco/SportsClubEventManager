@@ -23,7 +23,7 @@
     </PackageReference>
     <PackageReference Include="FluentAssertions" Version="6.12.1" />
     <PackageReference Include="NSubstitute" Version="5.1.0" />
-    <PackageReference Include="Bogus" Version="35.5.1" />
+    <PackageReference Include="Bogus" Version="35.6.5" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="10.0.1" />
     <PackageReference Include="Microsoft.Extensions.Configuration" Version="10.0.1" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.1" />
