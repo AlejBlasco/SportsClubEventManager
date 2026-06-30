@@ -1,0 +1,27 @@
+@using Microsoft.AspNetCore.Components.Authorization
+
+<AuthorizeView>
+    <Authorized>
+        <div class="user-info">
+            <span class="user-name">Hello, @context.User.Identity?.Name</span>
+            <a href="/account/logout" class="btn btn-sm btn-outline-secondary">Logout</a>
+        </div>
+    </Authorized>
+    <NotAuthorized>
+        <a href="/login" class="btn btn-sm btn-primary">Login</a>
+    </NotAuthorized>
+</AuthorizeView>
+
+<style>
+    .user-info {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .user-name {
+        color: #333;
+        font-weight: 500;
+    }
+</style>
+

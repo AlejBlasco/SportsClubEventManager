@@ -49,6 +49,34 @@ internal sealed class UserConfiguration : IEntityTypeConfiguration<User>
 
         builder.Property(u => u.UpdatedAt);
 
+        builder.Property(u => u.PasswordHash)
+            .HasMaxLength(500);
+
+        builder.Property(u => u.ExternalProviderId)
+            .HasMaxLength(256);
+
+        builder.HasIndex(u => u.ExternalProviderId);
+
+        builder.Property(u => u.ProviderName)
+            .HasMaxLength(50);
+
+        builder.HasIndex(u => new { u.ProviderName, u.ExternalProviderId })
+            .IsUnique()
+            .HasFilter("[ExternalProviderId] IS NOT NULL AND [ProviderName] IS NOT NULL");
+
+        builder.Property(u => u.RefreshToken)
+            .HasMaxLength(500);
+
+        builder.HasIndex(u => u.RefreshToken);
+
+        builder.Property(u => u.RefreshTokenExpiryTime);
+
+        builder.Property(u => u.IsActive)
+            .IsRequired()
+            .HasDefaultValue(true);
+
+        builder.Property(u => u.LastLoginAt);
+
         builder.HasMany(u => u.Registrations)
             .WithOne(r => r.User)
             .HasForeignKey(r => r.UserId)
