@@ -1,5 +1,8 @@
 @page "/login"
 @using SportsClubEventManager.Shared.DTOs
+@using Microsoft.AspNetCore.Authentication
+@using Microsoft.AspNetCore.Authentication.Cookies
+@using System.Security.Claims
 @inject IConfiguration Configuration
 @inject HttpClient HttpClient
 @inject NavigationManager Navigation
@@ -29,32 +32,24 @@
             <span>OR</span>
         </div>
 
-        <EditForm Model="@_loginRequest" OnValidSubmit="HandleLocalLogin" FormName="LoginForm">
+        <EditForm Model="@LoginRequest" OnValidSubmit="HandleLocalLogin" FormName="LoginForm">
             <DataAnnotationsValidator />
             <ValidationSummary class="text-danger" />
 
             <div class="form-group">
                 <label for="email">Email</label>
-                <InputText id="email" @bind-Value="_loginRequest.Email" class="form-control" placeholder="your.email@example.com" />
-                <ValidationMessage For="@(() => _loginRequest.Email)" />
+                <InputText id="email" @bind-Value="LoginRequest!.Email" class="form-control" placeholder="your.email@example.com" />
+                <ValidationMessage For="@(() => LoginRequest!.Email)" />
             </div>
 
             <div class="form-group">
                 <label for="password">Password</label>
-                <InputText id="password" type="password" @bind-Value="_loginRequest.Password" class="form-control" placeholder="Enter your password" />
-                <ValidationMessage For="@(() => _loginRequest.Password)" />
+                <InputText id="password" type="password" @bind-Value="LoginRequest!.Password" class="form-control" placeholder="Enter your password" />
+                <ValidationMessage For="@(() => LoginRequest!.Password)" />
             </div>
 
-            <button type="submit" class="btn btn-primary btn-block" disabled="@_isLoading">
-                @if (_isLoading)
-                {
-                    <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-                    <span> Signing in...</span>
-                }
-                else
-                {
-                    <span>Sign In</span>
-                }
+            <button type="submit" class="btn btn-primary btn-block">
+                Sign In
             </button>
         </EditForm>
     </div>
@@ -182,29 +177,51 @@
 </style>
 
 @code {
-    private LoginRequest _loginRequest = new();
+    [CascadingParameter]
+    private HttpContext HttpContext { get; set; } = default!;
+
+    [SupplyParameterFromForm(FormName = "LoginForm")]
+    private LoginRequest? LoginRequest { get; set; }
+
     private string _errorMessage = string.Empty;
-    private bool _isLoading = false;
+
+    protected override void OnInitialized() => LoginRequest ??= new LoginRequest();
 
     private string GetGoogleOAuthUrl()
     {
-        var apiBaseUrl = Configuration["ApiSettings:BaseUrl"] ?? "https://localhost:5001";
+        var apiBaseUrl = Configuration["ApiSettings:BaseUrl"] ?? "http://localhost:5240";
         return $"{apiBaseUrl}/api/authentication/google";
     }
 
     private async Task HandleLocalLogin()
     {
-        _isLoading = true;
         _errorMessage = string.Empty;
+        var redirectAfter = false;
 
         try
         {
-            var apiBaseUrl = Configuration["ApiSettings:BaseUrl"] ?? "https://localhost:5001";
-            var response = await HttpClient.PostAsJsonAsync($"{apiBaseUrl}/api/authentication/login", _loginRequest);
+            var apiBaseUrl = Configuration["ApiSettings:BaseUrl"] ?? "http://localhost:5240";
+            var response = await HttpClient.PostAsJsonAsync($"{apiBaseUrl}/api/authentication/login", LoginRequest!);
 
             if (response.IsSuccessStatusCode)
             {
-                Navigation.NavigateTo("/", forceLoad: true);
+                var loginResult = await response.Content.ReadFromJsonAsync<LoginResponse>();
+
+                if (loginResult is not null)
+                {
+                    var claims = new[]
+                    {
+                        new Claim(ClaimTypes.NameIdentifier, loginResult.UserId.ToString()),
+                        new Claim(ClaimTypes.Name, loginResult.Name),
+                        new Claim(ClaimTypes.Email, loginResult.Email),
+                    };
+
+                    var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+                    var principal = new ClaimsPrincipal(identity);
+                    await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal);
+                }
+
+                redirectAfter = true;
             }
             else
             {
@@ -216,9 +233,10 @@
         {
             _errorMessage = $"An error occurred: {ex.Message}";
         }
-        finally
+
+        if (redirectAfter)
         {
-            _isLoading = false;
+            Navigation.NavigateTo("/", forceLoad: true);
         }
     }
 

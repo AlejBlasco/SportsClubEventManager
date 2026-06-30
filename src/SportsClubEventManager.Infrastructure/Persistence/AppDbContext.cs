@@ -51,9 +51,12 @@ public sealed class AppDbContext : DbContext, IApplicationDbContext
     /// <returns>A task representing the asynchronous save operation. The task result contains the number of state entries written to the database.</returns>
     public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
+        ChangeTracker.DetectChanges();
+
         var entries = ChangeTracker.Entries()
             .Where(e => e.Entity is Domain.Common.BaseEntity &&
-                        (e.State == EntityState.Added || e.State == EntityState.Modified));
+                        (e.State == EntityState.Added || e.State == EntityState.Modified))
+            .ToList();
 
         foreach (var entry in entries)
         {

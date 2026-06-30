@@ -1,16 +1,10 @@
 @using Microsoft.AspNetCore.Components.Authorization
-@inject AuthenticationStateProvider AuthenticationStateProvider
-@inject NavigationManager Navigation
-@inject IConfiguration Configuration
-@inject HttpClient HttpClient
 
 <AuthorizeView>
     <Authorized>
         <div class="user-info">
             <span class="user-name">Hello, @context.User.Identity?.Name</span>
-            <button class="btn btn-sm btn-outline-secondary" @onclick="HandleLogout">
-                Logout
-            </button>
+            <a href="/account/logout" class="btn btn-sm btn-outline-secondary">Logout</a>
         </div>
     </Authorized>
     <NotAuthorized>
@@ -31,19 +25,3 @@
     }
 </style>
 
-@code {
-    private async Task HandleLogout()
-    {
-        try
-        {
-            var apiBaseUrl = Configuration["ApiSettings:BaseUrl"] ?? "https://localhost:5001";
-            await HttpClient.PostAsync($"{apiBaseUrl}/api/authentication/logout", null);
-
-            Navigation.NavigateTo("/login", forceLoad: true);
-        }
-        catch
-        {
-            Navigation.NavigateTo("/login", forceLoad: true);
-        }
-    }
-}
