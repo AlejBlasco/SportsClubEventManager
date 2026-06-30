@@ -1,0 +1,229 @@
+@page "/login"
+@using SportsClubEventManager.Shared.DTOs
+@inject IConfiguration Configuration
+@inject HttpClient HttpClient
+@inject NavigationManager Navigation
+
+<PageTitle>Login - Sports Club Event Manager</PageTitle>
+
+<div class="login-container">
+    <div class="login-card">
+        <h2>Sign In</h2>
+
+        @if (!string.IsNullOrEmpty(_errorMessage))
+        {
+            <div class="alert alert-danger" role="alert">
+                @_errorMessage
+            </div>
+        }
+
+        <div class="oauth-providers">
+            <h4>Sign in with:</h4>
+            <a href="@GetGoogleOAuthUrl()" class="btn btn-google">
+                <span class="btn-icon">G</span>
+                Sign in with Google
+            </a>
+        </div>
+
+        <div class="divider">
+            <span>OR</span>
+        </div>
+
+        <EditForm Model="@_loginRequest" OnValidSubmit="HandleLocalLogin" FormName="LoginForm">
+            <DataAnnotationsValidator />
+            <ValidationSummary class="text-danger" />
+
+            <div class="form-group">
+                <label for="email">Email</label>
+                <InputText id="email" @bind-Value="_loginRequest.Email" class="form-control" placeholder="your.email@example.com" />
+                <ValidationMessage For="@(() => _loginRequest.Email)" />
+            </div>
+
+            <div class="form-group">
+                <label for="password">Password</label>
+                <InputText id="password" type="password" @bind-Value="_loginRequest.Password" class="form-control" placeholder="Enter your password" />
+                <ValidationMessage For="@(() => _loginRequest.Password)" />
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-block" disabled="@_isLoading">
+                @if (_isLoading)
+                {
+                    <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                    <span> Signing in...</span>
+                }
+                else
+                {
+                    <span>Sign In</span>
+                }
+            </button>
+        </EditForm>
+    </div>
+</div>
+
+<style>
+    .login-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 80vh;
+        padding: 2rem;
+    }
+
+    .login-card {
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        padding: 2rem;
+        width: 100%;
+        max-width: 400px;
+    }
+
+    .login-card h2 {
+        text-align: center;
+        margin-bottom: 1.5rem;
+        color: #333;
+    }
+
+    .oauth-providers {
+        margin-bottom: 1.5rem;
+    }
+
+    .oauth-providers h4 {
+        font-size: 0.9rem;
+        color: #666;
+        margin-bottom: 1rem;
+        text-align: center;
+    }
+
+    .btn-google {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        padding: 0.75rem;
+        background: #4285f4;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        text-decoration: none;
+        font-weight: 500;
+        transition: background 0.3s;
+    }
+
+    .btn-google:hover {
+        background: #357ae8;
+        color: white;
+    }
+
+    .btn-icon {
+        margin-right: 0.5rem;
+        font-weight: bold;
+        font-size: 1.2rem;
+    }
+
+    .divider {
+        text-align: center;
+        margin: 1.5rem 0;
+        position: relative;
+    }
+
+    .divider::before,
+    .divider::after {
+        content: '';
+        position: absolute;
+        top: 50%;
+        width: 40%;
+        height: 1px;
+        background: #ddd;
+    }
+
+    .divider::before {
+        left: 0;
+    }
+
+    .divider::after {
+        right: 0;
+    }
+
+    .divider span {
+        background: white;
+        padding: 0 1rem;
+        color: #666;
+        font-size: 0.9rem;
+    }
+
+    .form-group {
+        margin-bottom: 1rem;
+    }
+
+    .form-group label {
+        display: block;
+        margin-bottom: 0.5rem;
+        color: #333;
+        font-weight: 500;
+    }
+
+    .btn-block {
+        width: 100%;
+        margin-top: 1rem;
+    }
+
+    .alert {
+        padding: 0.75rem;
+        margin-bottom: 1rem;
+        border-radius: 4px;
+    }
+
+    .alert-danger {
+        background: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+    }
+</style>
+
+@code {
+    private LoginRequest _loginRequest = new();
+    private string _errorMessage = string.Empty;
+    private bool _isLoading = false;
+
+    private string GetGoogleOAuthUrl()
+    {
+        var apiBaseUrl = Configuration["ApiSettings:BaseUrl"] ?? "https://localhost:5001";
+        return $"{apiBaseUrl}/api/authentication/google";
+    }
+
+    private async Task HandleLocalLogin()
+    {
+        _isLoading = true;
+        _errorMessage = string.Empty;
+
+        try
+        {
+            var apiBaseUrl = Configuration["ApiSettings:BaseUrl"] ?? "https://localhost:5001";
+            var response = await HttpClient.PostAsJsonAsync($"{apiBaseUrl}/api/authentication/login", _loginRequest);
+
+            if (response.IsSuccessStatusCode)
+            {
+                Navigation.NavigateTo("/", forceLoad: true);
+            }
+            else
+            {
+                var error = await response.Content.ReadFromJsonAsync<ErrorResponse>();
+                _errorMessage = error?.Message ?? "Login failed. Please check your credentials and try again.";
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"An error occurred: {ex.Message}";
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private sealed class ErrorResponse
+    {
+        public string Message { get; set; } = string.Empty;
+    }
+}

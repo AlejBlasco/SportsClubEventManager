@@ -2,6 +2,9 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using SportsClubEventManager.Application.Common.Interfaces;
+using SportsClubEventManager.Infrastructure.Authentication;
+using SportsClubEventManager.Infrastructure.Authentication.OAuth2;
+using SportsClubEventManager.Infrastructure.Common;
 using SportsClubEventManager.Infrastructure.Persistence;
 
 namespace SportsClubEventManager.Infrastructure;
@@ -34,6 +37,11 @@ public static class DependencyInjection
 
         services.AddScoped<IApplicationDbContext>(provider =>
             provider.GetRequiredService<AppDbContext>());
+
+        services.AddSingleton<IDateTimeProvider, SystemDateTimeProvider>();
+        services.AddScoped<ITokenService, TokenService>();
+        services.AddScoped<IPasswordHasher, PasswordHasher>();
+        services.AddScoped<GoogleOAuth2Handler>();
 
         return services;
     }
