@@ -53,10 +53,10 @@ public sealed class LoginDisplayTests : TestContext
     }
 
     /// <summary>
-    /// Verifies that user name and logout button are shown when authenticated.
+    /// Verifies that user name and logout link are shown when authenticated.
     /// </summary>
     [Fact]
-    public void Render_WhenAuthenticated_ShowsUserNameAndLogoutButton()
+    public void Render_WhenAuthenticated_ShowsUserNameAndLogoutLink()
     {
         // Arrange
         var authContext = this.AddTestAuthorization();
@@ -71,7 +71,7 @@ public sealed class LoginDisplayTests : TestContext
 
         // Assert
         cut.Find(".user-name").TextContent.Should().Contain("Hello, Test User");
-        cut.Find("button").TextContent.Should().Contain("Logout");
+        cut.Find("a[href='/account/logout']").TextContent.Should().Contain("Logout");
     }
 
     /// <summary>
