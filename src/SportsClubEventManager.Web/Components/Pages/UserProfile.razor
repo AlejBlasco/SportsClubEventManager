@@ -1,0 +1,272 @@
+@page "/profile"
+@rendermode InteractiveServer
+@using Microsoft.AspNetCore.Components.Authorization
+@using SportsClubEventManager.Shared.DTOs
+@using System.Security.Claims
+@inject IUserProfileService UserProfileService
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject NavigationManager NavigationManager
+
+<PageTitle>My Profile</PageTitle>
+
+<div class="profile-page">
+    @if (isLoading)
+    {
+        <div class="loading-spinner">
+            <p>Loading profile...</p>
+        </div>
+    }
+    else if (hasError)
+    {
+        <div class="alert alert-danger">
+            <p>@errorMessage</p>
+            <button class="btn btn-primary" @onclick="LoadProfileAsync">Retry</button>
+        </div>
+    }
+    else if (profile is not null)
+    {
+        <div class="profile-container">
+            <h1>My Profile</h1>
+
+            @if (!string.IsNullOrEmpty(successMessage))
+            {
+                <div class="alert alert-success">@successMessage</div>
+            }
+
+            <EditForm Model="@profileForm" OnValidSubmit="@HandleProfileSubmitAsync">
+                <DataAnnotationsValidator />
+                <ValidationSummary />
+
+                <div class="form-group">
+                    <label for="name">Name</label>
+                    <InputText id="name" class="form-control" @bind-Value="profileForm.Name" @oninput="OnFormChanged" />
+                    <ValidationMessage For="@(() => profileForm.Name)" />
+                </div>
+
+                <div class="form-group">
+                    <label for="gender">Gender</label>
+                    <InputSelect id="gender" class="form-control" @bind-Value="profileForm.Gender" @onchange="OnFormChanged">
+                        <option value="">-- Select Gender --</option>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                        <option value="Other">Other</option>
+                    </InputSelect>
+                    <ValidationMessage For="@(() => profileForm.Gender)" />
+                </div>
+
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    @if (profile.IsOAuthUser)
+                    {
+                        <InputText id="email" class="form-control" @bind-Value="profileForm.Email" disabled />
+                        <small class="form-text text-muted">Email is managed by @profile.ProviderName</small>
+                    }
+                    else
+                    {
+                        <InputText id="email" class="form-control" @bind-Value="profileForm.Email" @oninput="OnFormChanged" />
+                        <ValidationMessage For="@(() => profileForm.Email)" />
+                    }
+                </div>
+
+                <div class="form-group">
+                    <label for="licenseNumber">License Number</label>
+                    <InputText id="licenseNumber" class="form-control" @bind-Value="profileForm.LicenseNumber" @oninput="OnFormChanged" />
+                    <ValidationMessage For="@(() => profileForm.LicenseNumber)" />
+                </div>
+
+                <div class="form-group">
+                    <label for="licenseCategory">License Category</label>
+                    <InputText id="licenseCategory" class="form-control" @bind-Value="profileForm.LicenseCategory" @oninput="OnFormChanged" />
+                    <ValidationMessage For="@(() => profileForm.LicenseCategory)" />
+                </div>
+
+                <div class="form-group">
+                    <label>Role</label>
+                    <div class="form-control-plaintext">
+                        <span class="badge badge-info">@profile.Role</span>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Member Since</label>
+                    <div class="form-control-plaintext">@profile.CreatedAt.ToLocalTime().ToString("MMMM dd, yyyy")</div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary" disabled="@isSaving">
+                        @if (isSaving)
+                        {
+                            <span>Saving...</span>
+                        }
+                        else
+                        {
+                            <span>Save Changes</span>
+                        }
+                    </button>
+                    <button type="button" class="btn btn-secondary" @onclick="CancelEdit" disabled="@isSaving">Cancel</button>
+                </div>
+            </EditForm>
+
+            @if (!profile.IsOAuthUser)
+            {
+                <div class="password-section">
+                    <hr />
+                    <button type="button" class="btn btn-outline-primary" @onclick="() => showPasswordModal = true">
+                        Change Password
+                    </button>
+                </div>
+            }
+
+            @if (showPasswordModal)
+            {
+                <ChangePasswordModal UserId="@userId"
+                                     OnPasswordChanged="@HandlePasswordChanged"
+                                     OnCancel="@(() => showPasswordModal = false)" />
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private UserProfileDto? profile;
+    private ProfileFormModel profileForm = new();
+    private bool isLoading = true;
+    private bool hasError;
+    private bool isSaving;
+    private bool showPasswordModal;
+    private string errorMessage = string.Empty;
+    private string successMessage = string.Empty;
+    private Guid userId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadProfileAsync();
+    }
+
+    private async Task LoadProfileAsync()
+    {
+        isLoading = true;
+        hasError = false;
+        errorMessage = string.Empty;
+
+        try
+        {
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+
+            var userIdClaim = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (userIdClaim is null || !Guid.TryParse(userIdClaim, out userId))
+            {
+                errorMessage = "Unable to retrieve user information.";
+                hasError = true;
+                return;
+            }
+
+            profile = await UserProfileService.GetProfileAsync(userId);
+
+            if (profile is null)
+            {
+                errorMessage = "Profile not found.";
+                hasError = true;
+                return;
+            }
+
+            profileForm = new ProfileFormModel
+            {
+                Name = profile.Name,
+                Gender = profile.Gender,
+                Email = profile.Email,
+                LicenseNumber = profile.LicenseNumber,
+                LicenseCategory = profile.LicenseCategory
+            };
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error loading profile: {ex.Message}";
+            hasError = true;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task HandleProfileSubmitAsync()
+    {
+        if (profile is null)
+            return;
+
+        isSaving = true;
+        successMessage = string.Empty;
+        errorMessage = string.Empty;
+
+        try
+        {
+            var request = new UpdateProfileRequest
+            {
+                Name = profileForm.Name,
+                Gender = profileForm.Gender,
+                Email = profileForm.Email,
+                LicenseNumber = profileForm.LicenseNumber,
+                LicenseCategory = profileForm.LicenseCategory
+            };
+
+            var updatedProfile = await UserProfileService.UpdateProfileAsync(userId, request);
+
+            if (updatedProfile is not null)
+            {
+                profile = updatedProfile;
+                successMessage = "Profile updated successfully.";
+            }
+            else
+            {
+                errorMessage = "Failed to update profile.";
+            }
+        }
+        catch (HttpRequestException ex)
+        {
+            errorMessage = $"Error updating profile: {ex.Message}";
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private void CancelEdit()
+    {
+        if (profile is not null)
+        {
+            profileForm = new ProfileFormModel
+            {
+                Name = profile.Name,
+                Gender = profile.Gender,
+                Email = profile.Email,
+                LicenseNumber = profile.LicenseNumber,
+                LicenseCategory = profile.LicenseCategory
+            };
+            successMessage = string.Empty;
+            errorMessage = string.Empty;
+        }
+    }
+
+    private void OnFormChanged()
+    {
+        successMessage = string.Empty;
+    }
+
+    private void HandlePasswordChanged()
+    {
+        showPasswordModal = false;
+        successMessage = "Password changed successfully. Please log in again with your new password.";
+    }
+
+    public class ProfileFormModel
+    {
+        public string Name { get; set; } = string.Empty;
+        public string Gender { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string? LicenseNumber { get; set; }
+        public string? LicenseCategory { get; set; }
+    }
+}
