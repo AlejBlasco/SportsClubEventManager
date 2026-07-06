@@ -4,6 +4,7 @@ using Microsoft.Extensions.Configuration;
 using NSubstitute;
 using Xunit;
 using SportsClubEventManager.Application.Common.Interfaces;
+using SportsClubEventManager.Domain.Enums;
 using SportsClubEventManager.Infrastructure.Authentication;
 
 namespace SportsClubEventManager.Infrastructure.Authentication;
@@ -52,7 +53,7 @@ public sealed class TokenServiceTests
         var name = "Test User";
 
         // Act
-        var token = _tokenService.GenerateAccessToken(userId, email, name);
+        var token = _tokenService.GenerateAccessToken(userId, email, name, Role.User);
 
         // Assert
         token.Should().NotBeNullOrEmpty();
@@ -79,7 +80,7 @@ public sealed class TokenServiceTests
         var name = "Test User";
 
         // Act
-        var token = _tokenService.GenerateAccessToken(userId, email, name);
+        var token = _tokenService.GenerateAccessToken(userId, email, name, Role.User);
 
         // Assert
         var handler = new JwtSecurityTokenHandler();
@@ -132,7 +133,7 @@ public sealed class TokenServiceTests
         var userId = Guid.NewGuid();
         var email = "test@example.com";
         var name = "Test User";
-        var token = _tokenService.GenerateAccessToken(userId, email, name);
+        var token = _tokenService.GenerateAccessToken(userId, email, name, Role.User);
 
         // Act
         var result = _tokenService.ValidateAccessToken(token);
@@ -166,7 +167,7 @@ public sealed class TokenServiceTests
     {
         // Arrange
         var userId = Guid.NewGuid();
-        var token = _tokenService.GenerateAccessToken(userId, "test@example.com", "Test User");
+        var token = _tokenService.GenerateAccessToken(userId, "test@example.com", "Test User", Role.User);
         var tamperedToken = token.Substring(0, token.Length - 10) + "tampered";
 
         // Act

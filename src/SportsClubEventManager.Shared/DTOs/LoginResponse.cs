@@ -21,6 +21,12 @@ public sealed class LoginResponse
     public string Name { get; set; } = string.Empty;
 
     /// <summary>
+    /// Gets or sets the role of the authenticated user.
+    /// Valid values are: "User", "Administrator"
+    /// </summary>
+    public string Role { get; set; } = string.Empty;
+
+    /// <summary>
     /// Gets or sets the JWT access token.
     /// </summary>
     public string AccessToken { get; set; } = string.Empty;

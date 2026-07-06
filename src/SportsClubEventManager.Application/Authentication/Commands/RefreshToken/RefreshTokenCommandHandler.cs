@@ -64,7 +64,7 @@ public sealed class RefreshTokenCommandHandler : IRequestHandler<RefreshTokenCom
             throw new UnauthorizedAccessException("Account is inactive. Please contact support.");
         }
 
-        var accessToken = _tokenService.GenerateAccessToken(user.Id, user.Email, user.Name);
+        var accessToken = _tokenService.GenerateAccessToken(user.Id, user.Email, user.Name, user.Role);
         var newRefreshToken = _tokenService.GenerateRefreshToken();
         var hashedNewRefreshToken = _tokenService.HashRefreshToken(newRefreshToken);
 
@@ -82,6 +82,7 @@ public sealed class RefreshTokenCommandHandler : IRequestHandler<RefreshTokenCom
             UserId = user.Id,
             Email = user.Email,
             Name = user.Name,
+            Role = user.Role,
             AccessToken = accessToken,
             RefreshToken = newRefreshToken,
             ExpiresIn = expiresIn

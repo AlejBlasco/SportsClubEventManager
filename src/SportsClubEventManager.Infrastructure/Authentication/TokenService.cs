@@ -5,6 +5,7 @@ using System.Text;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using SportsClubEventManager.Application.Common.Interfaces;
+using SportsClubEventManager.Domain.Enums;
 
 namespace SportsClubEventManager.Infrastructure.Authentication;
 
@@ -35,8 +36,10 @@ public sealed class TokenService : ITokenService
     /// <param name="userId">The unique identifier of the user.</param>
     /// <param name="email">The email address of the user.</param>
     /// <param name="name">The name of the user.</param>
+    /// <param name="role">The role of the user for authorization.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>A JWT access token string.</returns>
-    public string GenerateAccessToken(Guid userId, string email, string name)
+    public string GenerateAccessToken(Guid userId, string email, string name, Role role, CancellationToken cancellationToken = default)
     {
         var secretKey = _configuration["Authentication:JwtSettings:SecretKey"]
             ?? throw new InvalidOperationException("JWT secret key is not configured.");
@@ -53,7 +56,8 @@ public sealed class TokenService : ITokenService
             new Claim(JwtRegisteredClaimNames.Sub, userId.ToString()),
             new Claim(JwtRegisteredClaimNames.Email, email),
             new Claim(JwtRegisteredClaimNames.Name, name),
-            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+            new Claim(ClaimTypes.Role, role.ToString())
         };
 
         var token = new JwtSecurityToken(
@@ -69,8 +73,9 @@ public sealed class TokenService : ITokenService
     /// <summary>
     /// Generates a cryptographically secure refresh token.
     /// </summary>
+    /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>A base64-encoded refresh token string.</returns>
-    public string GenerateRefreshToken()
+    public string GenerateRefreshToken(CancellationToken cancellationToken = default)
     {
         var randomNumber = new byte[64];
         using var rng = RandomNumberGenerator.Create();
@@ -82,8 +87,9 @@ public sealed class TokenService : ITokenService
     /// Validates a JWT access token and extracts the user ID.
     /// </summary>
     /// <param name="token">The JWT token to validate.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>The user ID if validation succeeds; otherwise, null.</returns>
-    public Guid? ValidateAccessToken(string token)
+    public Guid? ValidateAccessToken(string token, CancellationToken cancellationToken = default)
     {
         try
         {
@@ -122,8 +128,9 @@ public sealed class TokenService : ITokenService
     /// Hashes a refresh token using SHA256 for secure storage.
     /// </summary>
     /// <param name="refreshToken">The plain-text refresh token to hash.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>The hashed refresh token as a base64 string.</returns>
-    public string HashRefreshToken(string refreshToken)
+    public string HashRefreshToken(string refreshToken, CancellationToken cancellationToken = default)
     {
         using var sha256 = SHA256.Create();
         var hashBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(refreshToken));

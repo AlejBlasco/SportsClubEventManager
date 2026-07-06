@@ -5,10 +5,26 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using SportsClubEventManager.Api.Middleware;
 using SportsClubEventManager.Application;
+using SportsClubEventManager.Application.Authorization.Policies;
 using SportsClubEventManager.Infrastructure;
 using SportsClubEventManager.Infrastructure.Authentication.OAuth2;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Validate admin password configuration
+var adminPassword = builder.Configuration["AdminUser:Password"];
+var adminPasswordPlaceholder = builder.Configuration["Authorization:AdminUser:DefaultPassword"];
+
+if (!string.IsNullOrWhiteSpace(adminPasswordPlaceholder)
+    && adminPasswordPlaceholder.Contains("***"))
+{
+    if (string.IsNullOrWhiteSpace(adminPassword) && !builder.Environment.IsDevelopment())
+    {
+        throw new InvalidOperationException(
+            "Administrator password is not configured for non-development environment. " +
+            "Set 'AdminUser:Password' in Azure Key Vault or environment variables.");
+    }
+}
 
 // Add services to the container
 builder.Services.AddControllers();
@@ -81,7 +97,21 @@ builder.Services.AddAuthentication(options =>
 })
 .AddCookie(CookieAuthenticationDefaults.AuthenticationScheme);
 
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(options =>
+{
+    // Default policy: require authenticated user
+    options.DefaultPolicy = new Microsoft.AspNetCore.Authorization.AuthorizationPolicyBuilder()
+        .RequireAuthenticatedUser()
+        .Build();
+
+    // Policy requiring authenticated user (any role)
+    options.AddPolicy(AuthorizationPolicies.RequireAuthenticatedUser, policy =>
+        policy.RequireAuthenticatedUser());
+
+    // Policy requiring Administrator role
+    options.AddPolicy(AuthorizationPolicies.RequireAdministratorRole, policy =>
+        policy.RequireRole("Administrator"));
+});
 
 // Add CORS
 builder.Services.AddCors(options =>
@@ -124,6 +154,9 @@ app.UseCors();
 app.UseAuthentication();
 
 app.UseAuthorization();
+
+// Unauthorized access logging (placed after UseAuthorization to access populated User claims)
+app.UseMiddleware<UnauthorizedAccessLoggingMiddleware>();
 
 app.MapControllers();
 

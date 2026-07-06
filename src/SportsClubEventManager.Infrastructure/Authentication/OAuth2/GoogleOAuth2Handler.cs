@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using SportsClubEventManager.Application.Common.Interfaces;
 using SportsClubEventManager.Domain.Entities;
+using SportsClubEventManager.Domain.Enums;
 
 namespace SportsClubEventManager.Infrastructure.Authentication.OAuth2;
 
@@ -64,7 +65,8 @@ public sealed class GoogleOAuth2Handler
                 ExternalProviderId = externalProviderId,
                 ProviderName = "Google",
                 IsActive = true,
-                Gender = Domain.Enums.Gender.Other
+                Gender = Domain.Enums.Gender.Other,
+                Role = Role.User
             };
 
             _context.Users.Add(user);
@@ -92,13 +94,14 @@ public sealed class GoogleOAuth2Handler
 
         await _context.SaveChangesAsync(context.HttpContext.RequestAborted);
 
-        var accessToken = _tokenService.GenerateAccessToken(user.Id, user.Email, user.Name);
+        var accessToken = _tokenService.GenerateAccessToken(user.Id, user.Email, user.Name, user.Role);
 
         var claims = new List<Claim>
         {
             new(ClaimTypes.NameIdentifier, user.Id.ToString()),
             new(ClaimTypes.Email, user.Email),
             new(ClaimTypes.Name, user.Name),
+            new(ClaimTypes.Role, user.Role.ToString()),
             new("access_token", accessToken),
             new("refresh_token", refreshToken)
         };
