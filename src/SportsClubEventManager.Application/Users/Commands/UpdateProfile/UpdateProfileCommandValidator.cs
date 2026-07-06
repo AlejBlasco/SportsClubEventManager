@@ -34,6 +34,8 @@ public sealed class UpdateProfileCommandValidator : AbstractValidator<UpdateProf
             .WithMessage("Email address is required.")
             .EmailAddress()
             .WithMessage("Email address must be in a valid format.")
+            .Must(BeValidEmailFormat)
+            .WithMessage("Email address must be in a valid format.")
             .MaximumLength(256)
             .WithMessage("Email address must not exceed 256 characters.");
 
@@ -51,5 +53,24 @@ public sealed class UpdateProfileCommandValidator : AbstractValidator<UpdateProf
     private bool BeValidGender(string gender)
     {
         return Enum.TryParse<Gender>(gender, ignoreCase: true, out _);
+    }
+
+    private bool BeValidEmailFormat(string email)
+    {
+        if (string.IsNullOrWhiteSpace(email))
+        {
+            return false;
+        }
+
+        var atIndex = email.IndexOf('@');
+        if (atIndex <= 0 || atIndex != email.LastIndexOf('@') || atIndex == email.Length - 1)
+        {
+            return false;
+        }
+
+        var domainPart = email[(atIndex + 1)..];
+        return domainPart.Contains('.')
+            && !domainPart.StartsWith('.')
+            && !domainPart.EndsWith('.');
     }
 }
