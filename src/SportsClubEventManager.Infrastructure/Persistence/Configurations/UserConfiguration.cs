@@ -77,6 +77,14 @@ internal sealed class UserConfiguration : IEntityTypeConfiguration<User>
 
         builder.Property(u => u.LastLoginAt);
 
+        builder.Property(u => u.Role)
+            .IsRequired()
+            .HasConversion<string>()
+            .HasMaxLength(50)
+            .HasDefaultValue(Domain.Enums.Role.User);
+
+        builder.HasIndex(u => u.Role);
+
         builder.HasMany(u => u.Registrations)
             .WithOne(r => r.User)
             .HasForeignKey(r => r.UserId)

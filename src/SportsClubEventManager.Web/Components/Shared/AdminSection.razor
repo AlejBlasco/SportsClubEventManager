@@ -1,0 +1,31 @@
+@using Microsoft.AspNetCore.Components.Authorization
+
+<AuthorizeView Roles="Administrator">
+    <Authorized>
+        @ChildContent
+    </Authorized>
+    <NotAuthorized>
+        @if (ShowForbiddenMessage)
+        {
+            <div class="alert alert-warning" role="alert">
+                <i class="bi bi-exclamation-triangle"></i>
+                You do not have permission to view this content. Administrator access required.
+            </div>
+        }
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    /// <summary>
+    /// Gets or sets the child content to display when the user has Administrator role.
+    /// </summary>
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether to show a forbidden message for non-admin users.
+    /// Default is false (content is simply hidden).
+    /// </summary>
+    [Parameter]
+    public bool ShowForbiddenMessage { get; set; } = false;
+}

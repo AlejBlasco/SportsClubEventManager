@@ -1,3 +1,5 @@
+using SportsClubEventManager.Domain.Enums;
+
 namespace SportsClubEventManager.Application.Authentication.Common;
 
 /// <summary>
@@ -19,6 +21,11 @@ public sealed class AuthenticationResult
     /// Gets the name of the authenticated user.
     /// </summary>
     public string Name { get; init; } = string.Empty;
+
+    /// <summary>
+    /// Gets the role of the authenticated user for authorization.
+    /// </summary>
+    public Role Role { get; init; }
 
     /// <summary>
     /// Gets the JWT access token.

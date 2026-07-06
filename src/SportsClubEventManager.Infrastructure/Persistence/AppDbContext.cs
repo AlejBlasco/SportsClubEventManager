@@ -44,6 +44,20 @@ public sealed class AppDbContext : DbContext, IApplicationDbContext
     }
 
     /// <summary>
+    /// Configures warnings to be suppressed or logged.
+    /// </summary>
+    /// <param name="optionsBuilder">The builder used to configure warnings.</param>
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    {
+        base.OnConfiguring(optionsBuilder);
+
+        // Suppress pending model changes warning for pending migrations
+        // This occurs during testing when migrations haven't been fully generated yet
+        optionsBuilder.ConfigureWarnings(w => w.Ignore(
+            Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
+    }
+
+    /// <summary>
     /// Saves all changes made in this context to the database.
     /// Automatically populates CreatedAt and UpdatedAt audit fields.
     /// </summary>

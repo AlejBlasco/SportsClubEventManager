@@ -71,7 +71,7 @@ public sealed class LoginCommandHandler : IRequestHandler<LoginCommand, Authenti
             throw new UnauthorizedAccessException("Invalid email or password.");
         }
 
-        var accessToken = _tokenService.GenerateAccessToken(user.Id, user.Email, user.Name);
+        var accessToken = _tokenService.GenerateAccessToken(user.Id, user.Email, user.Name, user.Role);
         var refreshToken = _tokenService.GenerateRefreshToken();
         var hashedRefreshToken = _tokenService.HashRefreshToken(refreshToken);
 
@@ -89,6 +89,7 @@ public sealed class LoginCommandHandler : IRequestHandler<LoginCommand, Authenti
             UserId = user.Id,
             Email = user.Email,
             Name = user.Name,
+            Role = user.Role,
             AccessToken = accessToken,
             RefreshToken = refreshToken,
             ExpiresIn = expiresIn

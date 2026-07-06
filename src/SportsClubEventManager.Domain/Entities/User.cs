@@ -91,6 +91,12 @@ public class User : BaseEntity
     public DateTime? LastLoginAt { get; set; }
 
     /// <summary>
+    /// Gets or sets the role of the user for authorization purposes.
+    /// Defaults to User role for standard access rights.
+    /// </summary>
+    public Role Role { get; set; } = Role.User;
+
+    /// <summary>
     /// Validates that the provided email address follows a valid format.
     /// </summary>
     /// <param name="email">The email address to validate.</param>

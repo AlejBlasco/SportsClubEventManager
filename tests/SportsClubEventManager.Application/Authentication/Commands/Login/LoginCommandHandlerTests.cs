@@ -69,9 +69,9 @@ public sealed class LoginCommandHandlerTests
         _context.Users.Returns(users);
 
         _passwordHasher.VerifyPassword("password123", "hashed_password").Returns(true);
-        _tokenService.GenerateAccessToken(user.Id, user.Email, user.Name).Returns("access_token");
-        _tokenService.GenerateRefreshToken().Returns("refresh_token");
-        _tokenService.HashRefreshToken("refresh_token").Returns("hashed_refresh_token");
+        _tokenService.GenerateAccessToken(user.Id, user.Email, user.Name, user.Role, Arg.Any<CancellationToken>()).Returns("access_token");
+        _tokenService.GenerateRefreshToken(Arg.Any<CancellationToken>()).Returns("refresh_token");
+        _tokenService.HashRefreshToken("refresh_token", Arg.Any<CancellationToken>()).Returns("hashed_refresh_token");
 
         var command = new LoginCommand { Email = "test@example.com", Password = "password123" };
 
@@ -225,9 +225,9 @@ public sealed class LoginCommandHandlerTests
         _context.Users.Returns(users);
 
         _passwordHasher.VerifyPassword("password123", "hashed_password").Returns(true);
-        _tokenService.GenerateAccessToken(user.Id, user.Email, user.Name).Returns("access_token");
-        _tokenService.GenerateRefreshToken().Returns("refresh_token");
-        _tokenService.HashRefreshToken("refresh_token").Returns("hashed_refresh_token");
+        _tokenService.GenerateAccessToken(user.Id, user.Email, user.Name, user.Role, Arg.Any<CancellationToken>()).Returns("access_token");
+        _tokenService.GenerateRefreshToken(Arg.Any<CancellationToken>()).Returns("refresh_token");
+        _tokenService.HashRefreshToken("refresh_token", Arg.Any<CancellationToken>()).Returns("hashed_refresh_token");
 
         var command = new LoginCommand { Email = "test@example.com", Password = "password123" };
 

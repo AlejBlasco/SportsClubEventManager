@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -61,6 +62,7 @@ public sealed class EventsController(ISender sender) : ControllerBase
     /// <response code="404">Event not found with the specified identifier.</response>
     /// <response code="500">Internal server error.</response>
     [HttpGet("{id:guid}")]
+    [AllowAnonymous]
     [ProducesResponseType(typeof(EventDetailDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
@@ -98,12 +100,15 @@ public sealed class EventsController(ISender sender) : ControllerBase
     /// <returns>Registration details including full event information.</returns>
     /// <response code="201">Registration created successfully. Location header contains the URI of the created registration.</response>
     /// <response code="400">Invalid request (e.g., event date is in the past, invalid identifiers).</response>
+    /// <response code="403">Forbidden. User can only register themselves.</response>
     /// <response code="404">Event not found with the specified identifier.</response>
     /// <response code="409">Conflict occurred (e.g., user already registered, event at full capacity, concurrency conflict).</response>
     /// <response code="500">Internal server error.</response>
     [HttpPost("{id:guid}/register")]
+    [Authorize]
     [ProducesResponseType(typeof(RegistrationCreatedDto), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
@@ -112,6 +117,26 @@ public sealed class EventsController(ISender sender) : ControllerBase
         [FromBody] RegisterForEventRequest request,
         CancellationToken cancellationToken)
     {
+        // Validate that the authenticated user matches the requested userId (unless admin)
+        var authenticatedUserIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(authenticatedUserIdClaim) || !Guid.TryParse(authenticatedUserIdClaim, out var authenticatedUserId))
+        {
+            return Unauthorized(new ProblemDetails
+            {
+                Title = "Authentication failed",
+                Detail = "Unable to determine authenticated user identity.",
+                Status = StatusCodes.Status401Unauthorized
+            });
+        }
+
+        var userRole = User.FindFirstValue(ClaimTypes.Role);
+        var isAdmin = userRole == "Administrator";
+
+        if (!isAdmin && authenticatedUserId != request.UserId)
+        {
+            return Forbid();
+        }
+
         var command = new RegisterForEventCommand
         {
             EventId = id,
@@ -171,12 +196,15 @@ public sealed class EventsController(ISender sender) : ControllerBase
     /// <returns>No content on success.</returns>
     /// <response code="204">Registration cancelled successfully.</response>
     /// <response code="400">Invalid request (e.g., event date is in the past, invalid identifiers).</response>
+    /// <response code="403">Forbidden. User can only cancel their own registration.</response>
     /// <response code="404">Event or registration not found with the specified identifiers.</response>
     /// <response code="409">Conflict occurred (e.g., concurrency conflict).</response>
     /// <response code="500">Internal server error.</response>
     [HttpDelete("{id:guid}/register")]
+    [Authorize]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
@@ -185,6 +213,26 @@ public sealed class EventsController(ISender sender) : ControllerBase
         [FromBody] CancelRegistrationRequest request,
         CancellationToken cancellationToken)
     {
+        // Validate that the authenticated user matches the requested userId (unless admin)
+        var authenticatedUserIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(authenticatedUserIdClaim) || !Guid.TryParse(authenticatedUserIdClaim, out var authenticatedUserId))
+        {
+            return Unauthorized(new ProblemDetails
+            {
+                Title = "Authentication failed",
+                Detail = "Unable to determine authenticated user identity.",
+                Status = StatusCodes.Status401Unauthorized
+            });
+        }
+
+        var userRole = User.FindFirstValue(ClaimTypes.Role);
+        var isAdmin = userRole == "Administrator";
+
+        if (!isAdmin && authenticatedUserId != request.UserId)
+        {
+            return Forbid();
+        }
+
         var command = new CancelRegistrationCommand
         {
             EventId = id,

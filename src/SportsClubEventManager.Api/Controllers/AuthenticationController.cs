@@ -36,6 +36,7 @@ public class AuthenticationController : ControllerBase
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>A login response containing access and refresh tokens.</returns>
     [HttpPost("login")]
+    [AllowAnonymous]
     [ProducesResponseType(typeof(LoginResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -56,6 +57,7 @@ public class AuthenticationController : ControllerBase
                 UserId = result.UserId,
                 Email = result.Email,
                 Name = result.Name,
+                Role = result.Role.ToString(),
                 AccessToken = result.AccessToken,
                 RefreshToken = result.RefreshToken,
                 ExpiresIn = result.ExpiresIn
@@ -78,6 +80,7 @@ public class AuthenticationController : ControllerBase
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>A login response containing new access and refresh tokens.</returns>
     [HttpPost("refresh")]
+    [AllowAnonymous]
     [ProducesResponseType(typeof(LoginResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> RefreshToken([FromBody] RefreshTokenRequest request, CancellationToken cancellationToken)
@@ -96,6 +99,7 @@ public class AuthenticationController : ControllerBase
                 UserId = result.UserId,
                 Email = result.Email,
                 Name = result.Name,
+                Role = result.Role.ToString(),
                 AccessToken = result.AccessToken,
                 RefreshToken = result.RefreshToken,
                 ExpiresIn = result.ExpiresIn
@@ -142,6 +146,7 @@ public class AuthenticationController : ControllerBase
     /// </summary>
     /// <returns>A challenge result redirecting to Google OAuth2.</returns>
     [HttpGet("google")]
+    [AllowAnonymous]
     public IActionResult GoogleLogin()
     {
         var properties = new AuthenticationProperties
@@ -158,6 +163,7 @@ public class AuthenticationController : ControllerBase
     /// </summary>
     /// <returns>A redirect to the web application with authentication tokens.</returns>
     [HttpGet("google/callback")]
+    [AllowAnonymous]
     public async Task<IActionResult> GoogleCallback()
     {
         var authenticateResult = await HttpContext.AuthenticateAsync(GoogleDefaults.AuthenticationScheme);

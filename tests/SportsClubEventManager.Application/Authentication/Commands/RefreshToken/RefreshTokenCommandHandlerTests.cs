@@ -66,10 +66,10 @@ public sealed class RefreshTokenCommandHandlerTests
         var users = new List<User> { user }.BuildMockDbSet();
         _context.Users.Returns(users);
 
-        _tokenService.HashRefreshToken("plain_refresh_token").Returns("hashed_refresh_token");
-        _tokenService.GenerateAccessToken(user.Id, user.Email, user.Name).Returns("new_access_token");
-        _tokenService.GenerateRefreshToken().Returns("new_refresh_token");
-        _tokenService.HashRefreshToken("new_refresh_token").Returns("new_hashed_refresh_token");
+        _tokenService.HashRefreshToken("plain_refresh_token", Arg.Any<CancellationToken>()).Returns("hashed_refresh_token");
+        _tokenService.GenerateAccessToken(user.Id, user.Email, user.Name, user.Role, Arg.Any<CancellationToken>()).Returns("new_access_token");
+        _tokenService.GenerateRefreshToken(Arg.Any<CancellationToken>()).Returns("new_refresh_token");
+        _tokenService.HashRefreshToken("new_refresh_token", Arg.Any<CancellationToken>()).Returns("new_hashed_refresh_token");
 
         var command = new RefreshTokenCommand { RefreshToken = "plain_refresh_token" };
 
@@ -198,10 +198,10 @@ public sealed class RefreshTokenCommandHandlerTests
         var users = new List<User> { user }.BuildMockDbSet();
         _context.Users.Returns(users);
 
-        _tokenService.HashRefreshToken("old_refresh_token").Returns("old_hashed_refresh_token");
-        _tokenService.GenerateAccessToken(user.Id, user.Email, user.Name).Returns("new_access_token");
-        _tokenService.GenerateRefreshToken().Returns("new_refresh_token");
-        _tokenService.HashRefreshToken("new_refresh_token").Returns("new_hashed_refresh_token");
+        _tokenService.HashRefreshToken("old_refresh_token", Arg.Any<CancellationToken>()).Returns("old_hashed_refresh_token");
+        _tokenService.GenerateAccessToken(user.Id, user.Email, user.Name, user.Role, Arg.Any<CancellationToken>()).Returns("new_access_token");
+        _tokenService.GenerateRefreshToken(Arg.Any<CancellationToken>()).Returns("new_refresh_token");
+        _tokenService.HashRefreshToken("new_refresh_token", Arg.Any<CancellationToken>()).Returns("new_hashed_refresh_token");
 
         var command = new RefreshTokenCommand { RefreshToken = "old_refresh_token" };
 

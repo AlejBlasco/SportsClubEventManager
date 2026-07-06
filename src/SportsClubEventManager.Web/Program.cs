@@ -1,8 +1,10 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Components.Authorization;
 using Radzen;
+using SportsClubEventManager.Application.Authorization.Policies;
 using SportsClubEventManager.Infrastructure;
 using SportsClubEventManager.Web.Components;
 using SportsClubEventManager.Web.Services;
@@ -30,7 +32,22 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         options.Cookie.SameSite = SameSiteMode.Strict;
     });
 
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(options =>
+{
+    // Policy requiring authenticated user (any role)
+    options.AddPolicy(AuthorizationPolicies.RequireAuthenticatedUser, policy =>
+        policy.RequireAuthenticatedUser());
+
+    // Policy requiring Administrator role
+    options.AddPolicy(AuthorizationPolicies.RequireAdministratorRole, policy =>
+        policy.RequireRole("Administrator"));
+
+    // Configure fallback policy to require authentication by default
+    options.FallbackPolicy = new AuthorizationPolicyBuilder()
+        .RequireAuthenticatedUser()
+        .Build();
+});
+
 builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<AuthenticationStateProvider, CustomAuthenticationStateProvider>();
