@@ -91,6 +91,22 @@ builder.Services.AddHttpClient<IEventManagementService, EventManagementService>(
     client.Timeout = TimeSpan.FromSeconds(30);
 });
 
+builder.Services.AddHttpClient<IRegistrationService, RegistrationService>(client =>
+{
+    var baseUrl = builder.Configuration["ApiSettings:BaseUrl"]
+        ?? throw new InvalidOperationException("ApiSettings:BaseUrl not configured");
+    client.BaseAddress = new Uri(baseUrl);
+    client.Timeout = TimeSpan.FromSeconds(30);
+});
+
+builder.Services.AddHttpClient<IAdminRegistrationManagementService, AdminRegistrationManagementService>(client =>
+{
+    var baseUrl = builder.Configuration["ApiSettings:BaseUrl"]
+        ?? throw new InvalidOperationException("ApiSettings:BaseUrl not configured");
+    client.BaseAddress = new Uri(baseUrl);
+    client.Timeout = TimeSpan.FromSeconds(30);
+});
+
 // Add utility services
 builder.Services.AddSingleton<IGuidProvider, GuidProvider>();
 

@@ -48,5 +48,15 @@ public enum AuditAction
     /// <summary>
     /// Event was deleted by an administrator.
     /// </summary>
-    EventDeleted = 8
+    EventDeleted = 8,
+
+    /// <summary>
+    /// Registration was created by an administrator.
+    /// </summary>
+    RegistrationCreated = 9,
+
+    /// <summary>
+    /// Registration was cancelled by an administrator.
+    /// </summary>
+    RegistrationCancelled = 10
 }

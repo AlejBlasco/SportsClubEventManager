@@ -18,6 +18,7 @@
             <AuthorizeView>
                 <Authorized>
                     <NavLink class="nav-link" href="profile">My Profile</NavLink>
+                    <NavLink class="nav-link" href="my-registrations">My Registrations</NavLink>
                 </Authorized>
             </AuthorizeView>
             <AuthorizeView Roles="Administrator">
@@ -27,6 +28,9 @@
                     </NavLink>
                     <NavLink class="nav-link nav-link-admin" href="admin/events">
                         <i class="bi bi-calendar-event"></i> Event Management
+                    </NavLink>
+                    <NavLink class="nav-link nav-link-admin" href="admin/registrations">
+                        <i class="bi bi-clipboard-check"></i> Registration Management
                     </NavLink>
                 </Authorized>
             </AuthorizeView>

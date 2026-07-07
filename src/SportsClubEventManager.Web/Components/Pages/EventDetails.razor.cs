@@ -1,10 +1,7 @@
 using Microsoft.AspNetCore.Components;
-using Microsoft.JSInterop;
 using SportsClubEventManager.Shared.DTOs;
-using SportsClubEventManager.Web.Constants;
 using SportsClubEventManager.Web.Models;
 using SportsClubEventManager.Web.Services;
-using System.Text.Json;
 
 namespace SportsClubEventManager.Web.Components.Pages;
 
@@ -14,17 +11,13 @@ namespace SportsClubEventManager.Web.Components.Pages;
 /// </summary>
 public sealed partial class EventDetails
 {
-    private const string LocalStorageKeyPrefix = LocalStorageKeys.EventRegistrationPrefix;
-
     private EventDetailDto? eventDetail;
     private bool isLoading = true;
     private bool hasError;
     private bool isNotFound;
 
     private bool isRegistered;
-    private Guid? currentUserId;
-    private string? currentUserName;
-    private string? currentUserEmail;
+    private Guid? currentRegistrationId;
 
     private bool showRegistrationForm;
     private bool showCancelConfirmation;
@@ -47,10 +40,7 @@ public sealed partial class EventDetails
     private ILogger<EventDetails> Logger { get; set; } = default!;
 
     [Inject]
-    private IJSRuntime JSRuntime { get; set; } = default!;
-
-    [Inject]
-    private IGuidProvider GuidProvider { get; set; } = default!;
+    private IRegistrationService RegistrationService { get; set; } = default!;
 
     /// <summary>
     /// Initializes the component and loads event details.
@@ -58,7 +48,7 @@ public sealed partial class EventDetails
     protected override async Task OnInitializedAsync()
     {
         await LoadEventDetailsAsync();
-        await LoadRegistrationStateAsync();
+        await LoadMyRegistrationStateAsync();
     }
 
     /// <summary>
@@ -90,71 +80,21 @@ public sealed partial class EventDetails
         }
     }
 
-    /// <summary>
-    /// Loads registration state from browser localStorage.
-    /// </summary>
-    private async Task LoadRegistrationStateAsync()
+    private async Task LoadMyRegistrationStateAsync()
     {
         try
         {
-            var storageKey = $"{LocalStorageKeyPrefix}{Id}";
-            var storedData = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", storageKey);
+            var myRegistrations = await RegistrationService.GetMyRegistrationsAsync();
+            var matchingRegistration = myRegistrations.FirstOrDefault(r => r.EventId == Id);
 
-            if (!string.IsNullOrWhiteSpace(storedData))
-            {
-                var registrationData = JsonSerializer.Deserialize<RegistrationStorageData>(storedData);
-                if (registrationData is not null)
-                {
-                    currentUserId = registrationData.UserId;
-                    currentUserName = registrationData.UserName;
-                    currentUserEmail = registrationData.UserEmail;
-                    isRegistered = true;
-                }
-            }
+            isRegistered = matchingRegistration is not null;
+            currentRegistrationId = matchingRegistration?.RegistrationId;
         }
         catch (Exception ex)
         {
-            Logger.LogWarning(ex, "Failed to load registration state from localStorage for event {EventId}", Id);
-        }
-    }
-
-    /// <summary>
-    /// Saves registration state to browser localStorage.
-    /// </summary>
-    private async Task SaveRegistrationStateAsync(Guid userId, string userName, string userEmail)
-    {
-        try
-        {
-            var storageKey = $"{LocalStorageKeyPrefix}{Id}";
-            var registrationData = new RegistrationStorageData
-            {
-                UserId = userId,
-                UserName = userName,
-                UserEmail = userEmail
-            };
-
-            var jsonData = JsonSerializer.Serialize(registrationData);
-            await JSRuntime.InvokeVoidAsync("localStorage.setItem", storageKey, jsonData);
-        }
-        catch (Exception ex)
-        {
-            Logger.LogWarning(ex, "Failed to save registration state to localStorage for event {EventId}", Id);
-        }
-    }
-
-    /// <summary>
-    /// Removes registration state from browser localStorage.
-    /// </summary>
-    private async Task ClearRegistrationStateAsync()
-    {
-        try
-        {
-            var storageKey = $"{LocalStorageKeyPrefix}{Id}";
-            await JSRuntime.InvokeVoidAsync("localStorage.removeItem", storageKey);
-        }
-        catch (Exception ex)
-        {
-            Logger.LogWarning(ex, "Failed to clear registration state from localStorage for event {EventId}", Id);
+            Logger.LogWarning(ex, "Failed to load current user registrations for event {EventId}", Id);
+            isRegistered = false;
+            currentRegistrationId = null;
         }
     }
 
@@ -197,27 +137,24 @@ public sealed partial class EventDetails
     /// </summary>
     private async Task HandleRegistrationSubmit(RegistrationFormModel formModel)
     {
+        _ = formModel;
         isRegistrationInProgress = true;
         ClearMessages();
 
         try
         {
-            var userId = GuidProvider.NewGuid();
-            var result = await EventService.RegisterForEventAsync(Id, userId);
+            var result = await EventService.RegisterForEventAsync(Id);
 
             if (result is not null)
             {
-                currentUserId = userId;
-                currentUserName = formModel.Name;
-                currentUserEmail = formModel.Email;
+                currentRegistrationId = result.RegistrationId;
                 isRegistered = true;
-
-                await SaveRegistrationStateAsync(userId, formModel.Name, formModel.Email);
 
                 successMessage = "Registration successful! You are now registered for this event.";
                 showRegistrationForm = false;
 
                 await LoadEventDetailsAsync();
+                await LoadMyRegistrationStateAsync();
             }
             else
             {
@@ -240,9 +177,9 @@ public sealed partial class EventDetails
     /// </summary>
     private async Task HandleCancellationConfirm()
     {
-        if (currentUserId is null)
+        if (currentRegistrationId is null)
         {
-            errorMessage = "Unable to cancel registration: user information not found.";
+            errorMessage = "Unable to cancel registration: registration information not found.";
             showCancelConfirmation = false;
             return;
         }
@@ -252,21 +189,18 @@ public sealed partial class EventDetails
 
         try
         {
-            var success = await EventService.CancelRegistrationAsync(Id, currentUserId.Value);
+            var success = await EventService.CancelRegistrationAsync(currentRegistrationId.Value);
 
             if (success)
             {
-                currentUserId = null;
-                currentUserName = null;
-                currentUserEmail = null;
+                currentRegistrationId = null;
                 isRegistered = false;
-
-                await ClearRegistrationStateAsync();
 
                 successMessage = "Registration cancelled successfully.";
                 showCancelConfirmation = false;
 
                 await LoadEventDetailsAsync();
+                await LoadMyRegistrationStateAsync();
             }
             else
             {
@@ -307,15 +241,5 @@ public sealed partial class EventDetails
     private void ClearErrorMessage()
     {
         errorMessage = null;
-    }
-
-    /// <summary>
-    /// Data structure for storing registration information in browser localStorage.
-    /// </summary>
-    private sealed class RegistrationStorageData
-    {
-        public Guid UserId { get; set; }
-        public string UserName { get; set; } = string.Empty;
-        public string UserEmail { get; set; } = string.Empty;
     }
 }
