@@ -75,6 +75,14 @@ builder.Services.AddHttpClient<IUserProfileService, UserProfileService>(client =
     client.Timeout = TimeSpan.FromSeconds(30);
 });
 
+builder.Services.AddHttpClient<IUserManagementService, UserManagementService>(client =>
+{
+    var baseUrl = builder.Configuration["ApiSettings:BaseUrl"]
+        ?? throw new InvalidOperationException("ApiSettings:BaseUrl not configured");
+    client.BaseAddress = new Uri(baseUrl);
+    client.Timeout = TimeSpan.FromSeconds(30);
+});
+
 // Add utility services
 builder.Services.AddSingleton<IGuidProvider, GuidProvider>();
 
