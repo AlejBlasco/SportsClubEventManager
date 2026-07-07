@@ -6,6 +6,7 @@ using SportsClubEventManager.Infrastructure.Authentication;
 using SportsClubEventManager.Infrastructure.Authentication.OAuth2;
 using SportsClubEventManager.Infrastructure.Common;
 using SportsClubEventManager.Infrastructure.Persistence;
+using SportsClubEventManager.Infrastructure.Services;
 
 namespace SportsClubEventManager.Infrastructure;
 
@@ -42,6 +43,7 @@ public static class DependencyInjection
         services.AddScoped<ITokenService, TokenService>();
         services.AddScoped<IPasswordHasher, PasswordHasher>();
         services.AddScoped<GoogleOAuth2Handler>();
+        services.AddScoped<IAuditService, AuditService>();
 
         return services;
     }

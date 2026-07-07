@@ -24,6 +24,11 @@ public interface IApplicationDbContext
     DbSet<User> Users { get; }
 
     /// <summary>
+    /// Gets the AuditLogs table.
+    /// </summary>
+    DbSet<AuditLog> AuditLogs { get; }
+
+    /// <summary>
     /// Saves all changes made in this context to the database asynchronously.
     /// </summary>
     /// <param name="cancellationToken">A token to observe while waiting for the task to complete.</param>
