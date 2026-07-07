@@ -14,7 +14,7 @@ namespace SportsClubEventManager.Web.Tests.Components;
 public sealed class EventDetailsPageTests : TestContext
 {
     private readonly IEventService _eventService;
-    private readonly IGuidProvider _guidProvider;
+    private readonly IRegistrationService _registrationService;
 
     /// <summary>
     /// Initializes the test with mocked dependencies.
@@ -22,9 +22,11 @@ public sealed class EventDetailsPageTests : TestContext
     public EventDetailsPageTests()
     {
         _eventService = Substitute.For<IEventService>();
-        _guidProvider = Substitute.For<IGuidProvider>();
+        _registrationService = Substitute.For<IRegistrationService>();
+        _registrationService.GetMyRegistrationsAsync(Arg.Any<CancellationToken>())
+            .Returns([]);
         Services.AddSingleton(_eventService);
-        Services.AddSingleton(_guidProvider);
+        Services.AddSingleton(_registrationService);
     }
 
     /// <summary>

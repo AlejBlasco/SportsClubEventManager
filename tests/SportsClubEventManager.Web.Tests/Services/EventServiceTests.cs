@@ -341,7 +341,7 @@ public sealed class EventServiceTests
         var service = new EventService(httpClient);
 
         // Act
-        var result = await service.RegisterForEventAsync(eventId, userId);
+        var result = await service.RegisterForEventAsync(eventId);
 
         // Assert
         result.Should().NotBeNull();
@@ -356,12 +356,11 @@ public sealed class EventServiceTests
     {
         // Arrange
         var eventId = Guid.NewGuid();
-        var userId = Guid.NewGuid();
         var httpClient = CreateHttpClientWithRegistrationResponse(HttpStatusCode.NotFound, null);
         var service = new EventService(httpClient);
 
         // Act
-        var result = await service.RegisterForEventAsync(eventId, userId);
+        var result = await service.RegisterForEventAsync(eventId);
 
         // Assert
         result.Should().BeNull();
@@ -375,12 +374,11 @@ public sealed class EventServiceTests
     {
         // Arrange
         var eventId = Guid.NewGuid();
-        var userId = Guid.NewGuid();
         var httpClient = CreateHttpClientWithRegistrationResponse(HttpStatusCode.Conflict, null);
         var service = new EventService(httpClient);
 
         // Act
-        var result = await service.RegisterForEventAsync(eventId, userId);
+        var result = await service.RegisterForEventAsync(eventId);
 
         // Assert
         result.Should().BeNull();
@@ -394,12 +392,11 @@ public sealed class EventServiceTests
     {
         // Arrange
         var eventId = Guid.NewGuid();
-        var userId = Guid.NewGuid();
         var httpClient = CreateHttpClientWithRegistrationResponse(HttpStatusCode.BadRequest, null);
         var service = new EventService(httpClient);
 
         // Act
-        var result = await service.RegisterForEventAsync(eventId, userId);
+        var result = await service.RegisterForEventAsync(eventId);
 
         // Assert
         result.Should().BeNull();
@@ -413,12 +410,11 @@ public sealed class EventServiceTests
     {
         // Arrange
         var eventId = Guid.NewGuid();
-        var userId = Guid.NewGuid();
         var httpClient = CreateHttpClientWithRegistrationResponse(HttpStatusCode.InternalServerError, null);
         var service = new EventService(httpClient);
 
         // Act
-        var act = async () => await service.RegisterForEventAsync(eventId, userId);
+        var act = async () => await service.RegisterForEventAsync(eventId);
 
         // Assert
         await act.Should().ThrowAsync<HttpRequestException>();
@@ -432,14 +428,13 @@ public sealed class EventServiceTests
     {
         // Arrange
         var eventId = Guid.NewGuid();
-        var userId = Guid.NewGuid();
         var httpClient = CreateHttpClientWithDelay();
         var service = new EventService(httpClient);
         using var cts = new CancellationTokenSource();
         cts.Cancel();
 
         // Act
-        var act = async () => await service.RegisterForEventAsync(eventId, userId, cts.Token);
+        var act = async () => await service.RegisterForEventAsync(eventId, cts.Token);
 
         // Assert
         await act.Should().ThrowAsync<OperationCanceledException>();
@@ -452,13 +447,12 @@ public sealed class EventServiceTests
     public async Task CancelRegistrationAsync_WhenApiReturns204_ReturnsTrue()
     {
         // Arrange
-        var eventId = Guid.NewGuid();
-        var userId = Guid.NewGuid();
+        var registrationId = Guid.NewGuid();
         var httpClient = CreateHttpClientWithCancellationResponse(HttpStatusCode.NoContent);
         var service = new EventService(httpClient);
 
         // Act
-        var result = await service.CancelRegistrationAsync(eventId, userId);
+        var result = await service.CancelRegistrationAsync(registrationId);
 
         // Assert
         result.Should().BeTrue();
@@ -471,13 +465,12 @@ public sealed class EventServiceTests
     public async Task CancelRegistrationAsync_WhenApiReturns404_ReturnsFalse()
     {
         // Arrange
-        var eventId = Guid.NewGuid();
-        var userId = Guid.NewGuid();
+        var registrationId = Guid.NewGuid();
         var httpClient = CreateHttpClientWithCancellationResponse(HttpStatusCode.NotFound);
         var service = new EventService(httpClient);
 
         // Act
-        var result = await service.CancelRegistrationAsync(eventId, userId);
+        var result = await service.CancelRegistrationAsync(registrationId);
 
         // Assert
         result.Should().BeFalse();
@@ -490,13 +483,12 @@ public sealed class EventServiceTests
     public async Task CancelRegistrationAsync_WhenApiReturns400BadRequest_ReturnsFalse()
     {
         // Arrange
-        var eventId = Guid.NewGuid();
-        var userId = Guid.NewGuid();
+        var registrationId = Guid.NewGuid();
         var httpClient = CreateHttpClientWithCancellationResponse(HttpStatusCode.BadRequest);
         var service = new EventService(httpClient);
 
         // Act
-        var result = await service.CancelRegistrationAsync(eventId, userId);
+        var result = await service.CancelRegistrationAsync(registrationId);
 
         // Assert
         result.Should().BeFalse();
@@ -509,13 +501,12 @@ public sealed class EventServiceTests
     public async Task CancelRegistrationAsync_WhenApiReturns500_ThrowsHttpRequestException()
     {
         // Arrange
-        var eventId = Guid.NewGuid();
-        var userId = Guid.NewGuid();
+        var registrationId = Guid.NewGuid();
         var httpClient = CreateHttpClientWithCancellationResponse(HttpStatusCode.InternalServerError);
         var service = new EventService(httpClient);
 
         // Act
-        var act = async () => await service.CancelRegistrationAsync(eventId, userId);
+        var act = async () => await service.CancelRegistrationAsync(registrationId);
 
         // Assert
         await act.Should().ThrowAsync<HttpRequestException>();
@@ -528,15 +519,14 @@ public sealed class EventServiceTests
     public async Task CancelRegistrationAsync_WhenCancelled_ThrowsOperationCanceledException()
     {
         // Arrange
-        var eventId = Guid.NewGuid();
-        var userId = Guid.NewGuid();
+        var registrationId = Guid.NewGuid();
         var httpClient = CreateHttpClientWithDelay();
         var service = new EventService(httpClient);
         using var cts = new CancellationTokenSource();
         cts.Cancel();
 
         // Act
-        var act = async () => await service.CancelRegistrationAsync(eventId, userId, cts.Token);
+        var act = async () => await service.CancelRegistrationAsync(registrationId, cts.Token);
 
         // Assert
         await act.Should().ThrowAsync<OperationCanceledException>();
