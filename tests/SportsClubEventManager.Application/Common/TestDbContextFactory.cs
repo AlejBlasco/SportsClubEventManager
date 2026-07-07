@@ -63,4 +63,9 @@ internal sealed class TestApplicationDbContext : DbContext, IApplicationDbContex
     /// Gets the Users table.
     /// </summary>
     public DbSet<User> Users => Set<User>();
+
+    /// <summary>
+    /// Gets the AuditLogs table.
+    /// </summary>
+    public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
 }
