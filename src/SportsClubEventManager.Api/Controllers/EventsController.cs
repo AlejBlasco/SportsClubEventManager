@@ -2,7 +2,6 @@ using System.Security.Claims;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using SportsClubEventManager.Api.Models;
 using SportsClubEventManager.Application.Events.Commands.CancelRegistration;
 using SportsClubEventManager.Application.Events.Commands.RegisterForEvent;
 using SportsClubEventManager.Application.Events.Queries.GetEventById;
@@ -95,7 +94,6 @@ public sealed class EventsController(ISender sender) : ControllerBase
     /// Registers a user for a specific event.
     /// </summary>
     /// <param name="id">The unique identifier of the event.</param>
-    /// <param name="request">The registration request containing the user identifier.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Registration details including full event information.</returns>
     /// <response code="201">Registration created successfully. Location header contains the URI of the created registration.</response>
@@ -114,10 +112,8 @@ public sealed class EventsController(ISender sender) : ControllerBase
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
     public async Task<ActionResult<RegistrationCreatedDto>> RegisterForEvent(
         Guid id,
-        [FromBody] RegisterForEventRequest request,
         CancellationToken cancellationToken)
     {
-        // Validate that the authenticated user matches the requested userId (unless admin)
         var authenticatedUserIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (string.IsNullOrEmpty(authenticatedUserIdClaim) || !Guid.TryParse(authenticatedUserIdClaim, out var authenticatedUserId))
         {
@@ -129,18 +125,10 @@ public sealed class EventsController(ISender sender) : ControllerBase
             });
         }
 
-        var userRole = User.FindFirstValue(ClaimTypes.Role);
-        var isAdmin = userRole == "Administrator";
-
-        if (!isAdmin && authenticatedUserId != request.UserId)
-        {
-            return Forbid();
-        }
-
         var command = new RegisterForEventCommand
         {
             EventId = id,
-            UserId = request.UserId
+            UserId = authenticatedUserId
         };
 
         try
@@ -191,7 +179,6 @@ public sealed class EventsController(ISender sender) : ControllerBase
     /// Cancels a user's registration for a specific event.
     /// </summary>
     /// <param name="id">The unique identifier of the event.</param>
-    /// <param name="request">The cancellation request containing the user identifier.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>No content on success.</returns>
     /// <response code="204">Registration cancelled successfully.</response>
@@ -210,10 +197,8 @@ public sealed class EventsController(ISender sender) : ControllerBase
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> CancelRegistration(
         Guid id,
-        [FromBody] CancelRegistrationRequest request,
         CancellationToken cancellationToken)
     {
-        // Validate that the authenticated user matches the requested userId (unless admin)
         var authenticatedUserIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (string.IsNullOrEmpty(authenticatedUserIdClaim) || !Guid.TryParse(authenticatedUserIdClaim, out var authenticatedUserId))
         {
@@ -225,18 +210,10 @@ public sealed class EventsController(ISender sender) : ControllerBase
             });
         }
 
-        var userRole = User.FindFirstValue(ClaimTypes.Role);
-        var isAdmin = userRole == "Administrator";
-
-        if (!isAdmin && authenticatedUserId != request.UserId)
-        {
-            return Forbid();
-        }
-
         var command = new CancelRegistrationCommand
         {
             EventId = id,
-            UserId = request.UserId
+            UserId = authenticatedUserId
         };
 
         try
