@@ -1,0 +1,81 @@
+@using SportsClubEventManager.Shared.DTOs
+@using SportsClubEventManager.Web.Services
+@inject IEventManagementService EventManagementService
+
+@if (_isVisible)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi bi-calendar-event"></i>
+                        @(_editMode ? "Edit Event" : "Create New Event")
+                    </h5>
+                    <button type="button" class="btn-close" @onclick="Close"></button>
+                </div>
+
+                <div class="modal-body">
+                    @if (_errorMessage != null)
+                    {
+                        <div class="alert alert-danger">
+                            <i class="bi bi-exclamation-triangle"></i> @_errorMessage
+                        </div>
+                    }
+
+                    <EditForm Model="_formModel" OnValidSubmit="SaveAsync">
+                        <DataAnnotationsValidator />
+
+                        <div class="mb-3">
+                            <label class="form-label">Title <span class="text-danger">*</span></label>
+                            <InputText class="form-control" @bind-Value="_formModel.Title" placeholder="Enter event title" />
+                            <ValidationMessage For="@(() => _formModel.Title)" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Description</label>
+                            <InputTextArea class="form-control" rows="4" @bind-Value="_formModel.Description" placeholder="Enter event description (optional)" />
+                            <ValidationMessage For="@(() => _formModel.Description)" />
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Date <span class="text-danger">*</span></label>
+                                <InputDate Type="InputDateType.DateTimeLocal" class="form-control" @bind-Value="_formModel.Date" />
+                                <ValidationMessage For="@(() => _formModel.Date)" />
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Max Capacity <span class="text-danger">*</span></label>
+                                <InputNumber class="form-control" @bind-Value="_formModel.MaxCapacity" placeholder="Enter maximum capacity" />
+                                <ValidationMessage For="@(() => _formModel.MaxCapacity)" />
+                                @if (_editMode && _currentRegistrations > 0)
+                                {
+                                    <small class="text-muted">Current registrations: @_currentRegistrations</small>
+                                }
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Location <span class="text-danger">*</span></label>
+                            <InputText class="form-control" @bind-Value="_formModel.Location" placeholder="Enter event location" />
+                            <ValidationMessage For="@(() => _formModel.Location)" />
+                        </div>
+
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" @onclick="Close" disabled="@_saving">
+                                Cancel
+                            </button>
+                            <button type="submit" class="btn btn-primary" disabled="@_saving">
+                                @if (_saving)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-2"></span>
+                                }
+                                <i class="bi bi-save"></i> @(_editMode ? "Save Changes" : "Create Event")
+                            </button>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
+    </div>
+}

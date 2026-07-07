@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using SportsClubEventManager.Domain.Entities;
 
 namespace SportsClubEventManager.Application.Common.Interfaces;
@@ -27,6 +28,11 @@ public interface IApplicationDbContext
     /// Gets the AuditLogs table.
     /// </summary>
     DbSet<AuditLog> AuditLogs { get; }
+
+    /// <summary>
+    /// Provides access to database-related information and operations.
+    /// </summary>
+    DatabaseFacade Database { get; }
 
     /// <summary>
     /// Saves all changes made in this context to the database asynchronously.

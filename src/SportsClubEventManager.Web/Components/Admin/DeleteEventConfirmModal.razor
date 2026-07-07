@@ -1,0 +1,74 @@
+@using SportsClubEventManager.Shared.DTOs
+@using SportsClubEventManager.Web.Services
+@inject IEventManagementService EventManagementService
+
+@if (_isVisible && _eventToDelete != null)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title">
+                        <i class="bi bi-exclamation-triangle"></i>
+                        Confirm Event Deletion
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="Close"></button>
+                </div>
+
+                <div class="modal-body">
+                    @if (_errorMessage != null)
+                    {
+                        <div class="alert alert-danger">
+                            <i class="bi bi-exclamation-triangle"></i> @_errorMessage
+                        </div>
+                    }
+
+                    <div class="alert alert-warning">
+                        <strong>Warning:</strong> This action cannot be undone.
+                    </div>
+
+                    <p>You are about to delete the following event:</p>
+
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            <h6 class="card-title">@_eventToDelete.Title</h6>
+                            <p class="card-text mb-2">
+                                <i class="bi bi-calendar"></i> <strong>Date:</strong> @_eventToDelete.Date.ToString("yyyy-MM-dd HH:mm")<br />
+                                <i class="bi bi-geo-alt"></i> <strong>Location:</strong> @_eventToDelete.Location<br />
+                                <i class="bi bi-people"></i> <strong>Current Registrations:</strong> @_eventToDelete.CurrentRegistrations / @_eventToDelete.MaxCapacity
+                            </p>
+                        </div>
+                    </div>
+
+                    @if (_eventToDelete.CurrentRegistrations > 0)
+                    {
+                        <div class="alert alert-danger">
+                            <i class="bi bi-exclamation-triangle"></i>
+                            <strong>Impact:</strong> This event has <strong>@_eventToDelete.CurrentRegistrations active registration(s)</strong>.
+                            Deleting this event will <strong>cancel all registrations</strong>. Users will lose their spots.
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="text-muted">This event has no active registrations.</p>
+                    }
+
+                    <p class="fw-bold">Are you sure you want to proceed?</p>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="Close" disabled="@_deleting">
+                        Cancel
+                    </button>
+                    <button type="button" class="btn btn-danger" @onclick="ConfirmDeleteAsync" disabled="@_deleting">
+                        @if (_deleting)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2"></span>
+                        }
+                        <i class="bi bi-trash"></i> Yes, Delete Event
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
