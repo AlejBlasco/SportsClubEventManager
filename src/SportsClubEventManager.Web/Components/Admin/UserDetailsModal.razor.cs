@@ -13,12 +13,21 @@ namespace SportsClubEventManager.Web.Components.Admin;
 /// </summary>
 public partial class UserDetailsModal
 {
+    /// <summary>
+    /// Gets or sets the identifier of the user to display in the modal.
+    /// </summary>
     [Parameter]
     public Guid UserId { get; set; }
 
+    /// <summary>
+    /// Gets or sets the callback invoked when the modal is closed.
+    /// </summary>
     [Parameter]
     public EventCallback OnClose { get; set; }
 
+    /// <summary>
+    /// Gets or sets the callback invoked after a successful user update.
+    /// </summary>
     [Parameter]
     public EventCallback OnUserUpdated { get; set; }
 
