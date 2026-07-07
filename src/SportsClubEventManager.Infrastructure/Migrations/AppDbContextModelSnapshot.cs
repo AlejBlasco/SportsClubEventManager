@@ -22,6 +22,65 @@ namespace SportsClubEventManager.Infrastructure.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("SportsClubEventManager.Domain.Entities.AuditLog", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("Changes")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("IpAddress")
+                        .HasMaxLength(45)
+                        .HasColumnType("nvarchar(45)");
+
+                    b.Property<Guid>("PerformedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("TargetUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("TargetUserEmail")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<DateTime>("Timestamp")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UserAgent")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Action")
+                        .HasDatabaseName("IX_AuditLogs_Action");
+
+                    b.HasIndex("PerformedByUserId")
+                        .HasDatabaseName("IX_AuditLogs_PerformedByUserId");
+
+                    b.HasIndex("TargetUserId")
+                        .HasDatabaseName("IX_AuditLogs_TargetUserId");
+
+                    b.HasIndex("Timestamp")
+                        .HasDatabaseName("IX_AuditLogs_Timestamp");
+
+                    b.ToTable("AuditLogs", (string)null);
+                });
+
             modelBuilder.Entity("SportsClubEventManager.Domain.Entities.Event", b =>
                 {
                     b.Property<Guid>("Id")
@@ -160,6 +219,13 @@ namespace SportsClubEventManager.Infrastructure.Migrations
                     b.Property<DateTime?>("RefreshTokenExpiryTime")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasDefaultValue("User");
+
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
 
@@ -172,11 +238,24 @@ namespace SportsClubEventManager.Infrastructure.Migrations
 
                     b.HasIndex("RefreshToken");
 
+                    b.HasIndex("Role");
+
                     b.HasIndex("ProviderName", "ExternalProviderId")
                         .IsUnique()
                         .HasFilter("[ExternalProviderId] IS NOT NULL AND [ProviderName] IS NOT NULL");
 
                     b.ToTable("Users", (string)null);
+                });
+
+            modelBuilder.Entity("SportsClubEventManager.Domain.Entities.AuditLog", b =>
+                {
+                    b.HasOne("SportsClubEventManager.Domain.Entities.User", "PerformedByUser")
+                        .WithMany()
+                        .HasForeignKey("PerformedByUserId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.Navigation("PerformedByUser");
                 });
 
             modelBuilder.Entity("SportsClubEventManager.Domain.Entities.Registration", b =>
