@@ -33,5 +33,20 @@ public enum AuditAction
     /// <summary>
     /// User account was permanently deleted by an administrator.
     /// </summary>
-    UserDeleted = 5
+    UserDeleted = 5,
+
+    /// <summary>
+    /// Event was created by an administrator.
+    /// </summary>
+    EventCreated = 6,
+
+    /// <summary>
+    /// Event was updated by an administrator.
+    /// </summary>
+    EventUpdated = 7,
+
+    /// <summary>
+    /// Event was deleted by an administrator.
+    /// </summary>
+    EventDeleted = 8
 }
