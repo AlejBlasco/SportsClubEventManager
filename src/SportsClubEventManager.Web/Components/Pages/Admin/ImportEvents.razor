@@ -171,7 +171,13 @@
                                     @row.SourceDay / @row.SourceTime / @row.SourceModality / @row.SourceField / @row.SourceCategory
                                 </td>
                                 <td>
-                                    @if (row.IsValid)
+                                    @if (row.IsDuplicate)
+                                    {
+                                        <span class="badge bg-warning text-dark" title="@string.Join("; ", row.Errors)">
+                                            <i class="bi bi-files"></i> Duplicate
+                                        </span>
+                                    }
+                                    else if (row.IsValid)
                                     {
                                         <span class="badge bg-success">Valid</span>
                                     }

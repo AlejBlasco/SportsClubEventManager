@@ -2,6 +2,8 @@ using System.Reflection;
 using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
 using SportsClubEventManager.Application.Common.Behaviors;
+using SportsClubEventManager.Application.Common.Interfaces;
+using SportsClubEventManager.Application.Import.Services;
 
 namespace SportsClubEventManager.Application;
 
@@ -28,6 +30,10 @@ public static class DependencyInjection
 
         // Register FluentValidation validators
         services.AddValidatorsFromAssembly(assembly);
+
+        // Register Application-layer services whose only dependencies (IApplicationDbContext,
+        // IValidator<T>) already live in this project.
+        services.AddScoped<IEventImportValidationService, EventImportValidationService>();
 
         return services;
     }
