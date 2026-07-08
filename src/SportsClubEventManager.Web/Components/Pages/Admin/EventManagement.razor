@@ -1,4 +1,5 @@
 @page "/admin/events"
+@rendermode InteractiveServer
 @using Microsoft.AspNetCore.Authorization
 @using SportsClubEventManager.Shared.DTOs
 @using SportsClubEventManager.Web.Services
@@ -11,19 +12,23 @@
 
 <div class="admin-page">
     <div class="page-header">
-        <h1>
-            <i class="bi bi-calendar-event"></i>
-            Event Management
-        </h1>
-        <p class="page-description">
-            Manage events, schedules, and capacity
-        </p>
-        <button class="btn btn-primary mt-3" @onclick="OpenCreateModal">
-            <i class="bi bi-plus-circle"></i> Create New Event
-        </button>
-        <button class="btn btn-outline-primary mt-3" @onclick="@(() => NavigationManager.NavigateTo("/admin/events/import"))">
-            <i class="bi bi-file-earmark-arrow-up"></i> Import CSV
-        </button>
+        <div class="page-header-inner">
+            <h1>
+                <i class="bi bi-calendar-event"></i>
+                Event Management
+            </h1>
+            <p class="page-subtitle">
+                Manage events, schedules, and capacity
+            </p>
+            <div class="page-header-actions">
+                <button class="btn btn-primary" @onclick="OpenCreateModal">
+                    <i class="bi bi-plus-circle"></i> Create New Event
+                </button>
+                <button class="btn btn-outline-light" @onclick="@(() => NavigationManager.NavigateTo("/admin/events/import"))">
+                    <i class="bi bi-file-earmark-arrow-up"></i> Import CSV
+                </button>
+            </div>
+        </div>
     </div>
 
     @if (_errorMessage != null)
@@ -132,12 +137,14 @@
                             <td>
                                 @if (!eventItem.IsPastEvent)
                                 {
-                                    <button class="btn btn-sm btn-outline-primary me-1" @onclick="() => OpenEditModal(eventItem)">
-                                        <i class="bi bi-pencil"></i>
-                                    </button>
-                                    <button class="btn btn-sm btn-outline-danger" @onclick="() => OpenDeleteModal(eventItem)">
-                                        <i class="bi bi-trash"></i>
-                                    </button>
+                                    <div class="table-actions">
+                                        <button class="btn btn-sm btn-outline-primary" @onclick="() => OpenEditModal(eventItem)">
+                                            <i class="bi bi-pencil"></i> Edit
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" @onclick="() => OpenDeleteModal(eventItem)">
+                                            <i class="bi bi-trash"></i> Delete
+                                        </button>
+                                    </div>
                                 }
                                 else
                                 {

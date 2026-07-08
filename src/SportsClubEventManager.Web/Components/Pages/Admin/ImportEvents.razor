@@ -1,4 +1,5 @@
 @page "/admin/events/import"
+@rendermode InteractiveServer
 @using Microsoft.AspNetCore.Authorization
 @using SportsClubEventManager.Shared.DTOs
 @using SportsClubEventManager.Web.Services
@@ -11,17 +12,21 @@
 
 <div class="admin-page">
     <div class="page-header">
-        <h1>
-            <i class="bi bi-file-earmark-arrow-up"></i>
-            Import Events from CSV
-        </h1>
-        <p class="page-description">
-            Upload a standardized CSV file (header: DÍA, MODAL., NOMBRE TIRADA, HORA, CAMPO, LUGAR, CAT),
-            preview the mapped events, and confirm the import.
-        </p>
-        <button class="btn btn-outline-secondary mt-3" @onclick="@(() => NavigationManager.NavigateTo("/admin/events"))">
-            <i class="bi bi-arrow-left"></i> Back to Event Management
-        </button>
+        <div class="page-header-inner">
+            <h1>
+                <i class="bi bi-file-earmark-arrow-up"></i>
+                Import Events from CSV
+            </h1>
+            <p class="page-subtitle">
+                Upload a standardized CSV file (header: DÍA, MODAL., NOMBRE TIRADA, HORA, CAMPO, LUGAR, CAT),
+                preview the mapped events, and confirm the import.
+            </p>
+            <div class="page-header-actions">
+                <button class="btn btn-outline-light" @onclick="@(() => NavigationManager.NavigateTo("/admin/events"))">
+                    <i class="bi bi-arrow-left"></i> Back to Event Management
+                </button>
+            </div>
+        </div>
     </div>
 
     @if (_errorMessage is not null)
