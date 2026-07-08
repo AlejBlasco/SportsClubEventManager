@@ -1,4 +1,5 @@
 using Bunit;
+using Bunit.TestDoubles;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
@@ -27,6 +28,7 @@ public sealed class EventDetailsPageTests : TestContext
             .Returns([]);
         Services.AddSingleton(_eventService);
         Services.AddSingleton(_registrationService);
+        this.AddTestAuthorization().SetNotAuthorized();
     }
 
     /// <summary>
