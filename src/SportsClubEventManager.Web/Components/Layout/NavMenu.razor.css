@@ -72,6 +72,70 @@
     text-decoration: none;
 }
 
+.nav-dropdown {
+    position: relative;
+    height: 64px;
+    display: flex;
+}
+
+.nav-dropdown-toggle {
+    background: none;
+    border: none;
+    font: inherit;
+    cursor: pointer;
+    gap: 0.4rem;
+}
+
+.nav-dropdown-toggle.active {
+    color: #ffffff;
+    border-bottom-color: var(--club-gold);
+}
+
+.nav-caret {
+    font-size: 0.55rem;
+    margin-left: 0.15rem;
+}
+
+.nav-dropdown-menu {
+    display: none;
+    flex-direction: column;
+    position: absolute;
+    top: 64px;
+    right: 0;
+    min-width: 230px;
+    background: #161616;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+    padding: 0.4rem 0;
+    z-index: 999;
+}
+
+.nav-dropdown:hover .nav-dropdown-menu,
+.nav-dropdown:focus-within .nav-dropdown-menu {
+    display: flex;
+}
+
+.nav-dropdown-menu ::deep .nav-dropdown-item {
+    color: rgba(255, 255, 255, 0.72);
+    text-decoration: none;
+    padding: 0.6rem 1.25rem;
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    white-space: nowrap;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.nav-dropdown-menu ::deep .nav-dropdown-item:hover,
+.nav-dropdown-menu ::deep a.active {
+    color: #ffffff;
+    background: rgba(178, 135, 46, 0.14);
+}
+
 @media (max-width: 767px) {
     .nav-toggler {
         display: block;
@@ -127,5 +191,29 @@
         border-bottom-color: transparent;
         border-left-color: rgba(178, 135, 46, 0.5);
         background: rgba(255, 255, 255, 0.05);
+    }
+
+    .nav-dropdown {
+        height: auto;
+        display: block;
+    }
+
+    .nav-dropdown-toggle.active {
+        border-bottom-color: transparent;
+        border-left-color: var(--club-gold);
+        background: rgba(178, 135, 46, 0.1);
+    }
+
+    .nav-dropdown-menu {
+        display: flex;
+        position: static;
+        background: rgba(255, 255, 255, 0.03);
+        border: none;
+        box-shadow: none;
+        padding: 0;
+    }
+
+    .nav-dropdown-menu ::deep .nav-dropdown-item {
+        padding: 0.75rem 1.5rem 0.75rem 2.75rem;
     }
 }

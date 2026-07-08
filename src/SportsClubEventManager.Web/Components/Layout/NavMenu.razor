@@ -23,15 +23,22 @@
             </AuthorizeView>
             <AuthorizeView Roles="Administrator">
                 <Authorized>
-                    <NavLink class="nav-link nav-link-admin" href="admin/users">
-                        <i class="bi bi-people"></i> User Management
-                    </NavLink>
-                    <NavLink class="nav-link nav-link-admin" href="admin/events">
-                        <i class="bi bi-calendar-event"></i> Event Management
-                    </NavLink>
-                    <NavLink class="nav-link nav-link-admin" href="admin/registrations">
-                        <i class="bi bi-clipboard-check"></i> Registration Management
-                    </NavLink>
+                    <div class="nav-dropdown">
+                        <button type="button" class="nav-link nav-link-admin nav-dropdown-toggle @(_isAdminSectionActive ? "active" : "")" @onclick:stopPropagation="true">
+                            <i class="bi bi-gear-fill"></i> Admin <i class="bi bi-caret-down-fill nav-caret"></i>
+                        </button>
+                        <div class="nav-dropdown-menu">
+                            <NavLink class="nav-dropdown-item" href="admin/users">
+                                <i class="bi bi-people"></i> User Management
+                            </NavLink>
+                            <NavLink class="nav-dropdown-item" href="admin/events">
+                                <i class="bi bi-calendar-event"></i> Event Management
+                            </NavLink>
+                            <NavLink class="nav-dropdown-item" href="admin/registrations">
+                                <i class="bi bi-clipboard-check"></i> Registration Management
+                            </NavLink>
+                        </div>
+                    </div>
                 </Authorized>
             </AuthorizeView>
             <div class="nav-link-auth">
@@ -42,3 +49,32 @@
 </div>
 
 @using SportsClubEventManager.Web.Components.Authentication
+@implements IDisposable
+@inject NavigationManager Navigation
+
+@code {
+    private bool _isAdminSectionActive;
+
+    protected override void OnInitialized()
+    {
+        _isAdminSectionActive = IsAdminPath(Navigation.Uri);
+        Navigation.LocationChanged += OnLocationChanged;
+    }
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        _isAdminSectionActive = IsAdminPath(e.Location);
+        InvokeAsync(StateHasChanged);
+    }
+
+    private bool IsAdminPath(string uri)
+    {
+        var relativePath = Navigation.ToBaseRelativePath(uri);
+        return relativePath.StartsWith("admin/", StringComparison.OrdinalIgnoreCase);
+    }
+
+    public void Dispose()
+    {
+        Navigation.LocationChanged -= OnLocationChanged;
+    }
+}
