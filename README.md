@@ -89,7 +89,7 @@ flowchart TB
 | Testing backend | **xUnit**, **FluentAssertions**, **NSubstitute**, **Bogus** (datos de prueba), `coverlet.collector` |
 | Testing Blazor | **bUnit**, **WireMock.Net** (mock de llamadas HTTP a la API) |
 | Testing de integración | **Testcontainers** (SQL Server), **Respawn** (reseteo de BD), `Microsoft.AspNetCore.Mvc.Testing` |
-| Documentación de API | Swagger / OpenAPI (`/swagger`) |
+| Documentación de API | Swagger / OpenAPI (`/swagger`, solo en entorno `Development`) |
 
 ## c. Instalación y ejecución
 
@@ -133,7 +133,7 @@ flowchart TB
    - Web (Blazor): http://localhost:5123
    - API + Swagger: http://localhost:5240/swagger
 
-> Con `ASPNETCORE_ENVIRONMENT=Development` se aplican también las migraciones de datos de prueba (ver [sección f](#f-usuarios-de-prueba)).
+> Con `ASPNETCORE_ENVIRONMENT=Development` se aplican también las migraciones de datos de prueba (ver [sección f](#f-usuarios-de-prueba)) y se habilita Swagger UI; en otros entornos (`Production`, etc.) el endpoint `/swagger` no se expone.
 
 ### Opción B · Ejecución local con `dotnet run`
 
@@ -158,6 +158,8 @@ dotnet ef database update SeedDevelopmentUserPasswords --project src/SportsClubE
 dotnet run --project src/SportsClubEventManager.Api    # http://localhost:5240 · /swagger
 dotnet run --project src/SportsClubEventManager.Web    # http://localhost:5123
 ```
+
+> `dotnet run` usa por defecto el entorno `Development` (`launchSettings.json`), por lo que `/swagger` está disponible. Si se publica o ejecuta la API con `ASPNETCORE_ENVIRONMENT=Production`, el endpoint de Swagger UI no se registra.
 
 Un fichero de referencia con todos los secretos necesarios está disponible en `.secrets-template.json`.
 
