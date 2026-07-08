@@ -6,6 +6,9 @@ using SportsClubEventManager.Application.Common.Interfaces;
 using SportsClubEventManager.Application.Common.Validators;
 using SportsClubEventManager.Application.Import.Commands.ParseCsvFile;
 using SportsClubEventManager.Application.Import.Models;
+using SportsClubEventManager.Application.Import.Services;
+using SportsClubEventManager.Application.Tests.Common;
+using SportsClubEventManager.Domain.Entities;
 using SportsClubEventManager.Shared.DTOs;
 using Xunit;
 
@@ -13,6 +16,9 @@ namespace SportsClubEventManager.Application.Tests.Import.Commands.ParseCsvFile;
 
 /// <summary>
 /// Tests for ParseCsvFileCommandHandler to verify preview mapping, field-level validation, and fatal-error handling.
+/// The real <see cref="EventImportValidationService"/> is used (against an empty in-memory database) since these
+/// tests exercise the handler's orchestration, not the validation service's own logic (covered separately by
+/// EventImportValidationServiceTests).
 /// </summary>
 public sealed class ParseCsvFileCommandHandlerTests
 {
@@ -37,9 +43,14 @@ public sealed class ParseCsvFileCommandHandlerTests
             .Build();
 
         var itemValidator = new ImportEventItemDtoValidator(_dateTimeProvider);
+        var validationService = new EventImportValidationService(
+            TestDbContextFactory.CreateTestContext(),
+            itemValidator,
+            configuration,
+            Substitute.For<ILogger<EventImportValidationService>>());
         var logger = Substitute.For<ILogger<ParseCsvFileCommandHandler>>();
 
-        _handler = new ParseCsvFileCommandHandler(_parser, configuration, itemValidator, logger);
+        _handler = new ParseCsvFileCommandHandler(_parser, configuration, validationService, logger);
     }
 
     private static ParseCsvFileCommand CreateCommand(int? defaultMaxCapacity = null) => new()
@@ -48,6 +59,31 @@ public sealed class ParseCsvFileCommandHandlerTests
         FileName = "events.csv",
         DefaultMaxCapacity = defaultMaxCapacity
     };
+
+    /// <summary>
+    /// Builds a handler wired to a fresh <see cref="EventImportValidationService"/> against the
+    /// given database context, optionally overriding <c>ImportSettings:NormalizeTitleCapitalization</c>,
+    /// so tests can exercise duplicate detection against persisted events and the normalization
+    /// on/off toggle without depending on the handler's own default-constructed dependencies.
+    /// </summary>
+    private ParseCsvFileCommandHandler CreateHandlerWith(IApplicationDbContext context, bool? normalizeTitleCapitalization = null)
+    {
+        var configurationValues = new Dictionary<string, string?> { { "ImportSettings:DefaultMaxCapacity", "30" } };
+
+        if (normalizeTitleCapitalization.HasValue)
+        {
+            configurationValues["ImportSettings:NormalizeTitleCapitalization"] = normalizeTitleCapitalization.Value.ToString();
+        }
+
+        var configuration = new ConfigurationBuilder().AddInMemoryCollection(configurationValues).Build();
+        var validationService = new EventImportValidationService(
+            context,
+            new ImportEventItemDtoValidator(_dateTimeProvider),
+            configuration,
+            Substitute.For<ILogger<EventImportValidationService>>());
+
+        return new ParseCsvFileCommandHandler(_parser, configuration, validationService, Substitute.For<ILogger<ParseCsvFileCommandHandler>>());
+    }
 
     /// <summary>
     /// Verifies that a fully valid parsed row is mapped to a valid preview row with no errors.
@@ -217,5 +253,114 @@ public sealed class ParseCsvFileCommandHandlerTests
 
         // Assert
         _parser.Received(1).Parse(Arg.Any<Stream>(), Arg.Any<IReadOnlyDictionary<string, string>?>(), 75, Arg.Any<CancellationToken>());
+    }
+
+    /// <summary>
+    /// Verifies that when two parsed rows share the same normalized title and exact date/time,
+    /// the batch validation service's intra-batch duplicate detection is reflected end-to-end in
+    /// the preview response: the second row is flagged <c>IsDuplicate</c> with the expected
+    /// error message and excluded from the valid-row count, while the first row stays valid.
+    /// </summary>
+    [Fact]
+    public async Task Handle_WhenTwoRowsShareTitleAndDate_FlagsSecondRowAsDuplicateInPreview()
+    {
+        // Arrange
+        var sharedDate = new DateTime(2026, 6, 1, 10, 0, 0, DateTimeKind.Utc);
+        _parser.Parse(Arg.Any<Stream>(), Arg.Any<IReadOnlyDictionary<string, string>?>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+            .Returns(new CsvParseResult
+            {
+                Rows =
+                [
+                    new ImportRowParseResult { RowNumber = 1, Title = "Trap Shooting", Date = sharedDate, Location = "Range 1", MaxCapacity = 30, Errors = [] },
+                    new ImportRowParseResult { RowNumber = 2, Title = "TRAP SHOOTING", Date = sharedDate, Location = "Range 1", MaxCapacity = 30, Errors = [] }
+                ]
+            });
+        var handler = CreateHandlerWith(TestDbContextFactory.CreateTestContext());
+
+        // Act
+        var result = await handler.Handle(CreateCommand(), CancellationToken.None);
+
+        // Assert
+        result.Rows[0].IsDuplicate.Should().BeFalse();
+        result.Rows[0].IsValid.Should().BeTrue();
+        result.Rows[1].IsDuplicate.Should().BeTrue();
+        result.Rows[1].IsValid.Should().BeFalse();
+        result.Rows[1].Errors.Should().Contain("Duplicate of row 1");
+        result.ValidRowCount.Should().Be(1);
+    }
+
+    /// <summary>
+    /// Verifies that a parsed row matching an already-persisted event's (title, date) key is
+    /// flagged as a duplicate in the preview response, exercising the handler's end-to-end wiring
+    /// into the validation service's persisted-duplicate lookup (not just the intra-batch path).
+    /// </summary>
+    [Fact]
+    public async Task Handle_WhenRowMatchesPersistedEvent_FlagsRowAsDuplicateInPreview()
+    {
+        // Arrange
+        var sharedDate = new DateTime(2026, 6, 1, 10, 0, 0, DateTimeKind.Utc);
+        var context = TestDbContextFactory.CreateTestContextWithEvents(
+        [
+            new Event { Title = "Trap Shooting", Date = sharedDate, Location = "Range 1", MaxCapacity = 30 }
+        ]);
+        _parser.Parse(Arg.Any<Stream>(), Arg.Any<IReadOnlyDictionary<string, string>?>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+            .Returns(new CsvParseResult
+            {
+                Rows = [new ImportRowParseResult { RowNumber = 1, Title = "Trap Shooting", Date = sharedDate, Location = "Range 1", MaxCapacity = 30, Errors = [] }]
+            });
+        var handler = CreateHandlerWith(context);
+
+        // Act
+        var result = await handler.Handle(CreateCommand(), CancellationToken.None);
+
+        // Assert
+        var row = result.Rows.Single();
+        row.IsDuplicate.Should().BeTrue();
+        row.Errors.Should().Contain("An event with this title and date already exists");
+    }
+
+    /// <summary>
+    /// Verifies that the preview's <c>Title</c> reflects the validation service's normalization
+    /// (trim + title-case), not the raw parsed value, confirming the handler builds
+    /// <see cref="CsvImportRowDto"/> from <c>NormalizedItem</c> as designed.
+    /// </summary>
+    [Fact]
+    public async Task Handle_WhenNormalizeTitleCapitalizationEnabled_PreviewTitleIsTitleCased()
+    {
+        // Arrange
+        _parser.Parse(Arg.Any<Stream>(), Arg.Any<IReadOnlyDictionary<string, string>?>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+            .Returns(new CsvParseResult
+            {
+                Rows = [new ImportRowParseResult { RowNumber = 1, Title = "  trap shooting session  ", Date = DateTime.UtcNow.AddDays(30), Location = "Range 1", MaxCapacity = 30, Errors = [] }]
+            });
+        var handler = CreateHandlerWith(TestDbContextFactory.CreateTestContext(), normalizeTitleCapitalization: true);
+
+        // Act
+        var result = await handler.Handle(CreateCommand(), CancellationToken.None);
+
+        // Assert
+        result.Rows.Single().Title.Should().Be("Trap Shooting Session");
+    }
+
+    /// <summary>
+    /// Verifies that, with title capitalization normalization explicitly disabled via
+    /// configuration, the preview's <c>Title</c> is only trimmed and keeps its original casing.
+    /// </summary>
+    [Fact]
+    public async Task Handle_WhenNormalizeTitleCapitalizationDisabled_PreviewTitleIsOnlyTrimmed()
+    {
+        // Arrange
+        _parser.Parse(Arg.Any<Stream>(), Arg.Any<IReadOnlyDictionary<string, string>?>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+            .Returns(new CsvParseResult
+            {
+                Rows = [new ImportRowParseResult { RowNumber = 1, Title = "  trap SHOOTING session  ", Date = DateTime.UtcNow.AddDays(30), Location = "Range 1", MaxCapacity = 30, Errors = [] }]
+            });
+        var handler = CreateHandlerWith(TestDbContextFactory.CreateTestContext(), normalizeTitleCapitalization: false);
+
+        // Act
+        var result = await handler.Handle(CreateCommand(), CancellationToken.None);
+
+        // Assert
+        result.Rows.Single().Title.Should().Be("trap SHOOTING session");
     }
 }

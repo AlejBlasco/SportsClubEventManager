@@ -1,9 +1,9 @@
 using System.Text.Json;
-using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using SportsClubEventManager.Application.Common.Interfaces;
+using SportsClubEventManager.Application.Import.Models;
 using SportsClubEventManager.Domain.Entities;
 using SportsClubEventManager.Domain.Enums;
 using SportsClubEventManager.Shared.DTOs;
@@ -11,15 +11,15 @@ using SportsClubEventManager.Shared.DTOs;
 namespace SportsClubEventManager.Application.Import.Commands.BulkCreateEvents;
 
 /// <summary>
-/// Handler for confirming a CSV import. Re-validates every row as defense-in-depth against a
-/// stale or tampered client payload, then inserts all events in a single, all-or-nothing
+/// Handler for confirming a CSV import. Re-validates the whole batch as defense-in-depth against
+/// a stale or tampered client payload, then inserts all events in a single, all-or-nothing
 /// database transaction and writes one summary <c>AuditLog</c> entry.
 /// </summary>
 public sealed class BulkCreateEventsCommandHandler : IRequestHandler<BulkCreateEventsCommand, CsvImportResultDto>
 {
     private readonly IApplicationDbContext _context;
     private readonly IAuditService _auditService;
-    private readonly IValidator<ImportEventItemDto> _itemValidator;
+    private readonly IEventImportValidationService _validationService;
     private readonly ILogger<BulkCreateEventsCommandHandler> _logger;
 
     /// <summary>
@@ -27,17 +27,17 @@ public sealed class BulkCreateEventsCommandHandler : IRequestHandler<BulkCreateE
     /// </summary>
     /// <param name="context">The application database context.</param>
     /// <param name="auditService">The audit logging service.</param>
-    /// <param name="itemValidator">The shared field-level validator for mapped event rows.</param>
+    /// <param name="validationService">The batch normalization/validation/duplicate-detection service.</param>
     /// <param name="logger">The logger for structured, content-free diagnostics.</param>
     public BulkCreateEventsCommandHandler(
         IApplicationDbContext context,
         IAuditService auditService,
-        IValidator<ImportEventItemDto> itemValidator,
+        IEventImportValidationService validationService,
         ILogger<BulkCreateEventsCommandHandler> logger)
     {
         _context = context;
         _auditService = auditService;
-        _itemValidator = itemValidator;
+        _validationService = validationService;
         _logger = logger;
     }
 
@@ -49,7 +49,8 @@ public sealed class BulkCreateEventsCommandHandler : IRequestHandler<BulkCreateE
     /// <returns>The import result, summarizing what was imported or why it was rejected.</returns>
     public async Task<CsvImportResultDto> Handle(BulkCreateEventsCommand request, CancellationToken cancellationToken)
     {
-        var failedRows = BuildFailedRows(request.Events);
+        var validationResults = await _validationService.ValidateAsync(request.Events, cancellationToken);
+        var failedRows = BuildFailedRows(validationResults);
 
         if (failedRows.Count > 0)
         {
@@ -73,7 +74,10 @@ public sealed class BulkCreateEventsCommandHandler : IRequestHandler<BulkCreateE
             ? await _context.Database.BeginTransactionAsync(cancellationToken)
             : null;
 
-        var newEvents = request.Events
+        // Persist the normalized item (trimmed and, if enabled, title-cased), not the raw
+        // payload the admin submitted, so the normalization is reflected in what's stored.
+        var newEvents = validationResults
+            .Select(r => r.NormalizedItem)
             .Select(item => new Event
             {
                 Title = item.Title,
@@ -130,23 +134,27 @@ public sealed class BulkCreateEventsCommandHandler : IRequestHandler<BulkCreateE
     }
 
     /// <summary>
-    /// Re-validates every requested row and builds the failure list, if any.
+    /// Builds the failure list from the batch's re-validation results, if any. The row number
+    /// reported here reflects the position of each row within the batch handed to this command,
+    /// matching the row numbers used inside <see cref="IEventImportValidationService"/>'s own
+    /// duplicate messages (e.g. "Duplicate of row 2").
     /// </summary>
-    /// <param name="events">The event rows to validate.</param>
+    /// <param name="validationResults">The batch validation results, in submission order.</param>
     /// <returns>The rows that failed validation, each annotated with its error messages.</returns>
-    private List<CsvImportRowDto> BuildFailedRows(IReadOnlyList<ImportEventItemDto> events)
+    private static List<CsvImportRowDto> BuildFailedRows(IReadOnlyList<ImportRowValidationResult> validationResults)
     {
         var failedRows = new List<CsvImportRowDto>();
 
-        for (var i = 0; i < events.Count; i++)
+        for (var i = 0; i < validationResults.Count; i++)
         {
-            var item = events[i];
-            var validationResult = _itemValidator.Validate(item);
+            var result = validationResults[i];
 
-            if (validationResult.IsValid)
+            if (result.IsValid)
             {
                 continue;
             }
+
+            var item = result.NormalizedItem;
 
             failedRows.Add(new CsvImportRowDto
             {
@@ -157,7 +165,8 @@ public sealed class BulkCreateEventsCommandHandler : IRequestHandler<BulkCreateE
                 Location = item.Location,
                 MaxCapacity = item.MaxCapacity,
                 IsValid = false,
-                Errors = validationResult.Errors.Select(e => e.ErrorMessage).Distinct().ToList()
+                IsDuplicate = result.IsDuplicate,
+                Errors = result.Errors
             });
         }
 

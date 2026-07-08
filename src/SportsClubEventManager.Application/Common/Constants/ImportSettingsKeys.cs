@@ -48,4 +48,16 @@ public static class ImportSettingsKeys
     /// Default value used when <see cref="MaxRowCount"/> is not configured.
     /// </summary>
     public const int MaxRowCountFallback = 5000;
+
+    /// <summary>
+    /// Configuration key for whether imported event titles are normalized to title case
+    /// (via <see cref="System.Globalization.CultureInfo.InvariantCulture"/>'s <c>TextInfo.ToTitleCase</c>)
+    /// before validation and persistence.
+    /// </summary>
+    public const string NormalizeTitleCapitalization = "ImportSettings:NormalizeTitleCapitalization";
+
+    /// <summary>
+    /// Default value used when <see cref="NormalizeTitleCapitalization"/> is not configured.
+    /// </summary>
+    public const bool NormalizeTitleCapitalizationFallback = true;
 }

@@ -69,6 +69,13 @@ public sealed class CsvImportRowDto
     public bool IsValid { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether this row's <c>(Title, Date)</c> key — exact date
+    /// and time, title compared case-insensitively — matches another row in the same file or an
+    /// already-persisted event. A duplicate row is always also <see cref="IsValid"/> <c>false</c>.
+    /// </summary>
+    public bool IsDuplicate { get; set; }
+
+    /// <summary>
     /// Gets or sets the list of validation/parsing error messages for this row, if any.
     /// </summary>
     public IReadOnlyList<string> Errors { get; set; } = [];
