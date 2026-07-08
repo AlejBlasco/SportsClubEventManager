@@ -55,62 +55,69 @@ public class DeleteEventCommandHandler : IRequestHandler<DeleteEventCommand, Del
         var activeRegistrationsCount = eventEntity.Registrations
             .Count(r => r.Status != RegistrationStatus.Cancelled);
 
-        // Begin explicit transaction for atomic operation
-        using var transaction = await _context.Database.BeginTransactionAsync(cancellationToken);
+        // The DbContext is configured with EnableRetryOnFailure, so a manually-opened
+        // transaction must run through the execution strategy — otherwise EF Core throws,
+        // since the retrying strategy needs to be able to retry the whole transaction as a unit.
+        var strategy = _context.Database.CreateExecutionStrategy();
 
-        try
+        return await strategy.ExecuteAsync(async () =>
         {
-            // Cancel all active registrations using bulk update for performance (NFR-2: 5-second SLA for 500+ registrations)
-            // Use ExecuteUpdateAsync to avoid N+1 performance issue and check cancellation token
-            var cancelledCount = await _context.Registrations
-                .Where(r => r.EventId == request.EventId && r.Status != RegistrationStatus.Cancelled)
-                .ExecuteUpdateAsync(
-                    setters => setters.SetProperty(r => r.Status, RegistrationStatus.Cancelled),
+            using var transaction = await _context.Database.BeginTransactionAsync(cancellationToken);
+
+            try
+            {
+                // Cancel all active registrations using bulk update for performance (NFR-2: 5-second SLA for 500+ registrations)
+                // Use ExecuteUpdateAsync to avoid N+1 performance issue and check cancellation token
+                var cancelledCount = await _context.Registrations
+                    .Where(r => r.EventId == request.EventId && r.Status != RegistrationStatus.Cancelled)
+                    .ExecuteUpdateAsync(
+                        setters => setters.SetProperty(r => r.Status, RegistrationStatus.Cancelled),
+                        cancellationToken);
+
+                // Create audit details
+                var auditDetails = new
+                {
+                    EventId = eventEntity.Id,
+                    Title = eventEntity.Title,
+                    Date = eventEntity.Date,
+                    Location = eventEntity.Location,
+                    CancelledRegistrations = activeRegistrationsCount
+                };
+
+                // Log the audit entry
+                await _auditService.LogAsync(
+                    AuditAction.EventDeleted,
+                    request.AdminUserId,
+                    eventEntity.Id,
+                    eventEntity.Title,
+                    JsonSerializer.Serialize(auditDetails),
+                    request.IpAddress,
+                    request.UserAgent,
                     cancellationToken);
 
-            // Create audit details
-            var auditDetails = new
+                // OQ-3: Hard delete the event
+                _context.Events.Remove(eventEntity);
+
+                await _context.SaveChangesAsync(cancellationToken);
+
+                // Commit the transaction
+                await transaction.CommitAsync(cancellationToken);
+
+                return new DeleteEventResponse
+                {
+                    Success = true,
+                    CancelledRegistrationsCount = activeRegistrationsCount,
+                    Message = activeRegistrationsCount > 0
+                        ? $"Event deleted successfully. {activeRegistrationsCount} registration(s) were cancelled."
+                        : "Event deleted successfully."
+                };
+            }
+            catch (Exception)
             {
-                EventId = eventEntity.Id,
-                Title = eventEntity.Title,
-                Date = eventEntity.Date,
-                Location = eventEntity.Location,
-                CancelledRegistrations = activeRegistrationsCount
-            };
-
-            // Log the audit entry
-            await _auditService.LogAsync(
-                AuditAction.EventDeleted,
-                request.AdminUserId,
-                eventEntity.Id,
-                eventEntity.Title,
-                JsonSerializer.Serialize(auditDetails),
-                request.IpAddress,
-                request.UserAgent,
-                cancellationToken);
-
-            // OQ-3: Hard delete the event
-            _context.Events.Remove(eventEntity);
-
-            await _context.SaveChangesAsync(cancellationToken);
-
-            // Commit the transaction
-            await transaction.CommitAsync(cancellationToken);
-
-            return new DeleteEventResponse
-            {
-                Success = true,
-                CancelledRegistrationsCount = activeRegistrationsCount,
-                Message = activeRegistrationsCount > 0
-                    ? $"Event deleted successfully. {activeRegistrationsCount} registration(s) were cancelled."
-                    : "Event deleted successfully."
-            };
-        }
-        catch (Exception)
-        {
-            // Rollback on any error
-            await transaction.RollbackAsync(cancellationToken);
-            throw;
-        }
+                // Rollback on any error
+                await transaction.RollbackAsync(cancellationToken);
+                throw;
+            }
+        });
     }
 }

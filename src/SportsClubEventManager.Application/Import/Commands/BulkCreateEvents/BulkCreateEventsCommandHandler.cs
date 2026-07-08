@@ -68,12 +68,6 @@ public sealed class BulkCreateEventsCommandHandler : IRequestHandler<BulkCreateE
             };
         }
 
-        // The in-memory EF Core provider used by unit tests does not support real transactions,
-        // so the transaction is only opened against a relational (production) database.
-        await using var transaction = _context.Database.IsRelational()
-            ? await _context.Database.BeginTransactionAsync(cancellationToken)
-            : null;
-
         // Persist the normalized item (trimmed and, if enabled, title-cased), not the raw
         // payload the admin submitted, so the normalization is reflected in what's stored.
         var newEvents = validationResults
@@ -94,31 +88,45 @@ public sealed class BulkCreateEventsCommandHandler : IRequestHandler<BulkCreateE
             newEvent.ValidateFutureDate();
         }
 
-        _context.Events.AddRange(newEvents);
+        // The DbContext is configured with EnableRetryOnFailure, so a manually-opened
+        // transaction must run through the execution strategy — otherwise EF Core throws,
+        // since the retrying strategy needs to be able to retry the whole transaction as a unit.
+        // The in-memory EF Core provider used by unit tests does not support real transactions,
+        // so the transaction is only opened against a relational (production) database.
+        var strategy = _context.Database.CreateExecutionStrategy();
 
-        var auditDetails = new
+        await strategy.ExecuteAsync(async () =>
         {
-            Count = newEvents.Count,
-            Events = newEvents.Select(e => new { e.Title, e.Date }).ToList()
-        };
+            await using var transaction = _context.Database.IsRelational()
+                ? await _context.Database.BeginTransactionAsync(cancellationToken)
+                : null;
 
-        // Log the audit entry before saving changes, per the established convention.
-        await _auditService.LogAsync(
-            AuditAction.EventsImported,
-            request.AdminUserId,
-            Guid.Empty,
-            $"{newEvents.Count} event(s) imported via CSV",
-            JsonSerializer.Serialize(auditDetails),
-            request.IpAddress,
-            request.UserAgent,
-            cancellationToken);
+            _context.Events.AddRange(newEvents);
 
-        await _context.SaveChangesAsync(cancellationToken);
+            var auditDetails = new
+            {
+                Count = newEvents.Count,
+                Events = newEvents.Select(e => new { e.Title, e.Date }).ToList()
+            };
 
-        if (transaction is not null)
-        {
-            await transaction.CommitAsync(cancellationToken);
-        }
+            // Log the audit entry before saving changes, per the established convention.
+            await _auditService.LogAsync(
+                AuditAction.EventsImported,
+                request.AdminUserId,
+                Guid.Empty,
+                $"{newEvents.Count} event(s) imported via CSV",
+                JsonSerializer.Serialize(auditDetails),
+                request.IpAddress,
+                request.UserAgent,
+                cancellationToken);
+
+            await _context.SaveChangesAsync(cancellationToken);
+
+            if (transaction is not null)
+            {
+                await transaction.CommitAsync(cancellationToken);
+            }
+        });
 
         _logger.LogInformation(
             "Bulk event import committed for administrator {AdminUserId}: {ImportedCount} event(s) created.",
