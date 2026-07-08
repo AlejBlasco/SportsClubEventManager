@@ -1,0 +1,242 @@
+@using SportsClubEventManager.Domain.Enums
+@using SportsClubEventManager.Shared.DTOs
+@using SportsClubEventManager.Web.Services
+@inject IUserManagementService UserManagementService
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+@if (_isVisible)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi bi-person-circle"></i>
+                        User Details
+                    </h5>
+                    <button type="button" class="btn-close" @onclick="Close"></button>
+                </div>
+
+                <div class="modal-body">
+                    @if (_loading)
+                    {
+                        <div class="text-center my-5">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        </div>
+                    }
+                    else if (_errorMessage != null)
+                    {
+                        <div class="alert alert-danger">
+                            <i class="bi bi-exclamation-triangle"></i> @_errorMessage
+                        </div>
+                    }
+                    else if (_user != null)
+                    {
+                        @if (_localSuccessMessage != null)
+                        {
+                            <div class="alert alert-success alert-dismissible fade show">
+                                <i class="bi bi-check-circle"></i> @_localSuccessMessage
+                                <button type="button" class="btn-close" @onclick="@(() => _localSuccessMessage = null)"></button>
+                            </div>
+                        }
+
+                        @if (_isSelfModification)
+                        {
+                            <div class="alert alert-warning">
+                                <i class="bi bi-exclamation-triangle"></i>
+                                <strong>Warning:</strong> You are modifying your own account. Be careful when changing your role or status.
+                            </div>
+                        }
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">User ID</label>
+                                <p class="text-muted">@_user.Id</p>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">Created</label>
+                                <p class="text-muted">@_user.CreatedAt.ToString("yyyy-MM-dd HH:mm")</p>
+                            </div>
+                        </div>
+
+                        @if (_editMode)
+                        {
+                            <EditForm Model="_editRequest" OnValidSubmit="SaveChangesAsync">
+                                <DataAnnotationsValidator />
+
+                                <div class="mb-3">
+                                    <label class="form-label">Name</label>
+                                    <InputText class="form-control" @bind-Value="_editRequest.Name" />
+                                    <ValidationMessage For="@(() => _editRequest.Name)" />
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Email</label>
+                                    <InputText class="form-control" @bind-Value="_editRequest.Email" />
+                                    <ValidationMessage For="@(() => _editRequest.Email)" />
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Gender</label>
+                                    <InputSelect class="form-select" @bind-Value="_editRequest.Gender">
+                                        <option value="@Gender.Male">Male</option>
+                                        <option value="@Gender.Female">Female</option>
+                                        <option value="@Gender.Other">Other</option>
+                                    </InputSelect>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">License Number</label>
+                                    <InputText class="form-control" @bind-Value="_editRequest.LicenseNumber" />
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">License Category</label>
+                                    <InputText class="form-control" @bind-Value="_editRequest.LicenseCategory" />
+                                </div>
+
+                                <div class="d-flex gap-2">
+                                    <button type="submit" class="btn btn-primary" disabled="@_submitting">
+                                        @if (_submitting)
+                                        {
+                                            <span class="spinner-border spinner-border-sm me-1"></span>
+                                        }
+                                        Save Changes
+                                    </button>
+                                    <button type="button" class="btn btn-secondary" @onclick="CancelEdit">Cancel</button>
+                                </div>
+                            </EditForm>
+                        }
+                        else
+                        {
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label fw-bold">Name</label>
+                                    <p>@_user.Name</p>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label fw-bold">Email</label>
+                                    <p>@_user.Email</p>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label fw-bold">Gender</label>
+                                    <p>@_user.Gender</p>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label fw-bold">Provider</label>
+                                    <p>@(_user.ProviderName ?? "Local")</p>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label fw-bold">License Number</label>
+                                    <p>@(_user.LicenseNumber ?? "N/A")</p>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label fw-bold">License Category</label>
+                                    <p>@(_user.LicenseCategory ?? "N/A")</p>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label fw-bold">Last Login</label>
+                                    <p>@(_user.LastLoginAt?.ToString("yyyy-MM-dd HH:mm") ?? "Never")</p>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label fw-bold">Registrations</label>
+                                    <p>@_user.RegistrationCount</p>
+                                </div>
+                            </div>
+
+                            <div class="border-top pt-3 mt-3">
+                                <h6>Account Settings</h6>
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label fw-bold">Role</label>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span class="badge @(_user.Role == Role.Administrator ? "bg-danger" : "bg-primary")">
+                                                @_user.Role
+                                            </span>
+                                            <button class="btn btn-sm btn-outline-secondary" @onclick="ToggleRoleEdit">
+                                                <i class="bi bi-pencil"></i>
+                                            </button>
+                                        </div>
+                                        @if (_editingRole)
+                                        {
+                                            <div class="mt-2">
+                                                <select class="form-select form-select-sm" @bind="_newRole">
+                                                    <option value="@Role.User">User</option>
+                                                    <option value="@Role.Administrator">Administrator</option>
+                                                </select>
+                                                <div class="mt-2">
+                                                    <button class="btn btn-sm btn-primary" @onclick="SaveRoleAsync" disabled="@_submitting">Save</button>
+                                                    <button class="btn btn-sm btn-secondary" @onclick="@(() => _editingRole = false)">Cancel</button>
+                                                </div>
+                                            </div>
+                                        }
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label fw-bold">Status</label>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span class="badge @(_user.IsActive ? "bg-success" : "bg-secondary")">
+                                                @(_user.IsActive ? "Active" : "Inactive")
+                                            </span>
+                                            <button class="btn btn-sm @(_user.IsActive ? "btn-outline-warning" : "btn-outline-success")"
+                                                    @onclick="ToggleStatusAsync"
+                                                    disabled="@_submitting">
+                                                @(_user.IsActive ? "Deactivate" : "Activate")
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="border-top pt-3 mt-3">
+                                <button class="btn btn-outline-primary" @onclick="EnableEditMode">
+                                    <i class="bi bi-pencil"></i> Edit User Info
+                                </button>
+                            </div>
+
+                            <div class="border-top pt-3 mt-3 danger-zone">
+                                <h6 class="text-danger">Danger Zone</h6>
+                                @if (!_showDeleteConfirm)
+                                {
+                                    <button class="btn btn-outline-danger" @onclick="@(() => _showDeleteConfirm = true)">
+                                        <i class="bi bi-trash"></i> Delete User
+                                    </button>
+                                }
+                                else
+                                {
+                                    <div class="alert alert-danger">
+                                        <p><strong>Are you sure?</strong> This will permanently delete the user and all their registrations.</p>
+                                        <div class="d-flex gap-2">
+                                            <button class="btn btn-danger" @onclick="DeleteUserAsync" disabled="@_submitting">
+                                                @if (_submitting)
+                                                {
+                                                    <span class="spinner-border spinner-border-sm me-1"></span>
+                                                }
+                                                Yes, Delete Permanently
+                                            </button>
+                                            <button class="btn btn-secondary" @onclick="@(() => _showDeleteConfirm = false)">Cancel</button>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        }
+                    }
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="Close">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<style>
+    .danger-zone {
+        background-color: #fff5f5;
+        padding: 1rem;
+        border-radius: 0.375rem;
+        border: 1px solid #ffdddd;
+    }
+</style>

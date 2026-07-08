@@ -1,0 +1,123 @@
+@page "/my-registrations"
+@rendermode InteractiveServer
+@using Microsoft.AspNetCore.Authorization
+@using SportsClubEventManager.Domain.Enums
+@using SportsClubEventManager.Shared.DTOs
+@using SportsClubEventManager.Web.Services
+@using SportsClubEventManager.Web.Components.Shared
+@inject IRegistrationService RegistrationService
+@attribute [Authorize]
+
+<PageTitle>My Registrations - Sports Club Event Manager</PageTitle>
+
+<div class="registrations-page">
+    <div class="page-header">
+        <div class="page-header-inner">
+            <span class="page-eyebrow">Account</span>
+            <h1>
+                <i class="bi bi-person-check"></i>
+                My Registrations
+            </h1>
+            <p class="page-subtitle">View and manage your active event registrations.</p>
+        </div>
+    </div>
+
+    <div class="registrations-content">
+        @if (_errorMessage is not null)
+        {
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                <i class="bi bi-exclamation-triangle"></i> @_errorMessage
+                <button type="button" class="btn-close" @onclick="(() => _errorMessage = null)"></button>
+            </div>
+        }
+
+        @if (_successMessage is not null)
+        {
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                <i class="bi bi-check-circle"></i> @_successMessage
+                <button type="button" class="btn-close" @onclick="(() => _successMessage = null)"></button>
+            </div>
+        }
+
+        @if (_loading)
+        {
+            <div class="registrations-status-wrap">
+                <div class="registrations-spinner"></div>
+                <p>Loading your registrations...</p>
+            </div>
+        }
+        else if (_registrations.Any())
+        {
+            <div class="registrations-card">
+                <div class="table-responsive">
+                    <table class="table registrations-table">
+                        <thead>
+                            <tr>
+                                <th>Event</th>
+                                <th>Date</th>
+                                <th>Location</th>
+                                <th>Registered On</th>
+                                <th>Status</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var registration in _registrations)
+                            {
+                                <tr>
+                                    <td class="event-cell">@registration.EventTitle</td>
+                                    <td>
+                                        <i class="bi bi-calendar-event"></i>
+                                        @registration.EventDate.ToString("yyyy-MM-dd HH:mm")
+                                    </td>
+                                    <td>
+                                        <i class="bi bi-geo-alt"></i>
+                                        @registration.EventLocation
+                                    </td>
+                                    <td>@registration.RegistrationDate.ToString("yyyy-MM-dd HH:mm")</td>
+                                    <td>
+                                        <span class="badge-status @(registration.Status == RegistrationStatus.Registered ? "badge-status-active" : "badge-status-inactive")">
+                                            @registration.Status
+                                        </span>
+                                    </td>
+                                    <td class="actions-cell">
+                                        <button class="btn-cancel-page"
+                                                disabled="@(!registration.CanBeCancelledByUser || _processingRegistrationId == registration.RegistrationId)"
+                                                @onclick="() => ShowCancelConfirmation(registration)">
+                                            @if (_processingRegistrationId == registration.RegistrationId)
+                                            {
+                                                <span>Cancelling...</span>
+                                            }
+                                            else
+                                            {
+                                                <span><i class="bi bi-x-circle"></i> Cancel</span>
+                                            }
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="registrations-empty">
+                <i class="bi bi-calendar-x"></i>
+                <p>You do not have active registrations.</p>
+                <a href="/events" class="btn-secondary-page">Browse Events</a>
+            </div>
+        }
+    </div>
+
+    @if (_pendingCancellation is not null)
+    {
+        <ConfirmationDialog @key="@("cancel-confirmation")"
+                            Title="Cancel Registration"
+                            Message="Are you sure you want to cancel your registration for this event?"
+                            IsProcessing="@(_processingRegistrationId == _pendingCancellation.RegistrationId)"
+                            OnConfirm="@HandleCancellationConfirmAsync"
+                            OnCancel="@HideCancelConfirmation" />
+    }
+</div>

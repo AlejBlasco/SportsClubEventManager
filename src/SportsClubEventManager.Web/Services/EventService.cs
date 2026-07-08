@@ -50,14 +50,12 @@ public sealed class EventService(HttpClient httpClient) : IEventService
     /// Registers a user for a specific event.
     /// </summary>
     /// <param name="eventId">The unique identifier of the event to register for.</param>
-    /// <param name="userId">The unique identifier of the user registering.</param>
     /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
     /// <returns>Registration details if successful; otherwise, null if registration failed (event full, duplicate, or not found).</returns>
     /// <exception cref="HttpRequestException">Thrown when the API request fails with an unexpected error.</exception>
-    public async Task<RegistrationCreatedDto?> RegisterForEventAsync(Guid eventId, Guid userId, CancellationToken cancellationToken = default)
+    public async Task<RegistrationCreatedDto?> RegisterForEventAsync(Guid eventId, CancellationToken cancellationToken = default)
     {
-        var requestBody = new { UserId = userId };
-        var response = await httpClient.PostAsJsonAsync($"api/v1/events/{eventId}/register", requestBody, cancellationToken);
+        var response = await httpClient.PostAsync($"api/v1/events/{eventId}/register", content: null, cancellationToken);
 
         if (response.StatusCode == System.Net.HttpStatusCode.NotFound ||
             response.StatusCode == System.Net.HttpStatusCode.Conflict ||
@@ -73,22 +71,15 @@ public sealed class EventService(HttpClient httpClient) : IEventService
     }
 
     /// <summary>
-    /// Cancels a user's registration for a specific event.
+    /// Cancels a registration owned by the authenticated user.
     /// </summary>
-    /// <param name="eventId">The unique identifier of the event.</param>
-    /// <param name="userId">The unique identifier of the user whose registration should be cancelled.</param>
+    /// <param name="registrationId">The unique identifier of the registration.</param>
     /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
     /// <returns>True if cancellation was successful; false if registration was not found or event does not exist.</returns>
     /// <exception cref="HttpRequestException">Thrown when the API request fails with an unexpected error.</exception>
-    public async Task<bool> CancelRegistrationAsync(Guid eventId, Guid userId, CancellationToken cancellationToken = default)
+    public async Task<bool> CancelRegistrationAsync(Guid registrationId, CancellationToken cancellationToken = default)
     {
-        var requestBody = new { UserId = userId };
-        var request = new HttpRequestMessage(HttpMethod.Delete, $"api/v1/events/{eventId}/register")
-        {
-            Content = JsonContent.Create(requestBody)
-        };
-
-        var response = await httpClient.SendAsync(request, cancellationToken);
+        var response = await httpClient.DeleteAsync($"api/v1/registrations/{registrationId}", cancellationToken);
 
         if (response.StatusCode == System.Net.HttpStatusCode.NotFound ||
             response.StatusCode == System.Net.HttpStatusCode.BadRequest)

@@ -54,6 +54,49 @@ public class User : BaseEntity
     public ICollection<Registration> Registrations { get; set; } = new List<Registration>();
 
     /// <summary>
+    /// Gets or sets the hashed password for local authentication.
+    /// Null if the user only uses external OAuth2 providers.
+    /// </summary>
+    public string? PasswordHash { get; set; }
+
+    /// <summary>
+    /// Gets or sets the external provider identifier (e.g., Google user ID).
+    /// Null for local authentication users.
+    /// </summary>
+    public string? ExternalProviderId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the name of the authentication provider (e.g., "Google", "Microsoft", "Local").
+    /// </summary>
+    public string? ProviderName { get; set; }
+
+    /// <summary>
+    /// Gets or sets the hashed refresh token for session management.
+    /// </summary>
+    public string? RefreshToken { get; set; }
+
+    /// <summary>
+    /// Gets or sets the expiration time of the refresh token.
+    /// </summary>
+    public DateTime? RefreshTokenExpiryTime { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the user account is active.
+    /// </summary>
+    public bool IsActive { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets the timestamp of the user's last successful login.
+    /// </summary>
+    public DateTime? LastLoginAt { get; set; }
+
+    /// <summary>
+    /// Gets or sets the role of the user for authorization purposes.
+    /// Defaults to User role for standard access rights.
+    /// </summary>
+    public Role Role { get; set; } = Role.User;
+
+    /// <summary>
     /// Validates that the provided email address follows a valid format.
     /// </summary>
     /// <param name="email">The email address to validate.</param>

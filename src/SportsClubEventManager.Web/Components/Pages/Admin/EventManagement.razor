@@ -1,0 +1,198 @@
+@page "/admin/events"
+@rendermode InteractiveServer
+@using Microsoft.AspNetCore.Authorization
+@using SportsClubEventManager.Shared.DTOs
+@using SportsClubEventManager.Web.Services
+@using SportsClubEventManager.Web.Components.Admin
+@inject IEventManagementService EventManagementService
+@inject NavigationManager NavigationManager
+@attribute [Authorize(Roles = "Administrator")]
+
+<PageTitle>Event Management - Sports Club Event Manager</PageTitle>
+
+<div class="admin-page">
+    <div class="page-header">
+        <div class="page-header-inner">
+            <h1>
+                <i class="bi bi-calendar-event"></i>
+                Event Management
+            </h1>
+            <p class="page-subtitle">
+                Manage events, schedules, and capacity
+            </p>
+            <div class="page-header-actions">
+                <button class="btn btn-primary" @onclick="OpenCreateModal">
+                    <i class="bi bi-plus-circle"></i> Create New Event
+                </button>
+                <button class="btn btn-outline-light" @onclick="@(() => NavigationManager.NavigateTo("/admin/events/import"))">
+                    <i class="bi bi-file-earmark-arrow-up"></i> Import CSV
+                </button>
+            </div>
+        </div>
+    </div>
+
+    @if (_errorMessage != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle"></i> @_errorMessage
+            <button type="button" class="btn-close" @onclick="@(() => _errorMessage = null)"></button>
+        </div>
+    }
+
+    @if (_successMessage != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle"></i> @_successMessage
+            <button type="button" class="btn-close" @onclick="@(() => _successMessage = null)"></button>
+        </div>
+    }
+
+    <div class="filters-section">
+        <div class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label">Search</label>
+                <input type="text" class="form-control" placeholder="Title or location..." @bind="_searchText" @bind:event="oninput" />
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Status</label>
+                <select class="form-select" @bind="_statusFilter">
+                    <option value="">All Events</option>
+                    <option value="upcoming">Upcoming</option>
+                    <option value="past">Past</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">From Date</label>
+                <input type="date" class="form-control" @bind="_fromDate" />
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">To Date</label>
+                <input type="date" class="form-control" @bind="_toDate" />
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Sort By</label>
+                <select class="form-select" @bind="_sortBy">
+                    <option value="Date">Date</option>
+                    <option value="Title">Title</option>
+                    <option value="Location">Location</option>
+                    <option value="MaxCapacity">Capacity</option>
+                    <option value="CreatedAt">Created Date</option>
+                </select>
+            </div>
+            <div class="col-md-1 d-flex align-items-end">
+                <button class="btn btn-primary w-100" @onclick="ApplyFiltersAsync">
+                    <i class="bi bi-funnel"></i> Apply
+                </button>
+            </div>
+        </div>
+    </div>
+
+    @if (_loading)
+    {
+        <div class="text-center my-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2">Loading events...</p>
+        </div>
+    }
+    else if (_events != null && _events.Items.Any())
+    {
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Title</th>
+                        <th>Date</th>
+                        <th>Location</th>
+                        <th>Registrations</th>
+                        <th>Status</th>
+                        <th>Created</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var eventItem in _events.Items)
+                    {
+                        <tr>
+                            <td>@eventItem.Title</td>
+                            <td>@eventItem.Date.ToString("yyyy-MM-dd HH:mm")</td>
+                            <td>@eventItem.Location</td>
+                            <td>
+                                <span class="badge @GetCapacityBadgeClass(eventItem)">
+                                    @eventItem.CurrentRegistrations / @eventItem.MaxCapacity
+                                </span>
+                            </td>
+                            <td>
+                                @if (eventItem.IsPastEvent)
+                                {
+                                    <span class="badge bg-secondary">Past</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-success">Upcoming</span>
+                                }
+                            </td>
+                            <td>@eventItem.CreatedAt.ToString("yyyy-MM-dd")</td>
+                            <td>
+                                @if (!eventItem.IsPastEvent)
+                                {
+                                    <div class="table-actions">
+                                        <button class="btn btn-sm btn-outline-primary" @onclick="() => OpenEditModal(eventItem)">
+                                            <i class="bi bi-pencil"></i> Edit
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" @onclick="() => OpenDeleteModal(eventItem)">
+                                            <i class="bi bi-trash"></i> Delete
+                                        </button>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <span class="text-muted small">Read-only</span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <div class="d-flex justify-content-between align-items-center mt-3">
+            <div>
+                Showing @_events.Items.Count() of @_events.TotalCount events
+            </div>
+            <nav>
+                <ul class="pagination mb-0">
+                    <li class="page-item @(!_events.HasPreviousPage ? "disabled" : "")">
+                        <button class="page-link" @onclick="PreviousPageAsync" disabled="@(!_events.HasPreviousPage)">
+                            Previous
+                        </button>
+                    </li>
+                    @for (var i = 1; i <= _events.TotalPages; i++)
+                    {
+                        var pageNumber = i;
+                        <li class="page-item @(pageNumber == _events.PageNumber ? "active" : "")">
+                            <button class="page-link" @onclick="() => GoToPageAsync(pageNumber)">
+                                @pageNumber
+                            </button>
+                        </li>
+                    }
+                    <li class="page-item @(!_events.HasNextPage ? "disabled" : "")">
+                        <button class="page-link" @onclick="NextPageAsync" disabled="@(!_events.HasNextPage)">
+                            Next
+                        </button>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+    }
+    else
+    {
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle"></i> No events found. Create your first event to get started.
+        </div>
+    }
+</div>
+
+<EventFormModal @ref="_eventFormModal" OnEventSaved="OnEventSavedAsync" />
+<DeleteEventConfirmModal @ref="_deleteEventModal" OnEventDeleted="OnEventDeletedAsync" />

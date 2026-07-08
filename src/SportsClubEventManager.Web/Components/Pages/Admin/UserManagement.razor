@@ -1,0 +1,178 @@
+@page "/admin/users"
+@rendermode InteractiveServer
+@using Microsoft.AspNetCore.Authorization
+@using SportsClubEventManager.Domain.Enums
+@using SportsClubEventManager.Shared.DTOs
+@using SportsClubEventManager.Web.Services
+@inject IUserManagementService UserManagementService
+@inject NavigationManager NavigationManager
+@attribute [Authorize(Roles = "Administrator")]
+
+<PageTitle>User Management - Sports Club Event Manager</PageTitle>
+
+<div class="admin-page">
+    <div class="page-header">
+        <div class="page-header-inner">
+            <h1>
+                <i class="bi bi-people"></i>
+                User Management
+            </h1>
+            <p class="page-subtitle">
+                Manage user accounts, roles, and access permissions
+            </p>
+        </div>
+    </div>
+
+    @if (_errorMessage != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle"></i> @_errorMessage
+            <button type="button" class="btn-close" @onclick="@(() => _errorMessage = null)"></button>
+        </div>
+    }
+
+    @if (_successMessage != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle"></i> @_successMessage
+            <button type="button" class="btn-close" @onclick="@(() => _successMessage = null)"></button>
+        </div>
+    }
+
+    <div class="filters-section">
+        <div class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label">Search</label>
+                <input type="text" class="form-control" placeholder="Name or email..." @bind="_searchText" @bind:event="oninput" />
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Role</label>
+                <select class="form-select" @bind="_roleFilter">
+                    <option value="">All Roles</option>
+                    <option value="@Role.User">User</option>
+                    <option value="@Role.Administrator">Administrator</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Status</label>
+                <select class="form-select" @bind="_statusFilter">
+                    <option value="">All Status</option>
+                    <option value="true">Active</option>
+                    <option value="false">Inactive</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Sort By</label>
+                <select class="form-select" @bind="_sortBy">
+                    <option value="Name">Name</option>
+                    <option value="Email">Email</option>
+                    <option value="Role">Role</option>
+                    <option value="IsActive">Status</option>
+                    <option value="CreatedAt">Created Date</option>
+                    <option value="LastLoginAt">Last Login</option>
+                </select>
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button class="btn btn-primary w-100" @onclick="ApplyFiltersAsync">
+                    <i class="bi bi-funnel"></i> Apply
+                </button>
+            </div>
+        </div>
+    </div>
+
+    @if (_loading)
+    {
+        <div class="text-center my-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2">Loading users...</p>
+        </div>
+    }
+    else if (_users != null && _users.Items.Any())
+    {
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Role</th>
+                        <th>Status</th>
+                        <th>Provider</th>
+                        <th>Last Login</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var user in _users.Items)
+                    {
+                        <tr>
+                            <td>@user.Name</td>
+                            <td>@user.Email</td>
+                            <td>
+                                <span class="badge @(user.Role == Role.Administrator ? "bg-danger" : "bg-primary")">
+                                    @user.Role
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge @(user.IsActive ? "bg-success" : "bg-secondary")">
+                                    <i class="bi bi-@(user.IsActive ? "check-circle" : "x-circle")"></i>
+                                    @(user.IsActive ? "Active" : "Inactive")
+                                </span>
+                            </td>
+                            <td>@(user.ProviderName ?? "Local")</td>
+                            <td>@(user.LastLoginAt?.ToString("yyyy-MM-dd HH:mm") ?? "Never")</td>
+                            <td>
+                                <div class="table-actions">
+                                    <button class="btn btn-sm btn-outline-primary" @onclick="@(() => ViewUserDetails(user.Id))">
+                                        <i class="bi bi-eye"></i> View
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <nav aria-label="User list pagination">
+            <ul class="pagination justify-content-center">
+                <li class="page-item @(!_users.HasPreviousPage ? "disabled" : "")">
+                    <button class="page-link" @onclick="@(() => ChangePage(_users.PageNumber - 1))" disabled="@(!_users.HasPreviousPage)">
+                        Previous
+                    </button>
+                </li>
+                @for (int i = 1; i <= _users.TotalPages; i++)
+                {
+                    var pageNum = i;
+                    <li class="page-item @(_users.PageNumber == pageNum ? "active" : "")">
+                        <button class="page-link" @onclick="@(() => ChangePage(pageNum))">@pageNum</button>
+                    </li>
+                }
+                <li class="page-item @(!_users.HasNextPage ? "disabled" : "")">
+                    <button class="page-link" @onclick="@(() => ChangePage(_users.PageNumber + 1))" disabled="@(!_users.HasNextPage)">
+                        Next
+                    </button>
+                </li>
+            </ul>
+        </nav>
+
+        <p class="text-center text-muted">
+            Showing @(_users.Items.Count()) of @_users.TotalCount users
+        </p>
+    }
+    else
+    {
+        <div class="alert alert-info text-center">
+            <i class="bi bi-info-circle"></i> No users found matching your filters.
+        </div>
+    }
+</div>
+
+@if (_selectedUserId.HasValue)
+{
+    <UserDetailsModal UserId="_selectedUserId.Value"
+                      OnClose="CloseUserDetails"
+                      OnUserUpdated="OnUserUpdatedAsync" />
+}

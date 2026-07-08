@@ -3,8 +3,8 @@ using System.ComponentModel.DataAnnotations;
 namespace SportsClubEventManager.Web.Models;
 
 /// <summary>
-/// Model for the event registration form with validation.
-/// Temporary MVP solution for collecting user information without authentication.
+/// Model for the event registration confirmation form.
+/// Name and email are prefilled read-only from the authenticated user's account.
 /// </summary>
 public sealed class RegistrationFormModel
 {

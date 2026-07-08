@@ -1,0 +1,216 @@
+@page "/admin/events/import"
+@rendermode InteractiveServer
+@using Microsoft.AspNetCore.Authorization
+@using SportsClubEventManager.Shared.DTOs
+@using SportsClubEventManager.Web.Services
+@inject IImportManagementService ImportManagementService
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JSRuntime
+@attribute [Authorize(Roles = "Administrator")]
+
+<PageTitle>Import Events - Sports Club Event Manager</PageTitle>
+
+<div class="admin-page">
+    <div class="page-header">
+        <div class="page-header-inner">
+            <h1>
+                <i class="bi bi-file-earmark-arrow-up"></i>
+                Import Events from CSV
+            </h1>
+            <p class="page-subtitle">
+                Upload a standardized CSV file (header: DÍA, MODAL., NOMBRE TIRADA, HORA, CAMPO, LUGAR, CAT),
+                preview the mapped events, and confirm the import.
+            </p>
+            <div class="page-header-actions">
+                <button class="btn btn-outline-light" @onclick="@(() => NavigationManager.NavigateTo("/admin/events"))">
+                    <i class="bi bi-arrow-left"></i> Back to Event Management
+                </button>
+            </div>
+        </div>
+    </div>
+
+    @if (_errorMessage is not null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle"></i> @_errorMessage
+            <button type="button" class="btn-close" @onclick="@(() => _errorMessage = null)"></button>
+        </div>
+    }
+
+    @if (_successMessage is not null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle"></i> @_successMessage
+            <button type="button" class="btn-close" @onclick="@(() => _successMessage = null)"></button>
+        </div>
+    }
+
+    <div class="filters-section">
+        <div class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label">CSV File</label>
+                <InputFile class="form-control" OnChange="OnFileSelectedAsync" accept=".csv" />
+                @if (_selectedFileName is not null)
+                {
+                    <div class="form-text">Selected: @_selectedFileName</div>
+                }
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Default Max Capacity (optional)</label>
+                <input type="number" min="1" class="form-control"
+                       value="@_defaultMaxCapacity"
+                       @onchange="@(e => _defaultMaxCapacity = int.TryParse(e.Value?.ToString(), out var v) ? v : null)" />
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button class="btn btn-primary w-100" @onclick="PreviewAsync" disabled="@(_loading || _selectedFileContent is null)">
+                    @if (_loading)
+                    {
+                        <span>Parsing...</span>
+                    }
+                    else
+                    {
+                        <span><i class="bi bi-eye"></i> Preview</span>
+                    }
+                </button>
+            </div>
+            <div class="col-md-3 d-flex align-items-end">
+                <button class="btn btn-outline-secondary w-100" @onclick="DownloadTemplateAsync">
+                    <i class="bi bi-download"></i> Download Template
+                </button>
+            </div>
+        </div>
+    </div>
+
+    @if (_preview is not null)
+    {
+        @if (_preview.FatalError is not null)
+        {
+            <div class="alert alert-danger">
+                <i class="bi bi-exclamation-triangle"></i> @_preview.FatalError
+            </div>
+        }
+        else
+        {
+            <div class="filters-section">
+                <h5><i class="bi bi-arrow-left-right"></i> Column Mapping</h5>
+                <p class="text-muted small">
+                    If the detected headers below don't exactly match the standardized schema, remap them here and re-run the preview.
+                </p>
+                <div class="row g-2">
+                    @foreach (var canonical in CanonicalColumns)
+                    {
+                        <div class="col-md-3">
+                            <label class="form-label small">@canonical</label>
+                            <select class="form-select form-select-sm"
+                                    @onchange="@(e => SetColumnMapping(canonical, e.Value?.ToString() ?? string.Empty))">
+                                <option value="">(auto-detect)</option>
+                                @foreach (var header in _preview.DetectedHeaders)
+                                {
+                                    <option value="@header" selected="@(_preview.SuggestedMapping.TryGetValue(header, out var suggested) && suggested == canonical)">
+                                        @header
+                                    </option>
+                                }
+                            </select>
+                        </div>
+                    }
+                </div>
+                <button class="btn btn-sm btn-outline-primary mt-3" @onclick="PreviewAsync" disabled="@_loading">
+                    <i class="bi bi-arrow-repeat"></i> Re-run Preview with Mapping
+                </button>
+            </div>
+
+            <div class="d-flex justify-content-between align-items-center mt-3">
+                <div>
+                    <strong>@_preview.TotalRows</strong> row(s) parsed —
+                    <span class="text-success">@_preview.ValidRowCount valid</span>,
+                    <span class="text-danger">@_preview.InvalidRowCount invalid</span>
+                </div>
+                <button class="btn btn-success" @onclick="ConfirmImportAsync" disabled="@(_confirming || _preview.ValidRowCount == 0)">
+                    @if (_confirming)
+                    {
+                        <span>Importing...</span>
+                    }
+                    else
+                    {
+                        <span><i class="bi bi-cloud-upload"></i> Confirm Import</span>
+                    }
+                </button>
+            </div>
+
+            <div class="table-responsive mt-2">
+                <table class="table table-hover table-sm">
+                    <thead>
+                        <tr>
+                            <th></th>
+                            <th>#</th>
+                            <th>Title</th>
+                            <th>Date</th>
+                            <th>Location</th>
+                            <th>Description</th>
+                            <th>Max Capacity</th>
+                            <th>Source (DÍA/HORA/MODAL./CAMPO/CAT)</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var row in _preview.Rows)
+                        {
+                            <tr class="@(row.IsValid ? "" : "table-danger")">
+                                <td>
+                                    <input type="checkbox"
+                                           checked="@_rowSelections.GetValueOrDefault(row.RowNumber)"
+                                           disabled="@(!row.IsValid)"
+                                           @onchange="@(e => SetRowSelected(row.RowNumber, (bool)(e.Value ?? false)))" />
+                                </td>
+                                <td>@row.RowNumber</td>
+                                <td>@row.Title</td>
+                                <td>@(row.Date?.ToString("yyyy-MM-dd HH:mm") ?? "-")</td>
+                                <td>@row.Location</td>
+                                <td>@row.Description</td>
+                                <td style="max-width: 110px;">
+                                    <input type="number" min="1" class="form-control form-control-sm"
+                                           value="@_rowCapacityOverrides.GetValueOrDefault(row.RowNumber, row.MaxCapacity ?? 0)"
+                                           @onchange="@(e => SetRowCapacity(row.RowNumber, int.TryParse(e.Value?.ToString(), out var v) ? v : 0))" />
+                                </td>
+                                <td class="small text-muted">
+                                    @row.SourceDay / @row.SourceTime / @row.SourceModality / @row.SourceField / @row.SourceCategory
+                                </td>
+                                <td>
+                                    @if (row.IsDuplicate)
+                                    {
+                                        <span class="badge bg-warning text-dark" title="@string.Join("; ", row.Errors)">
+                                            <i class="bi bi-files"></i> Duplicate
+                                        </span>
+                                    }
+                                    else if (row.IsValid)
+                                    {
+                                        <span class="badge bg-success">Valid</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-danger" title="@string.Join("; ", row.Errors)">
+                                            <i class="bi bi-exclamation-circle"></i> @row.Errors.Count error(s)
+                                        </span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    }
+
+    @if (_importResult is not null && _importResult.FailedCount > 0)
+    {
+        <div class="alert alert-warning mt-3">
+            <h6><i class="bi bi-exclamation-triangle"></i> Import rejected — the following rows failed re-validation:</h6>
+            <ul class="mb-0">
+                @foreach (var failedRow in _importResult.FailedRows)
+                {
+                    <li>Row @failedRow.RowNumber (@failedRow.Title): @string.Join("; ", failedRow.Errors)</li>
+                }
+            </ul>
+        </div>
+    }
+</div>

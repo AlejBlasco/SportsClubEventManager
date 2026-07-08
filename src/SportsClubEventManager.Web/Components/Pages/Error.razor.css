@@ -1,0 +1,65 @@
+.error-page {
+    min-height: 70vh;
+}
+
+.error-content {
+    background: #fff;
+}
+
+.error-inner {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 4rem 2rem 5rem;
+    text-align: center;
+}
+
+.error-icon {
+    color: var(--club-danger);
+    margin-bottom: 2rem;
+}
+
+.error-message {
+    font-size: 1.05rem;
+    line-height: 1.75;
+    color: var(--club-muted);
+    margin: 0 0 2rem;
+}
+
+.error-request-id {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+    background: #f5f5f5;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    padding: 0.625rem 1rem;
+    margin-bottom: 2rem;
+    font-size: 0.875rem;
+}
+
+.error-request-label {
+    font-weight: 700;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--club-muted);
+}
+
+.error-request-id code {
+    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+    color: var(--club-ink);
+    font-size: 0.8rem;
+}
+
+.error-actions {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+@media (max-width: 576px) {
+    .error-inner {
+        padding: 2.5rem 1.25rem 3rem;
+    }
+}

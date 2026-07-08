@@ -1,4 +1,5 @@
 @page "/events/{id:guid}"
+@attribute [Microsoft.AspNetCore.Authorization.AllowAnonymous]
 @rendermode InteractiveServer
 @using SportsClubEventManager.Shared.DTOs
 
@@ -130,6 +131,8 @@
     {
         <RegistrationForm @key="@("registration-form")"
                           IsSubmitting="@isRegistrationInProgress"
+                          UserName="@currentUserName"
+                          UserEmail="@currentUserEmail"
                           OnSubmit="@HandleRegistrationSubmit"
                           OnCancel="@HideRegistrationForm" />
     }

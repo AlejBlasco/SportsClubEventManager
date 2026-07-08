@@ -261,6 +261,17 @@ dotnet ef migrations add InitialCreate --project src/SportsClubEventManager.Infr
 - Logging de ejecución de migraciones
 - Solo activo en entorno Development
 
+> **⚠️ Cuidado con `appsettings.Development.json` en el Web.** Tanto
+> `SportsClubEventManager.Api` como `SportsClubEventManager.Web` leen
+> `ConnectionStrings:DefaultConnection` (vía `AddInfrastructure`), y en Development el
+> `appsettings.Development.json` de cada proyecto tiene prioridad sobre su `appsettings.json`. El
+> 2026-07-08 se encontró `src/SportsClubEventManager.Web/appsettings.Development.json` con
+> `"DefaultConnection": ""` — esa cadena vacía pisaba silenciosamente la cadena válida de
+> `appsettings.json`, por lo que `MigrateDatabaseAsync()` fallaba al arrancar el Web (aunque el
+> Api, sin esa clave en su propio `Development.json`, funcionaba con normalidad). Si una clave de
+> configuración parece "no aplicarse", revisar primero si el `Development.json` del proyecto
+> concreto la está sobrescribiendo con un valor vacío.
+
 ---
 
 ## Dependencias Añadidas
@@ -467,6 +478,15 @@ dotnet ef migrations add {NombreDeLaMigracion} \
   --project src/SportsClubEventManager.Infrastructure \
   --startup-project src/SportsClubEventManager.Web
 ```
+
+> **⚠️ No crear archivos de migración a mano.** El 2026-07-08 se detectó que tres migraciones
+> (`AddRoleToUser`, `SeedAdministratorUser`, `AddAuditLogTable` — ver US-28/US-30) se habían
+> creado manualmente sin su `.Designer.cs` asociado. Ese archivo lleva el atributo
+> `[DbContext(typeof(AppDbContext))]` que EF Core necesita para reconocer la migración; sin él,
+> `MigrateDatabaseAsync()` la ignora silenciosamente y solo se ve el mensaje "No migrations were
+> applied. The database is already up to date." — sin ningún error visible, aunque la tabla o
+> columna nunca se llegó a crear. Usa siempre `dotnet ef migrations add` (como arriba); genera
+> automáticamente el `.cs` y el `.Designer.cs` juntos y evita esta clase de bug.
 
 ### Aplicar migraciones manualmente (alternativa a auto-migración)
 

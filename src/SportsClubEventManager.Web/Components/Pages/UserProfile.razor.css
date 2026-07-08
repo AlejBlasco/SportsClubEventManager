@@ -1,0 +1,209 @@
+.profile-page {
+    min-height: 70vh;
+}
+
+.profile-status-wrap {
+    max-width: 480px;
+    margin: 4rem auto;
+    text-align: center;
+    padding: 0 1.5rem;
+}
+
+.profile-spinner {
+    width: 40px;
+    height: 40px;
+    margin: 0 auto 1.25rem;
+    border: 3px solid rgba(31, 77, 58, 0.15);
+    border-top-color: var(--club-forest);
+    border-radius: 50%;
+    animation: profile-spin 0.8s linear infinite;
+}
+
+@keyframes profile-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.page-header {
+    background: linear-gradient(135deg, #0d0d0d 0%, var(--club-forest-deep) 100%);
+    color: #fff;
+    padding: 3.5rem 0 3rem;
+}
+
+.page-header-inner {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 0 2rem;
+}
+
+.page-eyebrow {
+    display: inline-block;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--club-gold);
+    margin-bottom: 0.75rem;
+    border-left: 3px solid var(--club-gold);
+    padding-left: 0.75rem;
+}
+
+.page-header h1 {
+    font-family: 'Merriweather', Georgia, serif;
+    font-size: clamp(1.8rem, 4vw, 2.75rem);
+    font-weight: 900;
+    color: #fff;
+    margin: 0 0 0.75rem;
+}
+
+.page-subtitle {
+    font-size: 1rem;
+    color: rgba(255, 255, 255, 0.68);
+    margin: 0;
+}
+
+.profile-content {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 3rem 2rem 5rem;
+}
+
+.profile-card {
+    background: #fff;
+    border-radius: 12px;
+    border: 1px solid rgba(178, 135, 46, 0.22);
+    box-shadow: 0 10px 24px rgba(20, 44, 35, 0.08);
+    padding: 2.5rem;
+}
+
+.profile-card-top {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    margin-bottom: 2rem;
+    padding-bottom: 2rem;
+    border-bottom: 1px solid #ebebeb;
+}
+
+.profile-avatar {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 68px;
+    height: 68px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--club-forest) 0%, var(--club-forest-deep) 100%);
+    color: #fff;
+    font-family: 'Merriweather', Georgia, serif;
+    font-size: 1.4rem;
+    font-weight: 700;
+}
+
+.profile-identity h2 {
+    font-family: 'Merriweather', Georgia, serif;
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--club-ink);
+    margin: 0 0 0.4rem;
+}
+
+.badge-role {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    background: rgba(178, 135, 46, 0.14);
+    color: var(--club-gold-deep);
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.profile-form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem 2rem;
+    margin-bottom: 2rem;
+}
+
+.form-group label {
+    display: block;
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: var(--club-ink);
+    margin-bottom: 0.4rem;
+}
+
+.form-group .form-control {
+    border-radius: 6px;
+    border: 1px solid #d8d8d8;
+    padding: 0.6rem 0.85rem;
+}
+
+.form-group .form-control:focus {
+    border-color: var(--club-forest);
+}
+
+.form-group .form-control-plaintext {
+    padding: 0.6rem 0;
+    color: var(--club-muted);
+}
+
+.form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid #ebebeb;
+}
+
+.password-section {
+    margin-top: 2rem;
+    padding-top: 2rem;
+    border-top: 1px solid #ebebeb;
+}
+
+.btn-secondary-page {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.65rem 1.5rem;
+    background: transparent;
+    border: 1.5px solid var(--club-forest);
+    color: var(--club-forest);
+    font-weight: 700;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.btn-secondary-page:hover {
+    background: var(--club-forest);
+    color: #fff;
+}
+
+@media (max-width: 640px) {
+    .page-header {
+        padding: 2.5rem 0 2rem;
+    }
+
+    .page-header-inner {
+        padding: 0 1.25rem;
+    }
+
+    .profile-content {
+        padding: 2.5rem 1.25rem 3rem;
+    }
+
+    .profile-card {
+        padding: 1.75rem;
+    }
+
+    .profile-form-grid {
+        grid-template-columns: 1fr;
+    }
+}

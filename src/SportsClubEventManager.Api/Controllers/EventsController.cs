@@ -1,7 +1,7 @@
+using System.Security.Claims;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using SportsClubEventManager.Api.Models;
 using SportsClubEventManager.Application.Events.Commands.CancelRegistration;
 using SportsClubEventManager.Application.Events.Commands.RegisterForEvent;
 using SportsClubEventManager.Application.Events.Queries.GetEventById;
@@ -61,6 +61,7 @@ public sealed class EventsController(ISender sender) : ControllerBase
     /// <response code="404">Event not found with the specified identifier.</response>
     /// <response code="500">Internal server error.</response>
     [HttpGet("{id:guid}")]
+    [AllowAnonymous]
     [ProducesResponseType(typeof(EventDetailDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
@@ -93,29 +94,41 @@ public sealed class EventsController(ISender sender) : ControllerBase
     /// Registers a user for a specific event.
     /// </summary>
     /// <param name="id">The unique identifier of the event.</param>
-    /// <param name="request">The registration request containing the user identifier.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Registration details including full event information.</returns>
     /// <response code="201">Registration created successfully. Location header contains the URI of the created registration.</response>
     /// <response code="400">Invalid request (e.g., event date is in the past, invalid identifiers).</response>
+    /// <response code="403">Forbidden. User can only register themselves.</response>
     /// <response code="404">Event not found with the specified identifier.</response>
     /// <response code="409">Conflict occurred (e.g., user already registered, event at full capacity, concurrency conflict).</response>
     /// <response code="500">Internal server error.</response>
     [HttpPost("{id:guid}/register")]
+    [Authorize]
     [ProducesResponseType(typeof(RegistrationCreatedDto), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
     public async Task<ActionResult<RegistrationCreatedDto>> RegisterForEvent(
         Guid id,
-        [FromBody] RegisterForEventRequest request,
         CancellationToken cancellationToken)
     {
+        var authenticatedUserIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(authenticatedUserIdClaim) || !Guid.TryParse(authenticatedUserIdClaim, out var authenticatedUserId))
+        {
+            return Unauthorized(new ProblemDetails
+            {
+                Title = "Authentication failed",
+                Detail = "Unable to determine authenticated user identity.",
+                Status = StatusCodes.Status401Unauthorized
+            });
+        }
+
         var command = new RegisterForEventCommand
         {
             EventId = id,
-            UserId = request.UserId
+            UserId = authenticatedUserId
         };
 
         try
@@ -166,29 +179,41 @@ public sealed class EventsController(ISender sender) : ControllerBase
     /// Cancels a user's registration for a specific event.
     /// </summary>
     /// <param name="id">The unique identifier of the event.</param>
-    /// <param name="request">The cancellation request containing the user identifier.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>No content on success.</returns>
     /// <response code="204">Registration cancelled successfully.</response>
     /// <response code="400">Invalid request (e.g., event date is in the past, invalid identifiers).</response>
+    /// <response code="403">Forbidden. User can only cancel their own registration.</response>
     /// <response code="404">Event or registration not found with the specified identifiers.</response>
     /// <response code="409">Conflict occurred (e.g., concurrency conflict).</response>
     /// <response code="500">Internal server error.</response>
     [HttpDelete("{id:guid}/register")]
+    [Authorize]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> CancelRegistration(
         Guid id,
-        [FromBody] CancelRegistrationRequest request,
         CancellationToken cancellationToken)
     {
+        var authenticatedUserIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(authenticatedUserIdClaim) || !Guid.TryParse(authenticatedUserIdClaim, out var authenticatedUserId))
+        {
+            return Unauthorized(new ProblemDetails
+            {
+                Title = "Authentication failed",
+                Detail = "Unable to determine authenticated user identity.",
+                Status = StatusCodes.Status401Unauthorized
+            });
+        }
+
         var command = new CancelRegistrationCommand
         {
             EventId = id,
-            UserId = request.UserId
+            UserId = authenticatedUserId
         };
 
         try

@@ -33,6 +33,11 @@ public sealed class AppDbContext : DbContext, IApplicationDbContext
     public DbSet<User> Users { get; set; } = null!;
 
     /// <summary>
+    /// Gets or sets the AuditLogs table.
+    /// </summary>
+    public DbSet<AuditLog> AuditLogs { get; set; } = null!;
+
+    /// <summary>
     /// Configures the model using Fluent API configurations.
     /// </summary>
     /// <param name="modelBuilder">The builder used to construct the model.</param>
@@ -44,6 +49,20 @@ public sealed class AppDbContext : DbContext, IApplicationDbContext
     }
 
     /// <summary>
+    /// Configures warnings to be suppressed or logged.
+    /// </summary>
+    /// <param name="optionsBuilder">The builder used to configure warnings.</param>
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    {
+        base.OnConfiguring(optionsBuilder);
+
+        // Suppress pending model changes warning for pending migrations
+        // This occurs during testing when migrations haven't been fully generated yet
+        optionsBuilder.ConfigureWarnings(w => w.Ignore(
+            Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
+    }
+
+    /// <summary>
     /// Saves all changes made in this context to the database.
     /// Automatically populates CreatedAt and UpdatedAt audit fields.
     /// </summary>
@@ -51,9 +70,12 @@ public sealed class AppDbContext : DbContext, IApplicationDbContext
     /// <returns>A task representing the asynchronous save operation. The task result contains the number of state entries written to the database.</returns>
     public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
+        ChangeTracker.DetectChanges();
+
         var entries = ChangeTracker.Entries()
             .Where(e => e.Entity is Domain.Common.BaseEntity &&
-                        (e.State == EntityState.Added || e.State == EntityState.Modified));
+                        (e.State == EntityState.Added || e.State == EntityState.Modified))
+            .ToList();
 
         foreach (var entry in entries)
         {

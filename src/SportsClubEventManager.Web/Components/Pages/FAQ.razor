@@ -1,0 +1,127 @@
+@page "/faq"
+@attribute [Microsoft.AspNetCore.Authorization.AllowAnonymous]
+
+<PageTitle>FAQ &mdash; Sports Club</PageTitle>
+
+<div class="static-page">
+    <div class="page-header">
+        <div class="page-header-inner">
+            <span class="page-eyebrow">Help</span>
+            <h1>Frequently Asked Questions</h1>
+            <p class="page-subtitle">Quick answers to the most common questions about events and membership.</p>
+        </div>
+    </div>
+
+    <div class="static-content">
+        <div class="static-inner">
+            <div class="faq-group">
+                <h2 class="faq-group-title">Events &amp; Registration</h2>
+
+                <details class="faq-item">
+                    <summary class="faq-question">How do I register for an event?</summary>
+                    <div class="faq-answer">
+                        <p>
+                            Browse the <a href="/events">Events Calendar</a>, select the event you are interested in,
+                            and click the &ldquo;Register&rdquo; button on the event detail page. Registration is
+                            confirmed immediately and the available capacity updates in real time.
+                        </p>
+                    </div>
+                </details>
+
+                <details class="faq-item">
+                    <summary class="faq-question">Can I cancel my registration?</summary>
+                    <div class="faq-answer">
+                        <p>
+                            Yes. Open the event detail page and click &ldquo;Cancel Registration&rdquo;. Your spot will
+                            be released immediately so other members can register. Please cancel as early as possible
+                            if you know you cannot attend.
+                        </p>
+                    </div>
+                </details>
+
+                <details class="faq-item">
+                    <summary class="faq-question">How do I know if an event is fully booked?</summary>
+                    <div class="faq-answer">
+                        <p>
+                            Each event card and detail page shows a live capacity indicator. When an event reaches
+                            maximum capacity the &ldquo;Register&rdquo; button is disabled and the status changes
+                            to &ldquo;Fully Booked&rdquo;.
+                        </p>
+                    </div>
+                </details>
+
+                <details class="faq-item">
+                    <summary class="faq-question">How far in advance can I register for an event?</summary>
+                    <div class="faq-answer">
+                        <p>
+                            Registration opens as soon as an event is published by a club organiser. There is no fixed
+                            advance registration window &mdash; check the events calendar regularly so you do not miss
+                            popular sessions.
+                        </p>
+                    </div>
+                </details>
+
+                <details class="faq-item">
+                    <summary class="faq-question">What happens if an event is cancelled by the club?</summary>
+                    <div class="faq-answer">
+                        <p>
+                            If an organiser cancels an event, all registered members will be notified automatically
+                            and their registrations removed. No action is required on your part.
+                        </p>
+                    </div>
+                </details>
+            </div>
+
+            <div class="faq-group">
+                <h2 class="faq-group-title">Membership &amp; Access</h2>
+
+                <details class="faq-item">
+                    <summary class="faq-question">Who can register for events?</summary>
+                    <div class="faq-answer">
+                        <p>
+                            Events are open to registered club members. If you are not yet a member, please contact
+                            us via the <a href="/contact">Contact</a> page to enquire about membership options.
+                        </p>
+                    </div>
+                </details>
+
+                <details class="faq-item">
+                    <summary class="faq-question">How do I update my contact information?</summary>
+                    <div class="faq-answer">
+                        <p>
+                            Member profile editing is managed by club administrators. If your contact details have
+                            changed, please reach out to us through the <a href="/contact">Contact</a> page and we
+                            will update your record.
+                        </p>
+                    </div>
+                </details>
+            </div>
+
+            <div class="faq-group faq-group--last">
+                <h2 class="faq-group-title">Technical Support</h2>
+
+                <details class="faq-item">
+                    <summary class="faq-question">Who do I contact if I experience a technical issue?</summary>
+                    <div class="faq-answer">
+                        <p>
+                            Please use the <a href="/contact">Contact</a> page to report any technical problems.
+                            Include a brief description of the issue and, if possible, the steps to reproduce it.
+                            We aim to respond within 2 business days.
+                        </p>
+                    </div>
+                </details>
+
+                <details class="faq-item">
+                    <summary class="faq-question">Is my personal data safe on this platform?</summary>
+                    <div class="faq-answer">
+                        <p>
+                            Yes. We take data protection seriously and comply with GDPR and Spanish data protection
+                            law (LOPDGDD). For full details on how we collect and use your data, please read our
+                            <a href="/privacy-policy">Privacy Policy</a>.
+                        </p>
+                    </div>
+                </details>
+            </div>
+        </div>
+    </div>
+</div>

@@ -9,8 +9,8 @@
 
         <div class="registration-form-body">
             <p class="mvp-notice">
-                <strong>Note:</strong> For this early version, please enter your name and email.
-                Full authentication is coming soon!
+                You are registering with the name and email from your account.
+                To change them, update your <a href="/profile">profile</a>.
             </p>
 
             <EditForm Model="@FormModel" OnValidSubmit="OnValidSubmitAsync">
@@ -18,15 +18,13 @@
 
                 <div class="form-group">
                     <label for="name">Name</label>
-                    <InputText id="name" class="form-control" @bind-Value="FormModel.Name"
-                               placeholder="Enter your name" disabled="@IsSubmitting" />
+                    <InputText id="name" class="form-control" @bind-Value="FormModel.Name" disabled="true" />
                     <ValidationMessage For="@(() => FormModel.Name)" class="validation-error" />
                 </div>
 
                 <div class="form-group">
                     <label for="email">Email</label>
-                    <InputText id="email" type="email" class="form-control" @bind-Value="FormModel.Email"
-                               placeholder="Enter your email" disabled="@IsSubmitting" />
+                    <InputText id="email" type="email" class="form-control" @bind-Value="FormModel.Email" disabled="true" />
                     <ValidationMessage For="@(() => FormModel.Email)" class="validation-error" />
                 </div>
 

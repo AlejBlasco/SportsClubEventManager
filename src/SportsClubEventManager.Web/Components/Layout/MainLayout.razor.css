@@ -18,18 +18,24 @@
 .site-footer {
     background: #111111;
     color: rgba(255, 255, 255, 0.55);
-    padding: 2rem 1.5rem;
 }
 
 .footer-inner {
     max-width: 1400px;
     margin: 0 auto;
+    padding: 3rem 2rem 2.5rem;
     display: flex;
     justify-content: space-between;
-    align-items: center;
+    align-items: flex-start;
+    gap: 3rem;
     flex-wrap: wrap;
+}
+
+.footer-brand-col {
+    display: flex;
+    flex-direction: column;
     gap: 0.5rem;
-    font-size: 0.875rem;
+    min-width: 180px;
 }
 
 .footer-brand {
@@ -37,7 +43,63 @@
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.06em;
+    font-size: 0.875rem;
     color: rgba(255, 255, 255, 0.75);
+}
+
+.footer-tagline {
+    font-size: 0.78rem;
+    color: rgba(255, 255, 255, 0.35);
+    letter-spacing: 0.04em;
+}
+
+.footer-nav {
+    display: flex;
+    gap: 3rem;
+    flex-wrap: wrap;
+}
+
+.footer-nav-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    min-width: 120px;
+}
+
+.footer-nav-heading {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: rgba(255, 255, 255, 0.35);
+    margin-bottom: 0.25rem;
+}
+
+.footer-link {
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.55);
+    text-decoration: none;
+    transition: color 0.15s ease;
+}
+
+.footer-link:hover {
+    color: rgba(255, 255, 255, 0.9);
+    text-decoration: none;
+}
+
+.footer-bottom {
+    border-top: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.footer-bottom-inner {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 1.25rem 2rem;
+}
+
+.footer-copy {
+    font-size: 0.78rem;
+    color: rgba(255, 255, 255, 0.3);
 }
 
 #blazor-error-ui {
@@ -61,9 +123,18 @@
         top: 0.5rem;
     }
 
-@media (max-width: 576px) {
+@media (max-width: 768px) {
     .footer-inner {
         flex-direction: column;
-        text-align: center;
+        gap: 2rem;
+        padding: 2.5rem 1.25rem 2rem;
+    }
+
+    .footer-nav {
+        gap: 2rem;
+    }
+
+    .footer-bottom-inner {
+        padding: 1rem 1.25rem;
     }
 }
