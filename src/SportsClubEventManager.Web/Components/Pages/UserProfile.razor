@@ -2,6 +2,7 @@
 @rendermode InteractiveServer
 @attribute [Microsoft.AspNetCore.Authorization.Authorize]
 @using Microsoft.AspNetCore.Components.Authorization
+@using System.ComponentModel.DataAnnotations
 @using SportsClubEventManager.Shared.DTOs
 @using System.Security.Claims
 @inject IUserProfileService UserProfileService
@@ -13,118 +14,132 @@
 <div class="profile-page">
     @if (isLoading)
     {
-        <div class="loading-spinner">
+        <div class="profile-status-wrap">
+            <div class="profile-spinner"></div>
             <p>Loading profile...</p>
         </div>
     }
     else if (hasError)
     {
-        <div class="alert alert-danger">
-            <p>@errorMessage</p>
+        <div class="profile-status-wrap">
+            <div class="alert alert-danger">@errorMessage</div>
             <button class="btn btn-primary" @onclick="LoadProfileAsync">Retry</button>
         </div>
     }
     else if (profile is not null)
     {
-        <div class="profile-container">
-            <h1>My Profile</h1>
+        <div class="page-header">
+            <div class="page-header-inner">
+                <span class="page-eyebrow">Account</span>
+                <h1>My Profile</h1>
+                <p class="page-subtitle">Manage your personal information and club membership details</p>
+            </div>
+        </div>
 
-            @if (!string.IsNullOrEmpty(successMessage))
-            {
-                <div class="alert alert-success">@successMessage</div>
-            }
-
-            <EditForm Model="@profileForm" OnValidSubmit="@HandleProfileSubmitAsync">
-                <DataAnnotationsValidator />
-                <ValidationSummary />
-
-                <div class="form-group">
-                    <label for="name">Name</label>
-                    <InputText id="name" class="form-control" @bind-Value="profileForm.Name" @oninput="OnFormChanged" />
-                    <ValidationMessage For="@(() => profileForm.Name)" />
-                </div>
-
-                <div class="form-group">
-                    <label for="gender">Gender</label>
-                    <InputSelect id="gender" class="form-control" @bind-Value="profileForm.Gender" @onchange="OnFormChanged">
-                        <option value="">-- Select Gender --</option>
-                        <option value="Male">Male</option>
-                        <option value="Female">Female</option>
-                        <option value="Other">Other</option>
-                    </InputSelect>
-                    <ValidationMessage For="@(() => profileForm.Gender)" />
-                </div>
-
-                <div class="form-group">
-                    <label for="email">Email</label>
-                    @if (profile.IsOAuthUser)
-                    {
-                        <InputText id="email" class="form-control" @bind-Value="profileForm.Email" disabled />
-                        <small class="form-text text-muted">Email is managed by @profile.ProviderName</small>
-                    }
-                    else
-                    {
-                        <InputText id="email" class="form-control" @bind-Value="profileForm.Email" @oninput="OnFormChanged" />
-                        <ValidationMessage For="@(() => profileForm.Email)" />
-                    }
-                </div>
-
-                <div class="form-group">
-                    <label for="licenseNumber">License Number</label>
-                    <InputText id="licenseNumber" class="form-control" @bind-Value="profileForm.LicenseNumber" @oninput="OnFormChanged" />
-                    <ValidationMessage For="@(() => profileForm.LicenseNumber)" />
-                </div>
-
-                <div class="form-group">
-                    <label for="licenseCategory">License Category</label>
-                    <InputText id="licenseCategory" class="form-control" @bind-Value="profileForm.LicenseCategory" @oninput="OnFormChanged" />
-                    <ValidationMessage For="@(() => profileForm.LicenseCategory)" />
-                </div>
-
-                <div class="form-group">
-                    <label>Role</label>
-                    <div class="form-control-plaintext">
-                        <span class="badge badge-info">@profile.Role</span>
+        <div class="profile-content">
+            <div class="profile-card">
+                <div class="profile-card-top">
+                    <div class="profile-avatar">@GetInitials(profile.Name)</div>
+                    <div class="profile-identity">
+                        <h2>@profile.Name</h2>
+                        <span class="badge-role">@profile.Role</span>
                     </div>
                 </div>
 
-                <div class="form-group">
-                    <label>Member Since</label>
-                    <div class="form-control-plaintext">@profile.CreatedAt.ToLocalTime().ToString("MMMM dd, yyyy")</div>
-                </div>
+                @if (!string.IsNullOrEmpty(successMessage))
+                {
+                    <div class="alert alert-success">@successMessage</div>
+                }
+                @if (!string.IsNullOrEmpty(errorMessage))
+                {
+                    <div class="alert alert-danger">@errorMessage</div>
+                }
 
-                <div class="form-actions">
-                    <button type="submit" class="btn btn-primary" disabled="@isSaving">
-                        @if (isSaving)
-                        {
-                            <span>Saving...</span>
-                        }
-                        else
-                        {
-                            <span>Save Changes</span>
-                        }
-                    </button>
-                    <button type="button" class="btn btn-secondary" @onclick="CancelEdit" disabled="@isSaving">Cancel</button>
-                </div>
-            </EditForm>
+                <EditForm Model="@profileForm" OnValidSubmit="@HandleProfileSubmitAsync">
+                    <DataAnnotationsValidator />
 
-            @if (!profile.IsOAuthUser)
-            {
-                <div class="password-section">
-                    <hr />
-                    <button type="button" class="btn btn-outline-primary" @onclick="() => showPasswordModal = true">
-                        Change Password
-                    </button>
-                </div>
-            }
+                    <div class="profile-form-grid">
+                        <div class="form-group">
+                            <label for="name">Name</label>
+                            <InputText id="name" class="form-control" @bind-Value="profileForm.Name" @oninput="OnFormChanged" />
+                            <ValidationMessage For="@(() => profileForm.Name)" />
+                        </div>
 
-            @if (showPasswordModal)
-            {
-                <ChangePasswordModal UserId="@userId"
-                                     OnPasswordChanged="@HandlePasswordChanged"
-                                     OnCancel="@(() => showPasswordModal = false)" />
-            }
+                        <div class="form-group">
+                            <label for="gender">Gender</label>
+                            <InputSelect id="gender" class="form-control" @bind-Value="profileForm.Gender" @onchange="OnFormChanged">
+                                <option value="">-- Select Gender --</option>
+                                <option value="Male">Male</option>
+                                <option value="Female">Female</option>
+                                <option value="Other">Other</option>
+                            </InputSelect>
+                            <ValidationMessage For="@(() => profileForm.Gender)" />
+                        </div>
+
+                        <div class="form-group">
+                            <label for="email">Email</label>
+                            @if (profile.IsOAuthUser)
+                            {
+                                <InputText id="email" class="form-control" @bind-Value="profileForm.Email" disabled />
+                                <small class="form-text text-muted">Email is managed by @profile.ProviderName</small>
+                            }
+                            else
+                            {
+                                <InputText id="email" class="form-control" @bind-Value="profileForm.Email" @oninput="OnFormChanged" />
+                                <ValidationMessage For="@(() => profileForm.Email)" />
+                            }
+                        </div>
+
+                        <div class="form-group">
+                            <label for="licenseNumber">License Number</label>
+                            <InputText id="licenseNumber" class="form-control" @bind-Value="profileForm.LicenseNumber" @oninput="OnFormChanged" />
+                            <ValidationMessage For="@(() => profileForm.LicenseNumber)" />
+                        </div>
+
+                        <div class="form-group">
+                            <label for="licenseCategory">License Category</label>
+                            <InputText id="licenseCategory" class="form-control" @bind-Value="profileForm.LicenseCategory" @oninput="OnFormChanged" />
+                            <ValidationMessage For="@(() => profileForm.LicenseCategory)" />
+                        </div>
+
+                        <div class="form-group">
+                            <label>Member Since</label>
+                            <div class="form-control-plaintext">@profile.CreatedAt.ToLocalTime().ToString("MMMM dd, yyyy")</div>
+                        </div>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-secondary" @onclick="CancelEdit" disabled="@isSaving">Cancel</button>
+                        <button type="submit" class="btn btn-primary" disabled="@isSaving">
+                            @if (isSaving)
+                            {
+                                <span>Saving...</span>
+                            }
+                            else
+                            {
+                                <span>Save Changes</span>
+                            }
+                        </button>
+                    </div>
+                </EditForm>
+
+                @if (!profile.IsOAuthUser)
+                {
+                    <div class="password-section">
+                        <button type="button" class="btn-secondary-page" @onclick="() => showPasswordModal = true">
+                            Change Password
+                        </button>
+                    </div>
+                }
+            </div>
         </div>
+
+        @if (showPasswordModal)
+        {
+            <ChangePasswordModal UserId="@userId"
+                                 OnPasswordChanged="@HandlePasswordChanged"
+                                 OnCancel="@(() => showPasswordModal = false)" />
+        }
     }
 </div>
 
@@ -262,12 +277,37 @@
         successMessage = "Password changed successfully. Please log in again with your new password.";
     }
 
+    private static string GetInitials(string name)
+    {
+        var parts = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        return parts.Length switch
+        {
+            0 => "?",
+            1 => parts[0][..1].ToUpperInvariant(),
+            _ => $"{parts[0][..1]}{parts[^1][..1]}".ToUpperInvariant()
+        };
+    }
+
     public class ProfileFormModel
     {
+        [Required(ErrorMessage = "Name is required.")]
+        [MinLength(2, ErrorMessage = "Name must be at least 2 characters long.")]
+        [MaxLength(100, ErrorMessage = "Name must not exceed 100 characters.")]
+        [RegularExpression(@"^[\p{L}\s\-']+$", ErrorMessage = "Name can only contain letters, spaces, hyphens, and apostrophes.")]
         public string Name { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Gender is required.")]
         public string Gender { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Email address is required.")]
+        [EmailAddress(ErrorMessage = "Email address must be in a valid format.")]
+        [MaxLength(256, ErrorMessage = "Email address must not exceed 256 characters.")]
         public string Email { get; set; } = string.Empty;
+
+        [MaxLength(50, ErrorMessage = "License number must not exceed 50 characters.")]
         public string? LicenseNumber { get; set; }
+
+        [MaxLength(50, ErrorMessage = "License category must not exceed 50 characters.")]
         public string? LicenseCategory { get; set; }
     }
 }

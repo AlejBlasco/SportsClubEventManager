@@ -20,7 +20,7 @@ public sealed class UpdateProfileCommandValidator : AbstractValidator<UpdateProf
             .WithMessage("Name must be at least 2 characters long.")
             .MaximumLength(100)
             .WithMessage("Name must not exceed 100 characters.")
-            .Matches(@"^[a-zA-Z\s\-']+$")
+            .Matches(@"^[\p{L}\s\-']+$")
             .WithMessage("Name can only contain letters, spaces, hyphens, and apostrophes.");
 
         RuleFor(x => x.Gender)

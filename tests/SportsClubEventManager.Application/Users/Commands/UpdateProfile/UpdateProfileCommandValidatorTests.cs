@@ -153,6 +153,9 @@ public sealed class UpdateProfileCommandValidatorTests
     [InlineData("O'Brien")]
     [InlineData("Jean-Paul")]
     [InlineData("Mary Jane Smith")]
+    [InlineData("José García")]
+    [InlineData("Muñoz")]
+    [InlineData("François")]
     public void Validate_NameValidSpecialCharacters_PassesValidation(string name)
     {
         // Arrange
