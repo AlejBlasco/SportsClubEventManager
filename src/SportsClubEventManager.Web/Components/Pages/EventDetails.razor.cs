@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Authorization;
 using SportsClubEventManager.Shared.DTOs;
 using SportsClubEventManager.Web.Models;
 using SportsClubEventManager.Web.Services;
@@ -17,6 +18,7 @@ public sealed partial class EventDetails
     private bool isNotFound;
 
     private bool isRegistered;
+    private bool isAuthenticated;
     private Guid? currentRegistrationId;
 
     private bool showRegistrationForm;
@@ -42,13 +44,26 @@ public sealed partial class EventDetails
     [Inject]
     private IRegistrationService RegistrationService { get; set; } = default!;
 
+    [Inject]
+    private AuthenticationStateProvider AuthenticationStateProvider { get; set; } = default!;
+
+    [Inject]
+    private NavigationManager NavigationManager { get; set; } = default!;
+
     /// <summary>
     /// Initializes the component and loads event details.
     /// </summary>
     protected override async Task OnInitializedAsync()
     {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        isAuthenticated = authState.User.Identity?.IsAuthenticated ?? false;
+
         await LoadEventDetailsAsync();
-        await LoadMyRegistrationStateAsync();
+
+        if (isAuthenticated)
+        {
+            await LoadMyRegistrationStateAsync();
+        }
     }
 
     /// <summary>
@@ -103,6 +118,12 @@ public sealed partial class EventDetails
     /// </summary>
     private void ShowRegistrationForm()
     {
+        if (!isAuthenticated)
+        {
+            NavigationManager.NavigateTo("/login");
+            return;
+        }
+
         showRegistrationForm = true;
         ClearMessages();
     }

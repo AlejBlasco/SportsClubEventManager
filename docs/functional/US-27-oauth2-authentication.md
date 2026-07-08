@@ -81,9 +81,8 @@ Una vez autenticado:
 ### Cierre Automático de Sesión
 
 Tu sesión se cierra automáticamente después de:
-- **30 minutos de inactividad** — Si no realizas ninguna acción (leer, hacer click, escribir)
+- **30 minutos desde que iniciaste sesión** — actualmente no se renueva automáticamente
 - **Hacer click en "Cerrar sesión"** — Cierre manual inmediato
-- **Medianoche** — Cierre nocturno de todas las sesiones (máximo 7 días después del login)
 
 Cuando tu sesión se cierra, serás redirigido a la página de Inicio de Sesión. Deberás volver a autenticarte.
 
@@ -124,10 +123,10 @@ Cierra sesión en todas las partes (haz click en "Cerrar sesión"). Tu refresh t
 Sí. Cada dispositivo necesita iniciar sesión por separado, pero puedes tener sesiones activas en tu laptop, teléfono y tablet al mismo tiempo.
 
 **¿Cuánto tiempo dura mi sesión?**  
-Tu sesión es válida hasta 7 días después de iniciar sesión, pero se cierra automáticamente después de 30 minutos sin actividad. Si te avisamos que tu sesión expirará, solo sigue usando la aplicación — tu sesión se extenderá automáticamente.
+Tu sesión es válida durante 30 minutos desde que inicias sesión. Pasado ese tiempo deberás volver a iniciar sesión para seguir usando funciones que requieren autenticación (por ejemplo, tu perfil o tus inscripciones) — actualmente la renovación automática de sesión no está implementada.
 
 **¿Qué es un "Refresh Token"?**  
-Un mecanismo de seguridad que mantiene tu sesión viva sin que necesites ingresar tu contraseña constantemente. Funciona automáticamente en segundo plano.
+Un mecanismo de seguridad pensado para renovar tu sesión sin que necesites volver a ingresar tu contraseña. La Api ya lo soporta, pero la aplicación Web todavía no lo utiliza automáticamente — por eso, hoy en día, tu sesión dura 30 minutos y luego debes iniciar sesión de nuevo.
 
 **¿Mi sesión es segura?**  
 Sí. Usamos encriptación de nivel bancario (HTTPS), protección contra ataques comunes (CSRF, XSS), y tokens que no pueden ser modificados o robados.

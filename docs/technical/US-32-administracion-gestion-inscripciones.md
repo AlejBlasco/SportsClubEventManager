@@ -11,6 +11,13 @@
 
 Este trabajo implementa un sistema completo de gestión de inscripciones a nivel de usuario y administrador. Los usuarios autenticados pueden ver sus inscripciones activas y cancelarlas (solo para eventos futuros). Los administradores tienen acceso completo: ver todas las inscripciones con filtros avanzados, crear inscripciones manuales para otros usuarios, cancelar cualquier inscripción, y exportar listados en CSV y PDF. Todas las acciones de administrador son registradas en la pista de auditoría.
 
+> **Corrección post-implementación (2026-07-08):** `MyRegistrations.razor` (usuario) y, previsiblemente,
+> `Admin/RegistrationManagement.razor` recibían 401 Unauthorized en todas sus llamadas porque el Web
+> nunca reenviaba el JWT a los endpoints `[Authorize]` de `RegistrationsController` /
+> `AdminRegistrationsController`. Ver
+> [Reenvío del Token de la Web a la Api](../technical/US-27-oauth2-authentication.md#reenvío-del-token-de-la-web-a-la-api-authtokenhandler)
+> en el documento técnico de US-27 para el detalle completo de la causa raíz y el fix (`AuthTokenHandler`).
+
 ---
 
 ## Arquitectura

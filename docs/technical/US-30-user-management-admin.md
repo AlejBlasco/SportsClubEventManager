@@ -731,6 +731,14 @@ id (Guid)  - ID del usuario a eliminar
 
 **Nombre:** `20260707000000_AddAuditLogTable`
 
+> **Corrección post-implementación (2026-07-08):** esta migración se creó manualmente sin su
+> `.Designer.cs`, por lo que EF Core no la reconocía como migración de `AppDbContext` y nunca
+> se llegó a aplicar (la Api/Web reportaban "database is already up to date" con la tabla
+> `AuditLogs` inexistente). Ver la nota equivalente en
+> `docs/technical/US-28-autorizacion-basada-en-roles.md` para el detalle completo de la causa
+> raíz y el fix (se generó el `.Designer.cs` faltante y se quitó el atributo `[Migration]`
+> duplicado de la clase principal).
+
 **Schema SQL generado:**
 ```sql
 CREATE TABLE [AuditLogs] (

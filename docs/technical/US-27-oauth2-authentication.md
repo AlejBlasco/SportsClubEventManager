@@ -125,13 +125,24 @@ La arquitectura sigue principios de **Arquitectura Limpia**, manteniendo separac
      * Actualiza `User.RefreshToken`, `RefreshTokenExpiryTime`, `LastLoginAt`
      * Persiste cambios en base de datos
 7. `AuthenticationController` recibe `AuthenticationResult` exitoso
-8. Establece cookies seguras (HttpOnly, Secure, SameSite=Strict):
+8. Establece cookies seguras (HttpOnly, Secure, SameSite=Strict) **en la respuesta HTTP de la Api**:
    - `access_token`: Token JWT (30 min)
    - `refresh_token`: Token de refresco (7 días)
-9. Devuelve respuesta 200 con `LoginResponse`
-10. Blazor Web lee cookies, establece estado de autenticación
-11. `CustomAuthenticationStateProvider` notifica a componentes
-12. Usuario es redirigido a página de inicio
+9. Devuelve respuesta 200 con `LoginResponse` (`userId`, `email`, `name`, `role`, `accessToken`, `refreshToken`, `expiresIn`)
+10. **Importante:** la llamada de `Login.razor` a la Api es una llamada HTTP servidor-a-servidor
+    (Blazor Server ejecuta en el servidor Web, no en el navegador). Las cookies `Set-Cookie` del
+    paso 8 quedan en esa respuesta interna y **nunca llegan al navegador del usuario** — son
+    descartadas junto con el resto de la respuesta. La Web **no comparte** las cookies `access_token`/
+    `refresh_token` de la Api.
+11. `Login.razor` lee el cuerpo JSON (`LoginResponse`) y construye su **propia** `ClaimsIdentity`
+    con `NameIdentifier`, `Name`, `Email`, `Role` y el `AccessToken` (como claim `access_token`),
+    y llama a `HttpContext.SignInAsync` con el esquema de cookies del **Web** (`CookieAuthenticationDefaults.AuthenticationScheme`,
+    cookie `.SportsClubEventManager.Auth`) — una cookie completamente distinta de las de la Api.
+12. `CustomAuthenticationStateProvider` lee esa cookie del Web y notifica a los componentes
+13. Usuario es redirigido a página de inicio
+14. En cada llamada posterior de un `HttpClient` tipado del Web hacia la Api, `AuthTokenHandler`
+    lee el claim `access_token` de `HttpContext.User` y lo adjunta como header
+    `Authorization: Bearer` (ver [Reenvío del Token de la Web a la Api](#reenvío-del-token-de-la-web-a-la-api-authtokenhandler))
 
 #### Flujo de Autenticación OAuth2 (Google)
 
@@ -329,7 +340,9 @@ La arquitectura sigue principios de **Arquitectura Limpia**, manteniendo separac
   "userId": "string — GUID del usuario",
   "email": "string — correo del usuario",
   "name": "string — nombre del usuario",
-  "token": "string — JWT access token",
+  "role": "string — rol del usuario (User | Administrator)",
+  "accessToken": "string — JWT access token",
+  "refreshToken": "string — token de refresco",
   "expiresIn": "number — segundos hasta expiración"
 }
 ```
@@ -344,6 +357,11 @@ La arquitectura sigue principios de **Arquitectura Limpia**, manteniendo separac
 **Cookies establecidas (Response 200):**
 - `access_token`: JWT (HttpOnly, Secure, SameSite=Strict, 30 min expiry)
 - `refresh_token`: Token refresco (HttpOnly, Secure, SameSite=Strict, 7 días expiry)
+
+> Estas cookies las establece la Api en su propia respuesta HTTP. Cuando quien llama a este
+> endpoint es el proyecto Web (login local vía `Login.razor`), la llamada es servidor-a-servidor
+> y estas cookies **no llegan al navegador** — ver punto 10 del flujo de autenticación local más
+> arriba y la sección [Reenvío del Token de la Web a la Api](#reenvío-del-token-de-la-web-a-la-api-authtokenhandler).
 
 ---
 
@@ -459,6 +477,66 @@ error=<error_code> — si usuario rechazó (opcional)
 **Cookies establecidas (si éxito):**
 - `access_token`: JWT de aplicación
 - `refresh_token`: Token refresco de aplicación
+
+---
+
+## Reenvío del Token de la Web a la Api (AuthTokenHandler)
+
+**Añadido:** 2026-07-08 (corrección post-implementación)
+
+### Problema
+
+Los 7 `HttpClient` tipados del proyecto Web (`EventService`, `UserProfileService`,
+`UserManagementService`, `EventManagementService`, `RegistrationService`,
+`AdminRegistrationManagementService`, `ImportManagementService`, todos registrados en
+`Program.cs` vía `AddHttpClient<TInterface, TImpl>`) nunca adjuntaban un header
+`Authorization` a sus peticiones hacia la Api. El `AccessToken` que la Api devuelve en
+`LoginResponse` se leía en `Login.razor` y **se descartaba** — no se guardaba en ningún
+sitio. Como consecuencia, cualquier endpoint de la Api marcado con `[Authorize]`
+(`UsersController`, `RegistrationsController`, `Admin*Controller`, y las acciones
+`RegisterForEvent`/`CancelRegistration` de `EventsController`) devolvía **401 Unauthorized**
+al ser invocado desde el Web — páginas como `/profile` ("My Profile") y `/my-registrations`
+("My Registrations") fallaban sistemáticamente, mientras que páginas como `/events` (que solo
+llaman a endpoints `[AllowAnonymous]`) parecían funcionar con normalidad.
+
+### Solución
+
+1. **`Login.razor`** ahora añade dos claims adicionales a la `ClaimsIdentity` de la cookie
+   propia del Web (además de `NameIdentifier`, `Name`, `Email` que ya existían):
+   - `ClaimTypes.Role` — con `loginResult.Role` (antes no se propagaba en absoluto)
+   - `access_token` (claim type definido en `AuthTokenHandler.AccessTokenClaimType`) — con
+     `loginResult.AccessToken`, el JWT crudo emitido por la Api
+
+2. **`AuthTokenHandler`** (`SportsClubEventManager.Web/Services/AuthTokenHandler.cs`) es un
+   `DelegatingHandler` que, en cada request saliente, lee el claim `access_token` del usuario
+   autenticado actual (vía `IHttpContextAccessor.HttpContext.User`, el mismo mecanismo que ya
+   usa `CustomAuthenticationStateProvider`) y, si existe, adjunta
+   `Authorization: Bearer <token>` a la petición antes de enviarla.
+
+3. **`Program.cs`** registra `AuthTokenHandler` como `Transient` y lo engancha con
+   `.AddHttpMessageHandler<AuthTokenHandler>()` en los 7 `AddHttpClient<...>` existentes.
+
+```csharp
+builder.Services.AddTransient<AuthTokenHandler>();
+
+builder.Services.AddHttpClient<IUserProfileService, UserProfileService>(client => { /* ... */ })
+    .AddHttpMessageHandler<AuthTokenHandler>();
+// ... igual para los 6 servicios restantes
+```
+
+### Limitaciones de esta solución
+
+- **Sin refresco automático:** el Web no invoca `POST /api/authentication/refresh`. El
+  `AccessToken` guardado en la cookie del Web expira a los 30 minutos (`ExpiresIn`) desde el
+  login, aunque la propia cookie de sesión del Web (`.SportsClubEventManager.Auth`) tenga
+  `SlidingExpiration` y siga viva más tiempo. Pasado ese plazo, las llamadas a la Api volverán a
+  devolver 401 hasta que el usuario cierre sesión y vuelva a iniciarla. Implementar el flujo de
+  refresh desde el Web queda pendiente como mejora futura.
+- **Login con Google no cubierto:** el callback de OAuth2 de Google se resuelve enteramente en
+  la Api (otro origen/puerto); no existe en el Web un endpoint que reciba ese callback y
+  establezca la cookie `.SportsClubEventManager.Auth` con `access_token`/`role`. Un usuario que
+  inicie sesión con Google seguirá sin poder llamar a los endpoints `[Authorize]` de la Api desde
+  el Web hasta que se implemente esa integración.
 
 ---
 
@@ -643,6 +721,14 @@ Escenarios planeados:
 ---
 
 ## Limitaciones Conocidas
+
+### Sin Refresco Automático de Token desde el Web
+
+El Web nunca llama a `POST /api/authentication/refresh`. Ver
+[Reenvío del Token de la Web a la Api](#reenvío-del-token-de-la-web-a-la-api-authtokenhandler)
+para el detalle: el `AccessToken` embebido en la cookie del Web expira a los 30 minutos y no se
+renueva, por lo que las páginas que llaman a la Api (`/profile`, `/my-registrations`, etc.)
+volverán a fallar con 401 pasado ese tiempo aunque la sesión del Web siga activa.
 
 ### Rate Limiting No Implementado
 

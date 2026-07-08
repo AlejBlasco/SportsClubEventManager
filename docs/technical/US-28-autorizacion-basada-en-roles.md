@@ -452,6 +452,12 @@ dotnet user-secrets list --project src/SportsClubEventManager.Infrastructure
 
 **Producción:** Configurar `AdminUser:Password` en Azure Key Vault y referenciar desde App Service Configuration.
 
+> **Corrección post-implementación (2026-07-08):** el comando anterior fallaba con
+> `Could not find the global property 'UserSecretsId'` porque
+> `SportsClubEventManager.Infrastructure.csproj` no tenía configurado
+> `<UserSecretsId>`. Se añadió un GUID fijo (`<UserSecretsId>4d0083bd-44d0-47ed-9fab-57e3ce98e0cf</UserSecretsId>`)
+> al `<PropertyGroup>` del csproj para que el comando funcione tal como está documentado.
+
 ---
 
 ## Cambios en Base de Datos
@@ -507,6 +513,23 @@ END
 ```sql
 DELETE FROM Users WHERE Email = 'admin@sportsclub.local' AND ProviderName = 'Local';
 ```
+
+> **Corrección post-implementación (2026-07-08) — migraciones invisibles para EF Core:**
+> `20260630174200_AddRoleToUser` y `20260630174300_SeedAdministratorUser` (junto con
+> `20260707000000_AddAuditLogTable` de US-30) se habían creado manualmente sin su archivo
+> `.Designer.cs` asociado. EF Core solo asocia una migración a su `DbContext` mediante el
+> atributo `[DbContext(typeof(AppDbContext))]`, que vive en ese `.Designer.cs` — sin él,
+> `MigrationsAssembly` no la reconoce en absoluto. El síntoma era que tanto la Api como el
+> Web arrancaban e imprimían `"No migrations were applied. The database is already up to
+> date."`, cuando en realidad la columna `Role` y el usuario administrador **nunca se habían
+> creado**; `dotnet ef migrations list` solo mostraba las 5 migraciones anteriores.
+>
+> **Fix aplicado:** se generaron los 3 `.Designer.cs` faltantes (reconstruyendo el modelo
+> histórico correcto en cada punto) y se eliminó el atributo `[Migration("...")]` duplicado
+> que se había añadido directamente en las clases de migración principales (ese atributo
+> debe vivir únicamente en el `.Designer.cs`, igual que en el resto de migraciones generadas
+> por `dotnet ef migrations add`). Tras el fix, `dotnet ef database update` aplicó
+> correctamente las 3 migraciones pendientes.
 
 ### Cambios de Esquema
 

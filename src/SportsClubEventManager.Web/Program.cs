@@ -41,11 +41,6 @@ builder.Services.AddAuthorization(options =>
     // Policy requiring Administrator role
     options.AddPolicy(AuthorizationPolicies.RequireAdministratorRole, policy =>
         policy.RequireRole("Administrator"));
-
-    // Configure fallback policy to require authentication by default
-    options.FallbackPolicy = new AuthorizationPolicyBuilder()
-        .RequireAuthenticatedUser()
-        .Build();
 });
 
 builder.Services.AddCascadingAuthenticationState();
@@ -58,6 +53,9 @@ builder.Services.AddInfrastructure(builder.Configuration);
 // Add Radzen services
 builder.Services.AddRadzenComponents();
 
+// Attaches the signed-in user's Api JWT to every typed HttpClient request below
+builder.Services.AddTransient<AuthTokenHandler>();
+
 // Add HTTP client for API
 builder.Services.AddHttpClient<IEventService, EventService>(client =>
 {
@@ -65,7 +63,7 @@ builder.Services.AddHttpClient<IEventService, EventService>(client =>
         ?? throw new InvalidOperationException("ApiSettings:BaseUrl not configured");
     client.BaseAddress = new Uri(baseUrl);
     client.Timeout = TimeSpan.FromSeconds(30);
-});
+}).AddHttpMessageHandler<AuthTokenHandler>();
 
 builder.Services.AddHttpClient<IUserProfileService, UserProfileService>(client =>
 {
@@ -73,7 +71,7 @@ builder.Services.AddHttpClient<IUserProfileService, UserProfileService>(client =
         ?? throw new InvalidOperationException("ApiSettings:BaseUrl not configured");
     client.BaseAddress = new Uri(baseUrl);
     client.Timeout = TimeSpan.FromSeconds(30);
-});
+}).AddHttpMessageHandler<AuthTokenHandler>();
 
 builder.Services.AddHttpClient<IUserManagementService, UserManagementService>(client =>
 {
@@ -81,7 +79,7 @@ builder.Services.AddHttpClient<IUserManagementService, UserManagementService>(cl
         ?? throw new InvalidOperationException("ApiSettings:BaseUrl not configured");
     client.BaseAddress = new Uri(baseUrl);
     client.Timeout = TimeSpan.FromSeconds(30);
-});
+}).AddHttpMessageHandler<AuthTokenHandler>();
 
 builder.Services.AddHttpClient<IEventManagementService, EventManagementService>(client =>
 {
@@ -89,7 +87,7 @@ builder.Services.AddHttpClient<IEventManagementService, EventManagementService>(
         ?? throw new InvalidOperationException("ApiSettings:BaseUrl not configured");
     client.BaseAddress = new Uri(baseUrl);
     client.Timeout = TimeSpan.FromSeconds(30);
-});
+}).AddHttpMessageHandler<AuthTokenHandler>();
 
 builder.Services.AddHttpClient<IRegistrationService, RegistrationService>(client =>
 {
@@ -97,7 +95,7 @@ builder.Services.AddHttpClient<IRegistrationService, RegistrationService>(client
         ?? throw new InvalidOperationException("ApiSettings:BaseUrl not configured");
     client.BaseAddress = new Uri(baseUrl);
     client.Timeout = TimeSpan.FromSeconds(30);
-});
+}).AddHttpMessageHandler<AuthTokenHandler>();
 
 builder.Services.AddHttpClient<IAdminRegistrationManagementService, AdminRegistrationManagementService>(client =>
 {
@@ -105,7 +103,7 @@ builder.Services.AddHttpClient<IAdminRegistrationManagementService, AdminRegistr
         ?? throw new InvalidOperationException("ApiSettings:BaseUrl not configured");
     client.BaseAddress = new Uri(baseUrl);
     client.Timeout = TimeSpan.FromSeconds(30);
-});
+}).AddHttpMessageHandler<AuthTokenHandler>();
 
 builder.Services.AddHttpClient<IImportManagementService, ImportManagementService>(client =>
 {
@@ -113,7 +111,7 @@ builder.Services.AddHttpClient<IImportManagementService, ImportManagementService
         ?? throw new InvalidOperationException("ApiSettings:BaseUrl not configured");
     client.BaseAddress = new Uri(baseUrl);
     client.Timeout = TimeSpan.FromSeconds(30);
-});
+}).AddHttpMessageHandler<AuthTokenHandler>();
 
 // Add utility services
 builder.Services.AddSingleton<IGuidProvider, GuidProvider>();
@@ -144,7 +142,7 @@ app.MapGet("/account/logout", async (HttpContext context) =>
     return Results.Redirect("/login");
 });
 
-app.MapStaticAssets();
+app.MapStaticAssets().AllowAnonymous();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
