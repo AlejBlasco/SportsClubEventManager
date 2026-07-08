@@ -136,12 +136,19 @@ await app.Services.MigrateDatabaseAsync();
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
+
+    app.UseSwaggerUI(options =>
+    {
+        options.SwaggerEndpoint("/openapi/v1.json", "Sports Club Event Manager API v1");
+        options.RoutePrefix = "swagger";
+    });
 }
 
 app.MapGet("/", () => Results.Ok(new
 {
     Name = "Sports Club Event Manager API",
-    OpenApi = "/openapi/v1.json"
+    OpenApi = "/openapi/v1.json",
+    Swagger = "/swagger"
 }));
 
 // Global exception handling
