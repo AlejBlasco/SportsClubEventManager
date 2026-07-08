@@ -1,5 +1,8 @@
 @page "/404"
+@page "/{*pathInfo}"
 @attribute [Microsoft.AspNetCore.Authorization.AllowAnonymous]
+@layout SportsClubEventManager.Web.Components.Layout.MainLayout
+@using Microsoft.AspNetCore.Http
 
 <PageTitle>404 &mdash; Page Not Found</PageTitle>
 
@@ -40,3 +43,19 @@
         </div>
     </div>
 </div>
+
+@code {
+    [Parameter]
+    public string? PathInfo { get; set; }
+
+    [CascadingParameter]
+    private HttpContext? HttpContext { get; set; }
+
+    protected override void OnInitialized()
+    {
+        if (HttpContext is not null)
+        {
+            HttpContext.Response.StatusCode = StatusCodes.Status404NotFound;
+        }
+    }
+}
