@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
 using SportsClubEventManager.Shared.DTOs;
@@ -20,6 +21,8 @@ public sealed partial class EventDetails
     private bool isRegistered;
     private bool isAuthenticated;
     private Guid? currentRegistrationId;
+    private string currentUserName = string.Empty;
+    private string currentUserEmail = string.Empty;
 
     private bool showRegistrationForm;
     private bool showCancelConfirmation;
@@ -57,6 +60,8 @@ public sealed partial class EventDetails
     {
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
         isAuthenticated = authState.User.Identity?.IsAuthenticated ?? false;
+        currentUserName = authState.User.FindFirst(ClaimTypes.Name)?.Value ?? string.Empty;
+        currentUserEmail = authState.User.FindFirst(ClaimTypes.Email)?.Value ?? string.Empty;
 
         await LoadEventDetailsAsync();
 

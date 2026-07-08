@@ -1,0 +1,234 @@
+.registrations-page {
+    min-height: 70vh;
+}
+
+.registrations-status-wrap {
+    max-width: 480px;
+    margin: 4rem auto;
+    text-align: center;
+    padding: 0 1.5rem;
+}
+
+.registrations-spinner {
+    width: 40px;
+    height: 40px;
+    margin: 0 auto 1.25rem;
+    border: 3px solid rgba(31, 77, 58, 0.15);
+    border-top-color: var(--club-forest);
+    border-radius: 50%;
+    animation: registrations-spin 0.8s linear infinite;
+}
+
+@keyframes registrations-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.page-header {
+    background: linear-gradient(135deg, #0d0d0d 0%, var(--club-forest-deep) 100%);
+    color: #fff;
+    padding: 3.5rem 0 3rem;
+}
+
+.page-header-inner {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 2rem;
+}
+
+.page-eyebrow {
+    display: inline-block;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--club-gold);
+    margin-bottom: 0.75rem;
+    border-left: 3px solid var(--club-gold);
+    padding-left: 0.75rem;
+}
+
+.page-header h1 {
+    font-family: 'Merriweather', Georgia, serif;
+    font-size: clamp(1.8rem, 4vw, 2.75rem);
+    font-weight: 900;
+    color: #fff;
+    margin: 0 0 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+}
+
+.page-subtitle {
+    font-size: 1rem;
+    color: rgba(255, 255, 255, 0.68);
+    margin: 0;
+}
+
+.registrations-content {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 3rem 2rem 5rem;
+}
+
+.registrations-card {
+    background: #fff;
+    border-radius: 12px;
+    border: 1px solid rgba(178, 135, 46, 0.22);
+    box-shadow: 0 10px 24px rgba(20, 44, 35, 0.08);
+    padding: 1.5rem;
+}
+
+.registrations-table {
+    margin-bottom: 0;
+}
+
+.registrations-table thead th {
+    border-bottom: 2px solid #ebebeb;
+    color: var(--club-muted);
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 0.75rem 1rem;
+}
+
+.registrations-table tbody td {
+    padding: 1rem;
+    vertical-align: middle;
+    border-bottom: 1px solid #f0f0f0;
+    color: var(--club-ink);
+}
+
+.registrations-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.registrations-table tbody tr:hover {
+    background: rgba(31, 77, 58, 0.03);
+}
+
+.event-cell {
+    font-weight: 700;
+    color: var(--club-ink);
+}
+
+.registrations-table td i {
+    color: var(--club-muted);
+    margin-right: 0.35rem;
+}
+
+.badge-status {
+    display: inline-block;
+    padding: 0.3rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.badge-status-active {
+    background: rgba(31, 77, 58, 0.12);
+    color: var(--club-forest);
+}
+
+.badge-status-inactive {
+    background: rgba(91, 106, 102, 0.14);
+    color: var(--club-muted);
+}
+
+.actions-cell {
+    text-align: right;
+}
+
+.btn-cancel-page {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.45rem 1rem;
+    background: transparent;
+    border: 1.5px solid var(--club-danger);
+    color: var(--club-danger);
+    font-weight: 700;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.btn-cancel-page:hover:not(:disabled) {
+    background: var(--club-danger);
+    color: #fff;
+}
+
+.btn-cancel-page:disabled {
+    border-color: #d8d8d8;
+    color: #b5b5b5;
+    cursor: not-allowed;
+}
+
+.registrations-empty {
+    text-align: center;
+    padding: 4rem 1.5rem;
+    background: #fff;
+    border-radius: 12px;
+    border: 1px solid rgba(178, 135, 46, 0.22);
+}
+
+.registrations-empty i {
+    font-size: 2.5rem;
+    color: var(--club-muted);
+    margin-bottom: 1rem;
+    display: block;
+}
+
+.registrations-empty p {
+    color: var(--club-muted);
+    margin-bottom: 1.5rem;
+}
+
+.btn-secondary-page {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.65rem 1.5rem;
+    background: transparent;
+    border: 1.5px solid var(--club-forest);
+    color: var(--club-forest);
+    font-weight: 700;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    text-decoration: none;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.btn-secondary-page:hover {
+    background: var(--club-forest);
+    color: #fff;
+    text-decoration: none;
+}
+
+@media (max-width: 768px) {
+    .page-header {
+        padding: 2.5rem 0 2rem;
+    }
+
+    .page-header-inner {
+        padding: 0 1.25rem;
+    }
+
+    .registrations-content {
+        padding: 2.5rem 1.25rem 3rem;
+    }
+
+    .registrations-card {
+        padding: 1rem;
+        overflow-x: auto;
+    }
+}

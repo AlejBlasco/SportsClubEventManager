@@ -18,6 +18,18 @@ public sealed partial class RegistrationForm
     public bool IsSubmitting { get; set; }
 
     /// <summary>
+    /// Gets or sets the authenticated user's name, used to prefill the form.
+    /// </summary>
+    [Parameter]
+    public string UserName { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the authenticated user's email, used to prefill the form.
+    /// </summary>
+    [Parameter]
+    public string UserEmail { get; set; } = string.Empty;
+
+    /// <summary>
     /// Gets or sets the callback invoked when the form is successfully submitted with valid data.
     /// </summary>
     [Parameter]
@@ -28,6 +40,13 @@ public sealed partial class RegistrationForm
     /// </summary>
     [Parameter]
     public EventCallback OnCancel { get; set; }
+
+    /// <inheritdoc />
+    protected override void OnInitialized()
+    {
+        FormModel.Name = UserName;
+        FormModel.Email = UserEmail;
+    }
 
     /// <summary>
     /// Handles valid form submission.

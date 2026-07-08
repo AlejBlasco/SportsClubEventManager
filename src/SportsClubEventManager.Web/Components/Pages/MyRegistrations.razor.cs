@@ -11,6 +11,7 @@ public partial class MyRegistrations
     private readonly List<RegistrationListDto> _registrations = [];
     private bool _loading = true;
     private Guid? _processingRegistrationId;
+    private RegistrationListDto? _pendingCancellation;
     private string? _errorMessage;
     private string? _successMessage;
 
@@ -43,8 +44,35 @@ public partial class MyRegistrations
         }
     }
 
-    private async Task CancelAsync(RegistrationListDto registration)
+    /// <summary>
+    /// Shows the cancellation confirmation dialog for the given registration.
+    /// </summary>
+    private void ShowCancelConfirmation(RegistrationListDto registration)
     {
+        _pendingCancellation = registration;
+        _errorMessage = null;
+        _successMessage = null;
+    }
+
+    /// <summary>
+    /// Hides the cancellation confirmation dialog without cancelling.
+    /// </summary>
+    private void HideCancelConfirmation()
+    {
+        _pendingCancellation = null;
+    }
+
+    /// <summary>
+    /// Confirms and performs the cancellation of the pending registration.
+    /// </summary>
+    private async Task HandleCancellationConfirmAsync()
+    {
+        if (_pendingCancellation is null)
+        {
+            return;
+        }
+
+        var registration = _pendingCancellation;
         _errorMessage = null;
         _successMessage = null;
 
@@ -69,6 +97,7 @@ public partial class MyRegistrations
         finally
         {
             _processingRegistrationId = null;
+            _pendingCancellation = null;
         }
     }
 }

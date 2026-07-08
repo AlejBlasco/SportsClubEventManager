@@ -1,6 +1,12 @@
 # Guía de Usuario — Gestión de Inscripciones
-**Versión:** 2026-07-07  
+**Versión:** 2026-07-08  
 **Aplica a:** Sports Club Event Manager (v1.2+)
+
+> **Actualización (2026-07-08):** La página "Mis Inscripciones" se rediseñó con el estilo visual
+> del resto de la aplicación (cabecera con degradado, tarjeta), y se corrigió un fallo por el que
+> el botón "Cancel" no respondía (la página no tenía habilitada la interactividad de Blazor
+> Server). Además, cancelar ahora muestra un diálogo de confirmación antes de proceder, igual que
+> en la página de detalles de evento. Ver Paso 3 más abajo.
 
 ---
 
@@ -44,8 +50,11 @@ En la tabla verás las siguientes columnas:
 1. Encuentra el evento que deseas cancelar en la tabla
 2. En la columna **Actions** (última columna), verás un botón **"Cancel"**
 3. Haz clic en el botón **"Cancel"**
+4. Aparece un diálogo de confirmación: **"Are you sure you want to cancel your registration for this event?"**
+5. Haz clic en **"Confirm"** para continuar, o en **"Cancel"** / fuera del diálogo para volver atrás sin cancelar
 
-**Resultado:** El botón mostrará "Cancelling..." mientras se procesa. Si todo funciona:
+**Resultado:** El botón "Confirm" mostrará "Processing..." mientras se procesa. Si todo funciona:
+- El diálogo se cierra
 - Aparecerá un mensaje verde: **"Registration cancelled successfully."**
 - El evento desaparecerá de tu lista
 - Tu lugar se libera para otro usuario

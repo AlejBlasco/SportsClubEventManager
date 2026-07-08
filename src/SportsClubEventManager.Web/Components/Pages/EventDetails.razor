@@ -131,6 +131,8 @@
     {
         <RegistrationForm @key="@("registration-form")"
                           IsSubmitting="@isRegistrationInProgress"
+                          UserName="@currentUserName"
+                          UserEmail="@currentUserEmail"
                           OnSubmit="@HandleRegistrationSubmit"
                           OnCancel="@HideRegistrationForm" />
     }

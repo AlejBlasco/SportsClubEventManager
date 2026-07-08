@@ -61,13 +61,18 @@
 }
 
 .mvp-notice {
-    background-color: #fff3cd;
-    border: 1px solid #ffc107;
+    background-color: #eef4f1;
+    border: 1px solid #cddcd5;
     border-radius: 4px;
     padding: 0.75rem;
     margin-bottom: 1.5rem;
     font-size: 0.9rem;
-    color: #856404;
+    color: #445e54;
+}
+
+.mvp-notice a {
+    color: #1f4d3a;
+    font-weight: 600;
 }
 
 .form-group {

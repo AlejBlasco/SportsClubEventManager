@@ -18,6 +18,18 @@ Este trabajo implementa un sistema completo de gestión de inscripciones a nivel
 > [Reenvío del Token de la Web a la Api](../technical/US-27-oauth2-authentication.md#reenvío-del-token-de-la-web-a-la-api-authtokenhandler)
 > en el documento técnico de US-27 para el detalle completo de la causa raíz y el fix (`AuthTokenHandler`).
 
+> **Corrección post-implementación (2026-07-08):** `MyRegistrations.razor` no declaraba
+> `@rendermode InteractiveServer`. Sin ese directive, Blazor Server renderiza el componente en modo
+> estático (SSR puro) y los manejadores `@onclick` nunca se conectan en el cliente, por lo que el
+> botón "Cancel" no producía ninguna llamada ni error visible. Se añadió el rendermode (alineado con
+> `EventDetails.razor`, `Events.razor` y `UserProfile.razor`, que ya lo tenían). Aprovechando el
+> arreglo, se rediseñó la página con el lenguaje visual de marca (`page-header` con degradado,
+> tarjeta, badges) usado en `UserProfile.razor`, y se añadió un `ConfirmationDialog` antes de
+> cancelar, reutilizando el mismo componente y mensaje que ya usaba `EventDetails.razor` para
+> cancelar un registro. Ver también la sección
+> [Flujo de Datos — Usuario: Cancela Inscripción](#usuario--cancela-inscripción) actualizada más
+> abajo.
+
 ---
 
 ## Arquitectura
@@ -54,8 +66,9 @@ Shared Layer (DTOs)
 └── GetAdminRegistrationsQueryParameters (parámetros GET)
 
 Web Layer (UI Blazor)
-├── MyRegistrations.razor / MyRegistrations.razor.cs
-│   └── RegistrationService (cliente HTTP)
+├── MyRegistrations.razor / MyRegistrations.razor.cs (@rendermode InteractiveServer)
+│   ├── RegistrationService (cliente HTTP)
+│   └── Shared/ConfirmationDialog.razor (diálogo de confirmación antes de cancelar)
 │
 └── Admin/RegistrationManagement.razor / Admin/RegistrationManagement.razor.cs
     ├── AdminRegistrationManagementService (cliente HTTP)
@@ -79,15 +92,25 @@ Infraestructura
 8. Devuelve lista; componente renderiza tabla
 
 #### Usuario — Cancela Inscripción
-1. Usuario hace clic en botón "Cancel"
-2. Invoca `RegistrationService.CancelMyRegistrationAsync(registrationId)`
-3. HTTP DELETE `/api/v1/registrations/{id}`
-4. Handler envía `CancelRegistrationByIdCommand` con `IsAdministrator=false`, `RequestingUserId=userId`
-5. Handler valida: registro existe, propietario==usuario, evento futuro
-6. Elimina registro de BD
-7. No registra en auditoría (acción de usuario, no administrador)
-8. Devuelve 204 NoContent
-9. Componente recarga lista con `LoadAsync()`
+1. Usuario hace clic en botón "Cancel" de la fila → `ShowCancelConfirmation(registration)` guarda
+   la inscripción pendiente en `_pendingCancellation` y limpia mensajes previos
+2. Se muestra `ConfirmationDialog` con título "Cancel Registration" y el mensaje "Are you sure you
+   want to cancel your registration for this event?"
+3. Si el usuario hace clic en "Cancel" del diálogo (o en el overlay) → `HideCancelConfirmation()`
+   limpia `_pendingCancellation` sin llamar a la API
+4. Si el usuario hace clic en "Confirm" → `HandleCancellationConfirmAsync()`:
+   1. Invoca `RegistrationService.CancelMyRegistrationAsync(registrationId)`
+   2. HTTP DELETE `/api/v1/registrations/{id}`
+   3. Handler envía `CancelRegistrationByIdCommand` con `IsAdministrator=false`, `RequestingUserId=userId`
+   4. Handler valida: registro existe, propietario==usuario, evento futuro
+   5. Elimina registro de BD
+   6. No registra en auditoría (acción de usuario, no administrador)
+   7. Devuelve 204 NoContent
+   8. Componente recarga lista con `LoadAsync()` y cierra el diálogo (`_pendingCancellation = null`)
+
+**Nota:** Este flujo requiere que `MyRegistrations.razor` tenga `@rendermode InteractiveServer`;
+sin interactividad del lado servidor, ni el botón "Cancel" ni el `ConfirmationDialog` responden a
+clics (ver corrección post-implementación arriba).
 
 #### Administrador — Consulta Inscripciones
 1. Página `RegistrationManagement` se carga con `OnInitializedAsync()`
@@ -410,8 +433,10 @@ No se creó migración nueva; se aprovecha estructura existente de Sprint 1.
   - Auditoría registra con IP/UserAgent
 
 #### Componentes Blazor (Web)
-- `MyRegistrations`: carga lista, cancela con confirmación, error/success messages
 - `RegistrationManagement`: filtros, paginación, creación manual, exporta CSV/PDF
+- `MyRegistrations`: sin tests bUnit dedicados a la fecha; el flujo de cancelación con
+  confirmación reutiliza `Shared/ConfirmationDialog.razor`, que sí cuenta con cobertura propia
+  (`ConfirmationDialogTests.cs`)
 
 **Cobertura estimada:** 85%+
 
@@ -427,7 +452,7 @@ No se creó migración nueva; se aprovecha estructura existente de Sprint 1.
 
 4. **Búsqueda por texto no es full-text:** Búsqueda simple con `Contains()`. Para volúmenes altos, considerar Elasticsearch o Full-Text Search de SQL Server.
 
-5. **Sin confirmación de diálogo modal para cancelación admin:** Admin hace clic en botón; se cancela inmediatamente. Se recomienda diálogo de confirmación en UI para v2.
+5. **Sin confirmación de diálogo modal para cancelación admin:** en `Admin/RegistrationManagement.razor` el admin hace clic en botón "Cancel" y se cancela inmediatamente, sin diálogo. Distinto del flujo de usuario en `MyRegistrations.razor`, que desde 2026-07-08 sí muestra un `ConfirmationDialog` antes de cancelar. Se recomienda extender el mismo patrón a la vista de administrador en una futura versión.
 
 6. **Exportación solo de página actual:** CSV/PDF exporta solo los registros visibles en página actual. Para exportar todos con filtros, se requeriría parámetro `pageSize=MaxInt`.
 

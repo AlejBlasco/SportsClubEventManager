@@ -100,6 +100,24 @@ public sealed class RegistrationFormTests : TestContext
     }
 
     /// <summary>
+    /// Tests that the form prefills name and email from the authenticated user parameters.
+    /// </summary>
+    [Fact]
+    public void RegistrationForm_WhenRendered_PrefillsNameAndEmailFromUserParameters()
+    {
+        // Arrange & Act
+        var cut = RenderComponent<RegistrationForm>(parameters => parameters
+            .Add(p => p.UserName, "Jane Smith")
+            .Add(p => p.UserEmail, "jane.smith@example.com"));
+
+        // Assert
+        var nameInput = cut.Find("#name");
+        var emailInput = cut.Find("#email");
+        nameInput.GetAttribute("value").Should().Be("Jane Smith");
+        emailInput.GetAttribute("value").Should().Be("jane.smith@example.com");
+    }
+
+    /// <summary>
     /// Tests that clicking Cancel button invokes OnCancel callback.
     /// </summary>
     [Fact]
