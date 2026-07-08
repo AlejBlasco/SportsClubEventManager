@@ -5,6 +5,9 @@ services:
       SA_PASSWORD: ${SA_PASSWORD}
       ACCEPT_EULA: "Y"
       MSSQL_PID: Developer
+    ports:
+      # Published to the host so tools like SQL Server Management Studio can connect.
+      - "${SQL_PORT:-1433}:1433"
     volumes:
       - sqlserver_data:/var/opt/mssql
     healthcheck:
@@ -34,6 +37,12 @@ services:
       # but kept so the policy remains consistent with future direct-browser scenarios.
       Cors__AllowedOrigins__0: http://localhost:${WEB_PORT:-5123}
       Cors__AllowedOrigins__1: ${WEB_EXTERNAL_URL:-}
+      # Required at startup — Program.cs throws if any of these are missing.
+      Authentication__JwtSettings__SecretKey: ${JWT_SECRET_KEY}
+      Authentication__Google__ClientId: ${GOOGLE_CLIENT_ID}
+      Authentication__Google__ClientSecret: ${GOOGLE_CLIENT_SECRET}
+      # Required by the SeedAdministratorUser migration on first run.
+      AdminUser__Password: ${ADMIN_PASSWORD}
     depends_on:
       sqlserver:
         condition: service_healthy
