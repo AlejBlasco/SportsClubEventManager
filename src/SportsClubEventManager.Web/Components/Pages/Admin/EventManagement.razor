@@ -21,6 +21,9 @@
         <button class="btn btn-primary mt-3" @onclick="OpenCreateModal">
             <i class="bi bi-plus-circle"></i> Create New Event
         </button>
+        <button class="btn btn-outline-primary mt-3" @onclick="@(() => NavigationManager.NavigateTo("/admin/events/import"))">
+            <i class="bi bi-file-earmark-arrow-up"></i> Import CSV
+        </button>
     </div>
 
     @if (_errorMessage != null)

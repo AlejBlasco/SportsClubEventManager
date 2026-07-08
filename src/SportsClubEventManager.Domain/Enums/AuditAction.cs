@@ -58,5 +58,10 @@ public enum AuditAction
     /// <summary>
     /// Registration was cancelled by an administrator.
     /// </summary>
-    RegistrationCancelled = 10
+    RegistrationCancelled = 10,
+
+    /// <summary>
+    /// A batch of events was created by an administrator via CSV import.
+    /// </summary>
+    EventsImported = 11
 }
