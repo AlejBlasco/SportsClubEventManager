@@ -11,6 +11,8 @@ updates:
     directory: "/"
     target-branch: "develop"
     multi-ecosystem-group: "all-dependencies"
+    patterns:
+      - "*"
     schedule:
       interval: "weekly"
     cooldown:
@@ -29,6 +31,8 @@ updates:
     directory: "/"
     target-branch: "develop"
     multi-ecosystem-group: "all-dependencies"
+    patterns:
+      - "*"
     schedule:
       interval: "weekly"
     cooldown:
