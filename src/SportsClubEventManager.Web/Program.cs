@@ -6,10 +6,13 @@ using Microsoft.AspNetCore.Components.Authorization;
 using Radzen;
 using SportsClubEventManager.Application.Authorization.Policies;
 using SportsClubEventManager.Infrastructure;
+using SportsClubEventManager.Infrastructure.Configuration;
 using SportsClubEventManager.Web.Components;
 using SportsClubEventManager.Web.Services;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Configuration.AddDockerSecrets();
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
