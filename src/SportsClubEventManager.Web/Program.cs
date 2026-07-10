@@ -8,26 +8,36 @@ using SportsClubEventManager.Application.Authorization.Policies;
 using SportsClubEventManager.Infrastructure;
 using SportsClubEventManager.Infrastructure.Configuration;
 using SportsClubEventManager.Web.Components;
+using SportsClubEventManager.Web.Configuration;
 using SportsClubEventManager.Web.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Configuration.AddDockerSecrets();
 
+// Binds and validates every critical configuration section owned by this host
+// (ApiSettings, CookieSettings). Validation runs eagerly during IHost.StartAsync(),
+// fixing the previous lazy-validation gap where a missing ApiSettings:BaseUrl let the
+// process start successfully and only failed later, on the first typed HttpClient use.
+builder.Services.AddWebConfigurationOptions(builder.Configuration);
+
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
+
+var cookieSettings = builder.Configuration.GetSection(CookieSettingsOptions.SectionName).Get<CookieSettingsOptions>()
+    ?? new CookieSettingsOptions();
 
 // Add Authentication
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
     {
-        options.Cookie.Name = builder.Configuration["Authentication:CookieSettings:CookieName"] ?? ".SportsClubEventManager.Auth";
-        options.LoginPath = builder.Configuration["Authentication:CookieSettings:LoginPath"] ?? "/login";
-        options.LogoutPath = builder.Configuration["Authentication:CookieSettings:LogoutPath"] ?? "/logout";
-        options.AccessDeniedPath = builder.Configuration["Authentication:CookieSettings:AccessDeniedPath"] ?? "/access-denied";
-        options.ExpireTimeSpan = TimeSpan.Parse(builder.Configuration["Authentication:CookieSettings:ExpireTimeSpan"] ?? "00:30:00");
-        options.SlidingExpiration = builder.Configuration.GetValue<bool>("Authentication:CookieSettings:SlidingExpiration", true);
+        options.Cookie.Name = cookieSettings.CookieName;
+        options.LoginPath = cookieSettings.LoginPath;
+        options.LogoutPath = cookieSettings.LogoutPath;
+        options.AccessDeniedPath = cookieSettings.AccessDeniedPath;
+        options.ExpireTimeSpan = cookieSettings.ExpireTimeSpan;
+        options.SlidingExpiration = cookieSettings.SlidingExpiration;
         options.Cookie.HttpOnly = true;
         options.Cookie.SecurePolicy = builder.Environment.IsDevelopment()
             ? CookieSecurePolicy.SameAsRequest
@@ -59,60 +69,52 @@ builder.Services.AddRadzenComponents();
 // Attaches the signed-in user's Api JWT to every typed HttpClient request below
 builder.Services.AddTransient<AuthTokenHandler>();
 
+// Single read of ApiSettings:BaseUrl, reused by every typed HttpClient below. The value is
+// already guaranteed present and well-formed by AddWebConfigurationOptions()'s
+// ValidateOnStart() above, so no further null-check/throw is needed here.
+var apiBaseUrl = builder.Configuration.GetSection(ApiSettingsOptions.SectionName).Get<ApiSettingsOptions>()?.BaseUrl
+    ?? string.Empty;
+
 // Add HTTP client for API
 builder.Services.AddHttpClient<IEventService, EventService>(client =>
 {
-    var baseUrl = builder.Configuration["ApiSettings:BaseUrl"]
-        ?? throw new InvalidOperationException("ApiSettings:BaseUrl not configured");
-    client.BaseAddress = new Uri(baseUrl);
+    client.BaseAddress = new Uri(apiBaseUrl);
     client.Timeout = TimeSpan.FromSeconds(30);
 }).AddHttpMessageHandler<AuthTokenHandler>();
 
 builder.Services.AddHttpClient<IUserProfileService, UserProfileService>(client =>
 {
-    var baseUrl = builder.Configuration["ApiSettings:BaseUrl"]
-        ?? throw new InvalidOperationException("ApiSettings:BaseUrl not configured");
-    client.BaseAddress = new Uri(baseUrl);
+    client.BaseAddress = new Uri(apiBaseUrl);
     client.Timeout = TimeSpan.FromSeconds(30);
 }).AddHttpMessageHandler<AuthTokenHandler>();
 
 builder.Services.AddHttpClient<IUserManagementService, UserManagementService>(client =>
 {
-    var baseUrl = builder.Configuration["ApiSettings:BaseUrl"]
-        ?? throw new InvalidOperationException("ApiSettings:BaseUrl not configured");
-    client.BaseAddress = new Uri(baseUrl);
+    client.BaseAddress = new Uri(apiBaseUrl);
     client.Timeout = TimeSpan.FromSeconds(30);
 }).AddHttpMessageHandler<AuthTokenHandler>();
 
 builder.Services.AddHttpClient<IEventManagementService, EventManagementService>(client =>
 {
-    var baseUrl = builder.Configuration["ApiSettings:BaseUrl"]
-        ?? throw new InvalidOperationException("ApiSettings:BaseUrl not configured");
-    client.BaseAddress = new Uri(baseUrl);
+    client.BaseAddress = new Uri(apiBaseUrl);
     client.Timeout = TimeSpan.FromSeconds(30);
 }).AddHttpMessageHandler<AuthTokenHandler>();
 
 builder.Services.AddHttpClient<IRegistrationService, RegistrationService>(client =>
 {
-    var baseUrl = builder.Configuration["ApiSettings:BaseUrl"]
-        ?? throw new InvalidOperationException("ApiSettings:BaseUrl not configured");
-    client.BaseAddress = new Uri(baseUrl);
+    client.BaseAddress = new Uri(apiBaseUrl);
     client.Timeout = TimeSpan.FromSeconds(30);
 }).AddHttpMessageHandler<AuthTokenHandler>();
 
 builder.Services.AddHttpClient<IAdminRegistrationManagementService, AdminRegistrationManagementService>(client =>
 {
-    var baseUrl = builder.Configuration["ApiSettings:BaseUrl"]
-        ?? throw new InvalidOperationException("ApiSettings:BaseUrl not configured");
-    client.BaseAddress = new Uri(baseUrl);
+    client.BaseAddress = new Uri(apiBaseUrl);
     client.Timeout = TimeSpan.FromSeconds(30);
 }).AddHttpMessageHandler<AuthTokenHandler>();
 
 builder.Services.AddHttpClient<IImportManagementService, ImportManagementService>(client =>
 {
-    var baseUrl = builder.Configuration["ApiSettings:BaseUrl"]
-        ?? throw new InvalidOperationException("ApiSettings:BaseUrl not configured");
-    client.BaseAddress = new Uri(baseUrl);
+    client.BaseAddress = new Uri(apiBaseUrl);
     client.Timeout = TimeSpan.FromSeconds(30);
 }).AddHttpMessageHandler<AuthTokenHandler>();
 
