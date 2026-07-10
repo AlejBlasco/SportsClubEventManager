@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using Serilog;
+using Serilog.Events;
 using SportsClubEventManager.Api.Configuration;
 using SportsClubEventManager.Api.Middleware;
 using SportsClubEventManager.Application;
@@ -10,8 +12,11 @@ using SportsClubEventManager.Application.Authorization.Policies;
 using SportsClubEventManager.Infrastructure;
 using SportsClubEventManager.Infrastructure.Authentication.OAuth2;
 using SportsClubEventManager.Infrastructure.Configuration;
+using SportsClubEventManager.Infrastructure.Logging;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Host.AddSerilogLogging("SportsClubEventManager.Api");
 
 builder.Configuration.AddDockerSecrets();
 
@@ -136,6 +141,19 @@ app.MapGet("/", () => Results.Ok(new
     OpenApi = "/openapi/v1.json"
 }));
 
+// Correlation id: reads/generates X-Correlation-Id and pushes it into the ambient LogContext
+// for the rest of the request, before anything else (including the request logging below) runs.
+app.UseMiddleware<CorrelationIdMiddleware>();
+
+app.UseSerilogRequestLogging(options =>
+{
+    // Verbose (not Information) for /health*, so periodic Docker/orchestrator probes (issue #41)
+    // don't flood the logs with a line every few seconds; they still show up if the minimum
+    // level is raised.
+    options.GetLevel = (httpContext, elapsed, ex) =>
+        httpContext.Request.Path.StartsWithSegments("/health") ? LogEventLevel.Verbose : LogEventLevel.Information;
+});
+
 // Global exception handling
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 
@@ -146,6 +164,10 @@ app.UseCors();
 app.UseAuthentication();
 
 app.UseAuthorization();
+
+// Pushes UserId/UserRole into the ambient LogContext (placed after UseAuthorization to access
+// populated User claims), so they're attached to every remaining log line for this request.
+app.UseMiddleware<RequestUserLogContextMiddleware>();
 
 // Unauthorized access logging (placed after UseAuthorization to access populated User claims)
 app.UseMiddleware<UnauthorizedAccessLoggingMiddleware>();
