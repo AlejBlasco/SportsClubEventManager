@@ -1,3 +1,15 @@
+secrets:
+  authentication__jwtsettings__secretkey:
+    environment: JWT_SECRET_KEY
+  authentication__google__clientid:
+    environment: GOOGLE_CLIENT_ID
+  authentication__google__clientsecret:
+    environment: GOOGLE_CLIENT_SECRET
+  adminuser__password:
+    environment: ADMIN_PASSWORD
+  connectionstrings__defaultconnection:
+    environment: CONNECTION_STRING
+
 services:
   sqlserver:
     image: mcr.microsoft.com/mssql/server:2022-latest
@@ -24,9 +36,17 @@ services:
       - "${API_PORT:-5240}:8080"
     environment:
       ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Production}
-      ConnectionStrings__DefaultConnection: ${CONNECTION_STRING}
+      # ConnectionStrings__DefaultConnection, Authentication__JwtSettings__SecretKey,
+      # Authentication__Google__ClientId/ClientSecret and AdminUser__Password ARE REMOVED
+      # from here: they now arrive as file-based secrets (see "secrets:" below).
       Cors__AllowedOrigins__0: http://localhost:${WEB_PORT:-5123}
       Cors__AllowedOrigins__1: ${WEB_EXTERNAL_URL:-}
+    secrets:
+      - authentication__jwtsettings__secretkey
+      - authentication__google__clientid
+      - authentication__google__clientsecret
+      - adminuser__password
+      - connectionstrings__defaultconnection
     depends_on:
       sqlserver:
         condition: service_healthy
@@ -39,8 +59,10 @@ services:
       - "${WEB_PORT:-5123}:8080"
     environment:
       ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Production}
-      ConnectionStrings__DefaultConnection: ${CONNECTION_STRING}
       ApiSettings__BaseUrl: http://api:8080
+      # ConnectionStrings__DefaultConnection IS REMOVED from here (see "secrets:")
+    secrets:
+      - connectionstrings__defaultconnection
     depends_on:
       sqlserver:
         condition: service_healthy

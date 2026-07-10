@@ -25,6 +25,10 @@ public static class DependencyInjection
         services.AddMediatR(config =>
         {
             config.RegisterServicesFromAssembly(assembly);
+
+            // LoggingBehavior is registered before ValidationBehavior so it is the more outer
+            // behavior in the pipeline, logging validation failures too, not just handler failures.
+            config.AddOpenBehavior(typeof(LoggingBehavior<,>));
             config.AddOpenBehavior(typeof(ValidationBehavior<,>));
         });
 

@@ -24,6 +24,66 @@ public sealed class DependencyInjectionTests
         return configBuilder.Build();
     }
 
+    private IConfiguration CreateConfigurationWithoutConnectionString()
+    {
+        var configBuilder = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>());
+
+        return configBuilder.Build();
+    }
+
+    private IConfiguration CreateConfigurationWithBlankConnectionString()
+    {
+        var configBuilder = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                { "ConnectionStrings:DefaultConnection", "   " }
+            });
+
+        return configBuilder.Build();
+    }
+
+    /// <summary>
+    /// Verifies that AddInfrastructure throws InvalidOperationException when
+    /// ConnectionStrings:DefaultConnection is entirely missing from configuration, so the process
+    /// fails fast at service registration time instead of failing later inside AddDbContext with a
+    /// less clear error.
+    /// </summary>
+    [Fact]
+    public void AddInfrastructure_WithMissingConnectionString_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        var services = new ServiceCollection();
+        var configuration = CreateConfigurationWithoutConnectionString();
+
+        // Act
+        var act = () => services.AddInfrastructure(configuration);
+
+        // Assert
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("*ConnectionStrings:DefaultConnection*");
+    }
+
+    /// <summary>
+    /// Verifies that AddInfrastructure throws InvalidOperationException when
+    /// ConnectionStrings:DefaultConnection is present but whitespace-only, treating a blank value
+    /// the same as a missing one.
+    /// </summary>
+    [Fact]
+    public void AddInfrastructure_WithBlankConnectionString_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        var services = new ServiceCollection();
+        var configuration = CreateConfigurationWithBlankConnectionString();
+
+        // Act
+        var act = () => services.AddInfrastructure(configuration);
+
+        // Assert
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("*ConnectionStrings:DefaultConnection*");
+    }
+
     /// <summary>
     /// Verifies that AddInfrastructure registers AppDbContext in the service container.
     /// </summary>

@@ -89,7 +89,7 @@ flowchart TB
 | Testing backend | **xUnit**, **FluentAssertions**, **NSubstitute**, **Bogus** (datos de prueba), `coverlet.collector` |
 | Testing Blazor | **bUnit**, **WireMock.Net** (mock de llamadas HTTP a la API) |
 | Testing de integración | **Testcontainers** (SQL Server), **Respawn** (reseteo de BD), `Microsoft.AspNetCore.Mvc.Testing` |
-| Documentación de API | Swagger / OpenAPI (`/swagger`, solo en entorno `Development`) |
+| Documentación de API | Swagger / OpenAPI (`/swagger`) |
 
 ## c. Instalación y ejecución
 
@@ -108,7 +108,13 @@ flowchart TB
    cd SportsClubEventManager
    ```
 
-2. Crear un archivo `.env` en la raíz del proyecto con, al menos, las siguientes variables:
+2. Crear un archivo `.env` en la raíz del proyecto a partir de la plantilla `.env.example` (que no contiene ningún secreto real, solo la lista completa de variables esperadas):
+
+   ```bash
+   cp .env.example .env
+   ```
+
+   Y rellenar, al menos, las siguientes variables:
 
    ```env
    SA_PASSWORD=UnaContraseñaSegura123!
@@ -133,15 +139,17 @@ flowchart TB
    - Web (Blazor): http://localhost:5123
    - API + Swagger: http://localhost:5240/swagger
 
-> Con `ASPNETCORE_ENVIRONMENT=Development` se aplican también las migraciones de datos de prueba (ver [sección f](#f-usuarios-de-prueba)) y se habilita Swagger UI; en otros entornos (`Production`, etc.) el endpoint `/swagger` no se expone.
+> Con `ASPNETCORE_ENVIRONMENT=Development` se aplican también las migraciones de datos de prueba (ver [sección f](#f-usuarios-de-prueba)). Con `ASPNETCORE_ENVIRONMENT=Production` (o cualquier valor distinto de `Development`), ambos hosts cargan `appsettings.json` (fichero base) como único perfil de configuración de producción — este repositorio no define un `appsettings.Production.json` separado; el fichero base ya cumple ese rol de forma explícita y documentada, y solo `appsettings.Development.json` diverge de él (logging más verboso).
+>
+> **Validación de arranque**: ambos hosts (`Api` y `Web`) validan de forma agregada, al arrancar y antes de aceptar ninguna petición HTTP, que toda la configuración crítica (`Authentication:JwtSettings`, `Authentication:Google`, `AdminUser:Password`, `Cors:AllowedOrigins` en `Api`; `ApiSettings:BaseUrl`, `Authentication:CookieSettings` en `Web`; `ConnectionStrings:DefaultConnection` en ambos) esté presente y sea válida. Si falta o es inválida alguna variable obligatoria, el proceso **no arranca**: termina con una excepción que agrega en un único mensaje **todos** los errores de configuración detectados (no solo el primero), en lugar de fallar de forma silenciosa o solo al primer uso.
 
 ### Opción B · Ejecución local con `dotnet run`
 
 Requiere una instancia de SQL Server / LocalDB accesible.
 
 ```bash
-# Configurar secretos de usuario para la API
-dotnet user-secrets init --project src/SportsClubEventManager.Api
+# Configurar secretos de usuario para la API (el UserSecretsId ya viene precommiteado en el .csproj,
+# no hace falta ejecutar "dotnet user-secrets init")
 dotnet user-secrets set "Authentication:JwtSettings:SecretKey" "<clave-de-al-menos-32-caracteres>" --project src/SportsClubEventManager.Api
 dotnet user-secrets set "Authentication:Google:ClientId" "<google-client-id>" --project src/SportsClubEventManager.Api
 dotnet user-secrets set "Authentication:Google:ClientSecret" "<google-client-secret>" --project src/SportsClubEventManager.Api
@@ -159,9 +167,7 @@ dotnet run --project src/SportsClubEventManager.Api    # http://localhost:5240 �
 dotnet run --project src/SportsClubEventManager.Web    # http://localhost:5123
 ```
 
-> `dotnet run` usa por defecto el entorno `Development` (`launchSettings.json`), por lo que `/swagger` está disponible. Si se publica o ejecuta la API con `ASPNETCORE_ENVIRONMENT=Production`, el endpoint de Swagger UI no se registra.
-
-Un fichero de referencia con todos los secretos necesarios está disponible en `.secrets-template.json`.
+Un fichero de referencia con todos los secretos necesarios está disponible en `.secrets-template.json`. Para el inventario completo de secretos y el procedimiento de alta/rotación de cada uno, ver [`docs/technical/secrets-management.md`](docs/technical/secrets-management.md).
 
 ### Ejecutar la batería de tests
 
