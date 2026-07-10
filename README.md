@@ -140,8 +140,8 @@ flowchart TB
 Requiere una instancia de SQL Server / LocalDB accesible.
 
 ```bash
-# Configurar secretos de usuario para la API
-dotnet user-secrets init --project src/SportsClubEventManager.Api
+# Configurar secretos de usuario para la API (el UserSecretsId ya viene precommiteado en el .csproj,
+# no hace falta ejecutar "dotnet user-secrets init")
 dotnet user-secrets set "Authentication:JwtSettings:SecretKey" "<clave-de-al-menos-32-caracteres>" --project src/SportsClubEventManager.Api
 dotnet user-secrets set "Authentication:Google:ClientId" "<google-client-id>" --project src/SportsClubEventManager.Api
 dotnet user-secrets set "Authentication:Google:ClientSecret" "<google-client-secret>" --project src/SportsClubEventManager.Api
@@ -159,7 +159,7 @@ dotnet run --project src/SportsClubEventManager.Api    # http://localhost:5240 �
 dotnet run --project src/SportsClubEventManager.Web    # http://localhost:5123
 ```
 
-Un fichero de referencia con todos los secretos necesarios está disponible en `.secrets-template.json`.
+Un fichero de referencia con todos los secretos necesarios está disponible en `.secrets-template.json`. Para el inventario completo de secretos y el procedimiento de alta/rotación de cada uno, ver [`docs/technical/secrets-management.md`](docs/technical/secrets-management.md).
 
 ### Ejecutar la batería de tests
 
