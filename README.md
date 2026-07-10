@@ -108,7 +108,13 @@ flowchart TB
    cd SportsClubEventManager
    ```
 
-2. Crear un archivo `.env` en la raíz del proyecto con, al menos, las siguientes variables:
+2. Crear un archivo `.env` en la raíz del proyecto a partir de la plantilla `.env.example` (que no contiene ningún secreto real, solo la lista completa de variables esperadas):
+
+   ```bash
+   cp .env.example .env
+   ```
+
+   Y rellenar, al menos, las siguientes variables:
 
    ```env
    SA_PASSWORD=UnaContraseñaSegura123!
@@ -133,7 +139,9 @@ flowchart TB
    - Web (Blazor): http://localhost:5123
    - API + Swagger: http://localhost:5240/swagger
 
-> Con `ASPNETCORE_ENVIRONMENT=Development` se aplican también las migraciones de datos de prueba (ver [sección f](#f-usuarios-de-prueba)).
+> Con `ASPNETCORE_ENVIRONMENT=Development` se aplican también las migraciones de datos de prueba (ver [sección f](#f-usuarios-de-prueba)). Con `ASPNETCORE_ENVIRONMENT=Production` (o cualquier valor distinto de `Development`), ambos hosts cargan `appsettings.json` (fichero base) como único perfil de configuración de producción — este repositorio no define un `appsettings.Production.json` separado; el fichero base ya cumple ese rol de forma explícita y documentada, y solo `appsettings.Development.json` diverge de él (logging más verboso).
+>
+> **Validación de arranque**: ambos hosts (`Api` y `Web`) validan de forma agregada, al arrancar y antes de aceptar ninguna petición HTTP, que toda la configuración crítica (`Authentication:JwtSettings`, `Authentication:Google`, `AdminUser:Password`, `Cors:AllowedOrigins` en `Api`; `ApiSettings:BaseUrl`, `Authentication:CookieSettings` en `Web`; `ConnectionStrings:DefaultConnection` en ambos) esté presente y sea válida. Si falta o es inválida alguna variable obligatoria, el proceso **no arranca**: termina con una excepción que agrega en un único mensaje **todos** los errores de configuración detectados (no solo el primero), en lugar de fallar de forma silenciosa o solo al primer uso.
 
 ### Opción B · Ejecución local con `dotnet run`
 

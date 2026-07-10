@@ -24,10 +24,18 @@ public static class DependencyInjection
     /// <returns>The service collection for method chaining.</returns>
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
+        var connectionString = configuration.GetConnectionString("DefaultConnection");
+        if (string.IsNullOrWhiteSpace(connectionString))
+        {
+            throw new InvalidOperationException(
+                "ConnectionStrings:DefaultConnection is not configured. " +
+                "Set it via User Secrets (local) or the CONNECTION_STRING environment variable (Docker).");
+        }
+
         services.AddDbContext<AppDbContext>(options =>
         {
             options.UseSqlServer(
-                configuration.GetConnectionString("DefaultConnection"),
+                connectionString,
                 sqlOptions =>
                 {
                     sqlOptions.EnableRetryOnFailure(

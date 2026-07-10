@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using SportsClubEventManager.Api.Configuration;
 using SportsClubEventManager.Api.Middleware;
 using SportsClubEventManager.Application;
 using SportsClubEventManager.Application.Authorization.Policies;
@@ -14,20 +15,11 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Configuration.AddDockerSecrets();
 
-// Validate admin password configuration
-var adminPassword = builder.Configuration["AdminUser:Password"];
-var adminPasswordPlaceholder = builder.Configuration["Authorization:AdminUser:DefaultPassword"];
-
-if (!string.IsNullOrWhiteSpace(adminPasswordPlaceholder)
-    && adminPasswordPlaceholder.Contains("***"))
-{
-    if (string.IsNullOrWhiteSpace(adminPassword) && !builder.Environment.IsDevelopment())
-    {
-        throw new InvalidOperationException(
-            "Administrator password is not configured for non-development environment. " +
-            "Set 'AdminUser:Password' in Azure Key Vault or environment variables.");
-    }
-}
+// Binds and validates every critical configuration section owned by this host
+// (JwtSettings, Google, AdminUser, Cors). Validation runs eagerly during
+// IHost.StartAsync(), aggregating every failure into a single exception raised
+// before the process accepts any HTTP request.
+builder.Services.AddApiConfigurationOptions(builder.Configuration);
 
 // Add services to the container
 builder.Services.AddControllers();
@@ -42,15 +34,14 @@ builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 
 // Add Authentication and Authorization
-var jwtSecretKey = builder.Configuration["Authentication:JwtSettings:SecretKey"]
-    ?? throw new InvalidOperationException("JWT secret key is not configured. Please add it to User Secrets.");
-
-if (jwtSecretKey.Length < 32)
-{
-    throw new InvalidOperationException(
-        $"JWT secret key must be at least 32 characters (256 bits). Current length: {jwtSecretKey.Length}. " +
-        "Generate a secure key with: openssl rand -base64 32");
-}
+// AddJwtBearer/AddGoogle need concrete values at builder-construction time (not a deferred
+// IOptions<T>), so the same sections are read directly here a second time; the
+// ValidateOnStart() registered above remains the source of the "fails fast at startup if
+// something is missing" guarantee.
+var jwtSettings = builder.Configuration.GetSection(JwtSettingsOptions.SectionName).Get<JwtSettingsOptions>()
+    ?? new JwtSettingsOptions();
+var googleAuth = builder.Configuration.GetSection(GoogleAuthOptions.SectionName).Get<GoogleAuthOptions>()
+    ?? new GoogleAuthOptions();
 
 builder.Services.AddAuthentication(options =>
 {
@@ -65,9 +56,9 @@ builder.Services.AddAuthentication(options =>
         ValidateAudience = true,
         ValidateLifetime = true,
         ValidateIssuerSigningKey = true,
-        ValidIssuer = builder.Configuration["Authentication:JwtSettings:Issuer"] ?? "SportsClubEventManager.Api",
-        ValidAudience = builder.Configuration["Authentication:JwtSettings:Audience"] ?? "SportsClubEventManager.Web",
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecretKey)),
+        ValidIssuer = jwtSettings.Issuer,
+        ValidAudience = jwtSettings.Audience,
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.SecretKey)),
         ClockSkew = TimeSpan.Zero
     };
 
@@ -85,11 +76,9 @@ builder.Services.AddAuthentication(options =>
 })
 .AddGoogle(options =>
 {
-    options.ClientId = builder.Configuration["Authentication:Google:ClientId"]
-        ?? throw new InvalidOperationException("Google OAuth2 Client ID is not configured.");
-    options.ClientSecret = builder.Configuration["Authentication:Google:ClientSecret"]
-        ?? throw new InvalidOperationException("Google OAuth2 Client Secret is not configured.");
-    options.CallbackPath = builder.Configuration["Authentication:Google:CallbackPath"] ?? "/signin-google";
+    options.ClientId = googleAuth.ClientId;
+    options.ClientSecret = googleAuth.ClientSecret;
+    options.CallbackPath = googleAuth.CallbackPath;
     options.SaveTokens = true;
 
     options.Events.OnCreatingTicket = async context =>
@@ -121,10 +110,10 @@ builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
     {
-        var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
-            ?? ["https://localhost:5001", "https://localhost:7001"];
+        var corsOptions = builder.Configuration.GetSection(CorsOptions.SectionName).Get<CorsOptions>()
+            ?? new CorsOptions();
 
-        policy.WithOrigins(allowedOrigins)
+        policy.WithOrigins(corsOptions.AllowedOrigins)
             .AllowAnyMethod()
             .AllowAnyHeader()
             .AllowCredentials();

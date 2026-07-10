@@ -1,6 +1,9 @@
 using FluentAssertions;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Configuration;
 using Respawn;
 using SportsClubEventManager.Domain.Enums;
 using SportsClubEventManager.Infrastructure.Persistence;
@@ -324,32 +327,125 @@ public class MigrationAndConfigurationIntegrationTests
         }
 
         /// <summary>
-        /// Verifies that API validates JWT secret key configuration.
+        /// Verifies that the API host fails fast at startup (before serving any HTTP request) when
+        /// Authentication:JwtSettings:SecretKey is entirely missing, via JwtSettingsOptions'
+        /// [Required] data annotation registered through AddApiConfigurationOptions/ValidateOnStart.
         /// </summary>
         [Fact]
-        public void ApiConfiguration_WithoutJwtSecretKey_ShouldFailAtStartup()
+        public void ApiConfiguration_WithoutJwtSecretKey_FailsAtStartup()
         {
-            // Arrange & Act
-            // This would require a test that attempts to start API without JWT secret
-            // Captured in Program.cs validation logic
+            // Arrange
+            using var factory = new WebApplicationFactory<Program>()
+                .WithWebHostBuilder(builder =>
+                {
+                    builder.ConfigureAppConfiguration((_, config) =>
+                    {
+                        config.AddInMemoryCollection(new Dictionary<string, string?>
+                        {
+                            ["Authentication:JwtSettings:SecretKey"] = string.Empty
+                        });
+                    });
+                });
+
+            // Act
+            var act = () => factory.CreateClient();
 
             // Assert
-            // Validation in Program.cs should throw InvalidOperationException
-            true.Should().BeTrue("JWT secret key validation is implemented in Program.cs");
+            var thrown = act.Should().Throw<Exception>().Which;
+            CollectAllMessages(thrown).Should().Contain(message => message.Contains("SecretKey"));
         }
 
         /// <summary>
-        /// Verifies that API validates JWT secret key minimum length (256 bits = 32 chars).
+        /// Verifies that the API host fails fast at startup when Authentication:JwtSettings:SecretKey
+        /// is present but shorter than the 32 characters (256 bits) required by
+        /// JwtSettingsOptions' [MinLength(32)] data annotation for HMAC-SHA256 signing.
         /// </summary>
         [Fact]
-        public void ApiConfiguration_WithShortJwtSecretKey_ShouldFailAtStartup()
+        public void ApiConfiguration_WithShortJwtSecretKey_FailsAtStartup()
         {
-            // Arrange & Act
-            // This would require testing API startup with short JWT key
+            // Arrange
+            using var factory = new WebApplicationFactory<Program>()
+                .WithWebHostBuilder(builder =>
+                {
+                    builder.ConfigureAppConfiguration((_, config) =>
+                    {
+                        config.AddInMemoryCollection(new Dictionary<string, string?>
+                        {
+                            ["Authentication:JwtSettings:SecretKey"] = "too-short-key"
+                        });
+                    });
+                });
+
+            // Act
+            var act = () => factory.CreateClient();
 
             // Assert
-            // Validation should enforce minimum 32 character length
-            true.Should().BeTrue("JWT secret key length validation is implemented in Program.cs");
+            var thrown = act.Should().Throw<Exception>().Which;
+            CollectAllMessages(thrown).Should().Contain(message => message.Contains("SecretKey"));
+        }
+
+        /// <summary>
+        /// Verifies that the API host fails fast at startup when Cors:AllowedOrigins is empty in a
+        /// simulated Production environment, via CorsOptionsValidator (the Development-only
+        /// localhost fallback must not silently apply outside Development).
+        /// </summary>
+        [Fact]
+        public void ApiConfiguration_WithEmptyCorsOriginsInProduction_FailsAtStartup()
+        {
+            // Arrange
+            using var factory = new WebApplicationFactory<Program>()
+                .WithWebHostBuilder(builder =>
+                {
+                    builder.UseEnvironment("Production");
+                    builder.ConfigureAppConfiguration((_, config) =>
+                    {
+                        config.AddInMemoryCollection(new Dictionary<string, string?>
+                        {
+                            // appsettings.json ships exactly two base entries (indices 0 and 1);
+                            // overriding both with blank values empties the effective array without
+                            // needing to know every configuration source contributing to it.
+                            ["Cors:AllowedOrigins:0"] = string.Empty,
+                            ["Cors:AllowedOrigins:1"] = "   ",
+                            // Supplied so AdminUserOptionsValidator (also mandatory outside
+                            // Development) does not fail simultaneously and muddy the assertion.
+                            ["AdminUser:Password"] = "a-real-non-blank-admin-password"
+                        });
+                    });
+                });
+
+            // Act
+            var act = () => factory.CreateClient();
+
+            // Assert
+            var thrown = act.Should().Throw<Exception>().Which;
+            CollectAllMessages(thrown).Should().Contain(message => message.Contains("Cors:AllowedOrigins"));
+        }
+
+        /// <summary>
+        /// Flattens an exception and, if present, every exception aggregated inside it into a flat
+        /// list of messages. ValidateOnStart aggregates multiple simultaneous options-validation
+        /// failures into an AggregateException, but a single failure is thrown as-is; checking both
+        /// shapes keeps these assertions correct regardless of that aggregation detail.
+        /// </summary>
+        /// <param name="exception">The exception thrown by the failing host startup.</param>
+        /// <returns>Every message found in the exception and its inner/aggregated exceptions.</returns>
+        private static IReadOnlyList<string> CollectAllMessages(Exception exception)
+        {
+            var messages = new List<string> { exception.Message };
+
+            if (exception is AggregateException aggregateException)
+            {
+                foreach (var inner in aggregateException.InnerExceptions)
+                {
+                    messages.AddRange(CollectAllMessages(inner));
+                }
+            }
+            else if (exception.InnerException is not null)
+            {
+                messages.AddRange(CollectAllMessages(exception.InnerException));
+            }
+
+            return messages;
         }
     }
 }
