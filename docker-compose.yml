@@ -1,3 +1,15 @@
+secrets:
+  authentication__jwtsettings__secretkey:
+    environment: JWT_SECRET_KEY
+  authentication__google__clientid:
+    environment: GOOGLE_CLIENT_ID
+  authentication__google__clientsecret:
+    environment: GOOGLE_CLIENT_SECRET
+  adminuser__password:
+    environment: ADMIN_PASSWORD
+  connectionstrings__defaultconnection:
+    environment: CONNECTION_STRING
+
 services:
   sqlserver:
     image: mcr.microsoft.com/mssql/server:2022-latest
@@ -31,18 +43,17 @@ services:
       - "${API_PORT:-5240}:8080"
     environment:
       ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Production}
-      ConnectionStrings__DefaultConnection: ${CONNECTION_STRING}
-      # Override CORS origins to match the host-mapped web port.
-      # Not required for Blazor Server (API calls are server-side, no browser CORS),
-      # but kept so the policy remains consistent with future direct-browser scenarios.
+      # ConnectionStrings__DefaultConnection, Authentication__JwtSettings__SecretKey,
+      # Authentication__Google__ClientId/ClientSecret and AdminUser__Password ARE REMOVED
+      # from here: they now arrive as file-based secrets (see "secrets:" below).
       Cors__AllowedOrigins__0: http://localhost:${WEB_PORT:-5123}
       Cors__AllowedOrigins__1: ${WEB_EXTERNAL_URL:-}
-      # Required at startup — Program.cs throws if any of these are missing.
-      Authentication__JwtSettings__SecretKey: ${JWT_SECRET_KEY}
-      Authentication__Google__ClientId: ${GOOGLE_CLIENT_ID}
-      Authentication__Google__ClientSecret: ${GOOGLE_CLIENT_SECRET}
-      # Required by the SeedAdministratorUser migration on first run.
-      AdminUser__Password: ${ADMIN_PASSWORD}
+    secrets:
+      - authentication__jwtsettings__secretkey
+      - authentication__google__clientid
+      - authentication__google__clientsecret
+      - adminuser__password
+      - connectionstrings__defaultconnection
     depends_on:
       sqlserver:
         condition: service_healthy
@@ -55,10 +66,12 @@ services:
       - "${WEB_PORT:-5123}:8080"
     environment:
       ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Production}
-      ConnectionStrings__DefaultConnection: ${CONNECTION_STRING}
       # Internal Docker network name — Blazor Server makes server-side calls to the API,
       # so this must point to the api service, not to the host-mapped port.
       ApiSettings__BaseUrl: http://api:8080
+      # ConnectionStrings__DefaultConnection IS REMOVED from here (see "secrets:")
+    secrets:
+      - connectionstrings__defaultconnection
     depends_on:
       sqlserver:
         condition: service_healthy

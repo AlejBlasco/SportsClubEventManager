@@ -1,0 +1,14 @@
+title = "SportsClubEventManager gitleaks config"
+
+[extend]
+useDefault = true   # default gitleaks rules (detects generic AWS keys/JWT/etc. patterns)
+
+[allowlist]
+description = "Template placeholders that are not real secrets"
+regexes = [
+  '''\*\*\* (SET VIA|STORED IN) USER SECRETS.*\*\*\*''',
+  '''REPLACE_WITH_[A-Z_]+''',
+]
+paths = [
+  '''\.secrets-template\.json$''',
+]

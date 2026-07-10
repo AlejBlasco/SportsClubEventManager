@@ -8,8 +8,11 @@ using SportsClubEventManager.Application;
 using SportsClubEventManager.Application.Authorization.Policies;
 using SportsClubEventManager.Infrastructure;
 using SportsClubEventManager.Infrastructure.Authentication.OAuth2;
+using SportsClubEventManager.Infrastructure.Configuration;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Configuration.AddDockerSecrets();
 
 // Validate admin password configuration
 var adminPassword = builder.Configuration["AdminUser:Password"];
