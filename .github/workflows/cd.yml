@@ -207,7 +207,9 @@ jobs:
         run: |
           response=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$PORTAINER_WEBHOOK_URL")
           echo "Portainer responded with HTTP $response"
-          [ "$response" = "200" ] || exit 1
+          # Portainer's stack webhook replies 204 No Content on a successful
+          # trigger, not 200 - accept any 2xx as success.
+          [[ "$response" =~ ^2[0-9]{2}$ ]] || exit 1
 
   post-deploy-smoke-test:
     name: Smoke test homelab deployment
