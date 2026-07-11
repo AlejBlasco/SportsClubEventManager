@@ -135,6 +135,8 @@ flowchart TB
    docker compose up --build
    ```
 
+   > El `docker-compose.yml` de la raíz es un fichero `include:` de dos líneas; el contenido real del stack vive en [`infrastructure/docker-compose/`](infrastructure/docker-compose/README.md), pero el comando anterior sigue funcionando sin cambios.
+
 4. Acceder a la aplicación:
    - Web (Blazor): http://localhost:5123
    - API + Swagger: http://localhost:5240/swagger
@@ -197,7 +199,8 @@ El repositorio sigue una arquitectura en capas (Clean Architecture):
   /functional                              → Documentación funcional por Historia de Usuario (castellano)
   /technical                               → Documentación técnica por Historia de Usuario (inglés)
 /docker
-  Dockerfile.api, Dockerfile.web, docker-compose.prod.yml
+  Dockerfile.api, Dockerfile.web
+/infrastructure                            → Infraestructura como código (Docker Compose, documentación de despliegue)
 /.github/workflows                         → Pipelines de CI (build + test) y CD (build + deploy)
 /.claude                                   → Kit de agentes de IA usado durante el desarrollo (ver más abajo)
 docker-compose.yml                         → Orquestación local del stack completo

@@ -9,7 +9,7 @@ Este documento describe cómo se despliega `SportsClubEventManager` al homelab e
 1. Un `push` a `master` (o un `workflow_dispatch` manual) dispara `.github/workflows/cd.yml`.
 2. `validate` (issue #44) construye ambas imágenes localmente, las escanea con Trivy y ejecuta un smoke test contra un SQL Server efímero. Si falla, el pipeline se detiene aquí y no se publica ni despliega nada.
 3. `build-and-push` publica `api` y `web` en GHCR con las etiquetas `latest`, `sha-<hash-corto>` y la versión de `Directory.Build.props`.
-4. `deploy` llama al **webhook de GitOps de Portainer** (`secrets.PORTAINER_WEBHOOK_URL`), que hace que Portainer vuelva a hacer `pull` de las imágenes (`pull_policy: always`) y recree los contenedores `api`/`web` del stack `docker/docker-compose.prod.yml`.
+4. `deploy` llama al **webhook de GitOps de Portainer** (`secrets.PORTAINER_WEBHOOK_URL`), que hace que Portainer vuelva a hacer `pull` de las imágenes (`pull_policy: always`) y recree los contenedores `api`/`web` del stack `infrastructure/docker-compose/docker-compose.prod.yml`.
 5. `post-deploy-smoke-test` espera a que el despliegue esté realmente sano contra la URL pública real (`secrets.HOMELAB_WEB_URL`, entorno `homelab-production`):
    - `GET /health/live` (bloqueante, hasta 6 intentos cada 15s, ~90s máx.).
    - `GET /health/ready` (mismo patrón de reintentos) — esto también valida `Api` de forma transitiva, ver `ApiAvailabilityHealthCheck` (issue #41).
@@ -66,7 +66,7 @@ Antes de que el flujo automático de las secciones 1 y 2 funcione de verdad, alg
 
 - Crear la **GitHub Environment** `homelab-production`.
 - Cargar en ese entorno los cuatro secretos/variables: `PORTAINER_WEBHOOK_URL`, `HOMELAB_WEB_URL`, `PORTAINER_API_URL`, `PORTAINER_API_KEY`.
-- Confirmar que el stack `docker/docker-compose.prod.yml` en Portainer tiene el **webhook de GitOps** activado con **"Re-pull image"**, y que existe la variable de entorno de stack `APP_VERSION` sin un valor por defecto forzado (para que `${APP_VERSION:-latest}` decida).
+- Confirmar que el stack `infrastructure/docker-compose/docker-compose.prod.yml` en Portainer tiene el **webhook de GitOps** activado con **"Re-pull image"**, y que existe la variable de entorno de stack `APP_VERSION` sin un valor por defecto forzado (para que `${APP_VERSION:-latest}` decida).
 - Confirmar que la API de Portainer (`PORTAINER_API_URL`) es alcanzable desde runners GitHub-hosted (`ubuntu-latest`), no solo la ruta del webhook.
 
 Los pasos exactos para generar cada secreto/token están documentados en el `## Apéndice A` del diseño de esta issue. Ninguno de estos pasos se realiza desde este repositorio ni desde el pipeline de agentes de desarrollo — son responsabilidad del propietario del homelab.
