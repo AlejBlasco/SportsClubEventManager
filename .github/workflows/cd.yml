@@ -56,18 +56,19 @@ jobs:
           image-ref: local/${{ matrix.service }}:${{ github.sha }}
           format: sarif
           output: trivy-${{ matrix.service }}.sarif
-          severity: CRITICAL
-          exit-code: 1
           ignore-unfixed: true
           # Secret scanning is already covered by gitleaks (ci.yml) on the git
-          # history; skipping it here reduces memory/time pressure on the
-          # shared runner during the dotnet-core vulnerability detection phase,
-          # which was crashing this step with no error output (verified
-          # locally: same Trivy version/flags against an equivalent image
-          # complete cleanly with 0 CRITICAL findings).
+          # history, so it's skipped here.
           scanners: vuln
+          # No severity filter and no exit-code here on purpose: combining
+          # format: sarif with severity: CRITICAL crashed this step on GitHub's
+          # shared runners with no error output (reproduced 3x in CI across
+          # both api/web; did NOT reproduce locally with the same Trivy
+          # version/flags). The severity-filtered pass/fail gate now lives in
+          # "Fail on CRITICAL vulnerabilities" below, driven off the table
+          # report, which has never crashed.
 
-      - name: Trivy scan (full report, non-blocking)
+      - name: Trivy scan (full report)
         if: always()
         uses: aquasecurity/trivy-action@master
         with:
@@ -75,6 +76,17 @@ jobs:
           format: table
           output: trivy-${{ matrix.service }}.txt
           ignore-unfixed: true
+
+      - name: Fail on CRITICAL vulnerabilities
+        run: |
+          # Every report ends with a "Total: N (..., CRITICAL: n)" summary line,
+          # so a plain substring match on "CRITICAL" would always hit even when
+          # n is 0 - sum the actual counts instead.
+          critical_count=$(grep -oP 'CRITICAL:\s*\K[0-9]+' "trivy-${{ matrix.service }}.txt" | awk '{sum += $1} END {print sum + 0}')
+          if [ "$critical_count" -gt 0 ]; then
+            echo "::error::Trivy found ${critical_count} CRITICAL vulnerability(ies) with an available fix in ${{ matrix.service }}. See the trivy-${{ matrix.service }} artifact or the Security tab for details."
+            exit 1
+          fi
 
       - name: Check image size against baseline
         run: |
