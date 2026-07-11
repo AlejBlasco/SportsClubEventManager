@@ -1,15 +1,113 @@
 name: CD
 
 on:
+  pull_request:
+    branches:
+      - master
   push:
     branches:
       - master
   workflow_dispatch:
 
 jobs:
+  validate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+
+    strategy:
+      matrix:
+        include:
+          - service: api
+            dockerfile: docker/Dockerfile.api
+            image: ghcr.io/alejblasco/sportsclubeventsmanager-api
+          - service: web
+            dockerfile: docker/Dockerfile.web
+            image: ghcr.io/alejblasco/sportsclubeventsmanager-web
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Extract version from Directory.Build.props
+        id: version
+        run: |
+          version=$(grep -oP '(?<=<Version>)[^<]+' Directory.Build.props)
+          echo "value=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Build ${{ matrix.service }} (local only)
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          push: false
+          load: true
+          tags: local/${{ matrix.service }}:${{ github.sha }}
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service }}
+
+      - name: Trivy scan (SARIF)
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: local/${{ matrix.service }}:${{ github.sha }}
+          format: sarif
+          output: trivy-${{ matrix.service }}.sarif
+          severity: CRITICAL
+          exit-code: 1
+          ignore-unfixed: true
+
+      - name: Trivy scan (full report, non-blocking)
+        if: always()
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: local/${{ matrix.service }}:${{ github.sha }}
+          format: table
+          output: trivy-${{ matrix.service }}.txt
+          ignore-unfixed: true
+
+      - name: Check image size against baseline
+        run: |
+          actual_bytes=$(docker image inspect --format='{{.Size}}' local/${{ matrix.service }}:${{ github.sha }})
+          baseline_bytes=$(jq -r '.images.${{ matrix.service }}.baselineBytes' docker/image-size-baseline.json)
+          warn_threshold_percent=$(jq -r '.warnThresholdPercent' docker/image-size-baseline.json)
+
+          echo "Actual size: ${actual_bytes} bytes. Baseline: ${baseline_bytes} bytes. Warn threshold: ${warn_threshold_percent}%."
+
+          max_allowed_bytes=$(( baseline_bytes + baseline_bytes * warn_threshold_percent / 100 ))
+          if [ "$actual_bytes" -gt "$max_allowed_bytes" ]; then
+            echo "::warning::Image ${{ matrix.service }} grew beyond the ${warn_threshold_percent}% baseline threshold (baseline: ${baseline_bytes} bytes, actual: ${actual_bytes} bytes). Consider investigating or updating docker/image-size-baseline.json if the growth is intentional."
+          fi
+
+      - name: Smoke test
+        run: |
+          chmod +x .github/scripts/smoke-test.sh
+          .github/scripts/smoke-test.sh "${{ matrix.service }}" "local/${{ matrix.service }}:${{ github.sha }}"
+
+      - name: Upload Trivy reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-${{ matrix.service }}
+          path: |
+            trivy-${{ matrix.service }}.sarif
+            trivy-${{ matrix.service }}.txt
+
+      - name: Upload Trivy SARIF to Security tab
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-${{ matrix.service }}.sarif
+          category: trivy-${{ matrix.service }}
+
   build-and-push:
     name: Build and push ${{ matrix.service }} image
     runs-on: ubuntu-latest
+    needs: validate
+    if: github.event_name != 'pull_request'
     permissions:
       contents: read
       packages: write
@@ -38,6 +136,12 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
 
+      - name: Extract version from Directory.Build.props
+        id: version
+        run: |
+          version=$(grep -oP '(?<=<Version>)[^<]+' Directory.Build.props)
+          echo "value=$version" >> "$GITHUB_OUTPUT"
+
       - name: Extract image metadata
         id: meta
         uses: docker/metadata-action@v6
@@ -46,6 +150,7 @@ jobs:
           tags: |
             type=raw,value=latest,enable={{is_default_branch}}
             type=sha,prefix=sha-
+            type=raw,value=${{ steps.version.outputs.value }}
 
       - name: Build and push ${{ matrix.service }}
         uses: docker/build-push-action@v7
