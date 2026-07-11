@@ -10,6 +10,10 @@ secrets:
   connectionstrings__defaultconnection:
     environment: CONNECTION_STRING
 
+networks:
+  sportsclub-network:
+    driver: bridge
+
 services:
   sqlserver:
     image: mcr.microsoft.com/mssql/server:2022-latest
@@ -19,6 +23,8 @@ services:
       MSSQL_PID: Developer
     volumes:
       - sqlserver_data:/var/opt/mssql
+    networks:
+      - sportsclub-network
     healthcheck:
       test:
         - CMD-SHELL
@@ -47,6 +53,8 @@ services:
       - authentication__google__clientsecret
       - adminuser__password
       - connectionstrings__defaultconnection
+    networks:
+      - sportsclub-network
     depends_on:
       sqlserver:
         condition: service_healthy
@@ -63,6 +71,8 @@ services:
       # ConnectionStrings__DefaultConnection IS REMOVED from here (see "secrets:")
     secrets:
       - connectionstrings__defaultconnection
+    networks:
+      - sportsclub-network
     depends_on:
       sqlserver:
         condition: service_healthy
