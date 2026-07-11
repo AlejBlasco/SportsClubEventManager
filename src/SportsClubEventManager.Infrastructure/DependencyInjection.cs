@@ -48,6 +48,14 @@ public static class DependencyInjection
         services.AddScoped<IApplicationDbContext>(provider =>
             provider.GetRequiredService<AppDbContext>());
 
+        // Registers a health check that verifies connectivity to the database via AppDbContext
+        // (issue #41). Tagged "ready" so it is included in readiness probes but not liveness
+        // probes. AddHealthChecks() can be called again by each host's Program.cs to register
+        // additional checks (e.g. Web's ApiAvailabilityHealthCheck); the framework accumulates
+        // registrations instead of overwriting them.
+        services.AddHealthChecks()
+            .AddDbContextCheck<AppDbContext>(name: "database", tags: ["ready"]);
+
         services.AddSingleton<IDateTimeProvider, SystemDateTimeProvider>();
         services.AddScoped<ITokenService, TokenService>();
         services.AddScoped<IPasswordHasher, PasswordHasher>();

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Radzen;
 using Serilog;
 using SportsClubEventManager.Application.Authorization.Policies;
@@ -11,6 +12,7 @@ using SportsClubEventManager.Infrastructure.Configuration;
 using SportsClubEventManager.Infrastructure.Logging;
 using SportsClubEventManager.Web.Components;
 using SportsClubEventManager.Web.Configuration;
+using SportsClubEventManager.Web.HealthChecks;
 using SportsClubEventManager.Web.Middleware;
 using SportsClubEventManager.Web.Services;
 
@@ -143,6 +145,20 @@ builder.Services.AddHttpClient<IImportManagementService, ImportManagementService
     .AddHttpMessageHandler<CorrelationIdHandler>()
     .AddHttpMessageHandler<ApiCallLoggingHandler>();
 
+// Dedicated HttpClient for the ApiAvailabilityHealthCheck below (issue #41): short timeout so a
+// slow Api does not block Web's own health check pipeline, and deliberately no AuthTokenHandler
+// since the Api's /health/live probe is anonymous.
+builder.Services.AddHttpClient("HealthCheckApiClient", client =>
+{
+    client.BaseAddress = new Uri(apiBaseUrl);
+    client.Timeout = TimeSpan.FromSeconds(3);
+});
+
+// Web's own readiness depends on its database (registered by AddInfrastructure above) and on
+// the Api being reachable (its only other runtime dependency).
+builder.Services.AddHealthChecks()
+    .AddCheck<ApiAvailabilityHealthCheck>("api", tags: ["ready"]);
+
 // Add utility services
 builder.Services.AddSingleton<IGuidProvider, GuidProvider>();
 
@@ -177,6 +193,31 @@ app.MapGet("/account/logout", async (HttpContext context) =>
     await context.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
     return Results.Redirect("/login");
 });
+
+// Health check endpoints (issue #41). Anonymous by design: orchestrators/monitors cannot
+// authenticate. /health/live runs no checks (Predicate = _ => false), the recommended pattern
+// for liveness probes, so a transient database/Api blip does not trigger unnecessary restarts;
+// /health/ready runs only the checks tagged "ready" (database and Api availability); /health
+// runs every registered check. Web has no OpenAPI, so no .WithTags/.WithSummary metadata here.
+app.MapHealthChecks("/health", new HealthCheckOptions
+    {
+        ResponseWriter = HealthCheckResponseWriter.WriteAsync
+    })
+    .AllowAnonymous();
+
+app.MapHealthChecks("/health/ready", new HealthCheckOptions
+    {
+        Predicate = check => check.Tags.Contains("ready"),
+        ResponseWriter = HealthCheckResponseWriter.WriteAsync
+    })
+    .AllowAnonymous();
+
+app.MapHealthChecks("/health/live", new HealthCheckOptions
+    {
+        Predicate = _ => false,
+        ResponseWriter = HealthCheckResponseWriter.WriteAsync
+    })
+    .AllowAnonymous();
 
 app.MapStaticAssets().AllowAnonymous();
 app.MapRazorComponents<App>()

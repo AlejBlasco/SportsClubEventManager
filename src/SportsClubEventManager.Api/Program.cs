@@ -2,10 +2,12 @@ using System.Text;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.IdentityModel.Tokens;
 using Serilog;
 using Serilog.Events;
 using SportsClubEventManager.Api.Configuration;
+using SportsClubEventManager.Api.HealthChecks;
 using SportsClubEventManager.Api.Middleware;
 using SportsClubEventManager.Application;
 using SportsClubEventManager.Application.Authorization.Policies;
@@ -133,12 +135,19 @@ await app.Services.MigrateDatabaseAsync();
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
+
+    app.UseSwaggerUI(options =>
+    {
+        options.SwaggerEndpoint("/openapi/v1.json", "Sports Club Event Manager API v1");
+        options.RoutePrefix = "swagger";
+    });
 }
 
 app.MapGet("/", () => Results.Ok(new
 {
     Name = "Sports Club Event Manager API",
-    OpenApi = "/openapi/v1.json"
+    OpenApi = "/openapi/v1.json",
+    Swagger = "/swagger"
 }));
 
 // Correlation id: reads/generates X-Correlation-Id and pushes it into the ambient LogContext
@@ -171,6 +180,34 @@ app.UseMiddleware<RequestUserLogContextMiddleware>();
 
 // Unauthorized access logging (placed after UseAuthorization to access populated User claims)
 app.UseMiddleware<UnauthorizedAccessLoggingMiddleware>();
+
+// Health check endpoints (issue #41). Anonymous by design: orchestrators/monitors cannot
+// authenticate. /health/live runs no checks (Predicate = _ => false), the recommended pattern
+// for liveness probes, so a transient database blip does not trigger unnecessary restarts;
+// /health/ready runs only the checks tagged "ready" (external dependencies); /health runs
+// every registered check.
+app.MapHealthChecks("/health", new HealthCheckOptions
+    {
+        ResponseWriter = HealthCheckResponseWriter.WriteAsync
+    })
+    .WithTags("Health").WithSummary("Overall health status (all checks)")
+    .AllowAnonymous();
+
+app.MapHealthChecks("/health/ready", new HealthCheckOptions
+    {
+        Predicate = check => check.Tags.Contains("ready"),
+        ResponseWriter = HealthCheckResponseWriter.WriteAsync
+    })
+    .WithTags("Health").WithSummary("Readiness: external dependencies (database)")
+    .AllowAnonymous();
+
+app.MapHealthChecks("/health/live", new HealthCheckOptions
+    {
+        Predicate = _ => false,
+        ResponseWriter = HealthCheckResponseWriter.WriteAsync
+    })
+    .WithTags("Health").WithSummary("Liveness: the process is responding")
+    .AllowAnonymous();
 
 app.MapControllers();
 
