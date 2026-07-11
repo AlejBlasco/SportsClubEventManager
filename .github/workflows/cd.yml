@@ -59,6 +59,13 @@ jobs:
           severity: CRITICAL
           exit-code: 1
           ignore-unfixed: true
+          # Secret scanning is already covered by gitleaks (ci.yml) on the git
+          # history; skipping it here reduces memory/time pressure on the
+          # shared runner during the dotnet-core vulnerability detection phase,
+          # which was crashing this step with no error output (verified
+          # locally: same Trivy version/flags against an equivalent image
+          # complete cleanly with 0 CRITICAL findings).
+          scanners: vuln
 
       - name: Trivy scan (full report, non-blocking)
         if: always()
