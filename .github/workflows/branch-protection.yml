@@ -16,6 +16,16 @@ jobs:
             exit 1
           fi
 
+      # NOTE: enforce_admins is false (both here and for master below) because
+      # this repo currently has a single collaborator (repo admin). GitHub
+      # never counts a PR author's own review toward
+      # required_pull_request_reviews, so with enforce_admins=true and no
+      # second collaborator, the admin would be permanently unable to merge
+      # any PR. Setting it to false still keeps required_status_checks/
+      # required_pull_request_reviews/required_linear_history enforced for
+      # everyone else - it only lets an admin use GitHub's "Merge without
+      # waiting for requirements" override. Revisit (set back to true) once a
+      # second collaborator can review PRs.
       - name: Configure develop protection
         env:
           GH_TOKEN: ${{ secrets.ADMIN_TOKEN }}
@@ -30,7 +40,7 @@ jobs:
               "strict": true,
               "contexts": ["build-and-test"]
             },
-            "enforce_admins": true,
+            "enforce_admins": false,
             "required_pull_request_reviews": {
               "required_approving_review_count": 1,
               "dismiss_stale_reviews": true,
@@ -65,7 +75,7 @@ jobs:
               "strict": true,
               "contexts": ["build-and-test", "validate (api)", "validate (web)"]
             },
-            "enforce_admins": true,
+            "enforce_admins": false,
             "required_pull_request_reviews": {
               "required_approving_review_count": 1,
               "dismiss_stale_reviews": true,

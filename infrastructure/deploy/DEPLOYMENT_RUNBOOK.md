@@ -45,7 +45,7 @@ También puede lanzarse desde la pestaña **Actions → Rollback Homelab Deploym
 Si el webhook de Portainer no está disponible (secreto no cargado, API/host inalcanzable, etc.), el despliegue normal puede hacerse a mano:
 
 1. Entrar en Portainer → seleccionar el **Environment** del nodo del homelab.
-2. Ir a **Stacks** → abrir el stack de producción (por defecto `sportsclubeventmanager-prod`, ver `PORTAINER_STACK_NAME` en `portainer-rollback.sh` si el nombre real difiere).
+2. Ir a **Stacks** → abrir el stack de producción (por defecto `sportsclubeventmanager-prod`; si el nombre real difiere, `rollback.yml` lo lee de la variable de repositorio/entorno `PORTAINER_STACK_NAME` — ver sección 5).
 3. Pulsar **"Pull and redeploy"** (o **"Update the stack"** con la opción **"Re-pull image"** activada, según la versión de Portainer). Esto vuelve a hacer `pull` de la imagen `:${APP_VERSION:-latest}` configurada actualmente y recrea los contenedores `api`/`web`.
 4. Verificar manualmente `GET https://<HOMELAB_WEB_URL>/health/live` y `GET https://<HOMELAB_WEB_URL>/health/ready` para confirmar que el despliegue quedó sano (los mismos checks que hace `smoke-test.sh`).
 
@@ -66,7 +66,22 @@ Antes de que el flujo automático de las secciones 1 y 2 funcione de verdad, alg
 
 - Crear la **GitHub Environment** `homelab-production`.
 - Cargar en ese entorno los cuatro secretos/variables: `PORTAINER_WEBHOOK_URL`, `HOMELAB_WEB_URL`, `PORTAINER_API_URL`, `PORTAINER_API_KEY`.
+- Si el stack de producción en Portainer no se llama `sportsclubeventmanager-prod`, crear además la variable `PORTAINER_STACK_NAME` (a nivel de repositorio o del entorno `homelab-production`) con el nombre real — `rollback.yml` la pasa a `portainer-rollback.sh`, que si no la recibe cae de vuelta al valor por defecto.
 - Confirmar que el stack `infrastructure/docker-compose/docker-compose.prod.yml` en Portainer tiene el **webhook de GitOps** activado con **"Re-pull image"**, y que existe la variable de entorno de stack `APP_VERSION` sin un valor por defecto forzado (para que `${APP_VERSION:-latest}` decida).
-- Confirmar que la API de Portainer (`PORTAINER_API_URL`) es alcanzable desde runners GitHub-hosted (`ubuntu-latest`), no solo la ruta del webhook.
+- **El homelab solo es accesible vía Tailscale** (no hay ruta pública a Portainer ni a Web) — los runners de GitHub Actions (`ubuntu-latest`) no están en el tailnet por defecto, así que los jobs `deploy`/`post-deploy-smoke-test` (`cd.yml`) y `portainer-rollback`/`post-rollback-smoke-test` (`rollback.yml`) se unen a él temporalmente con `tailscale/github-action`. Para esto hace falta:
+  - Generar un **Auth key** en el admin console de Tailscale (Settings → Keys → Generate auth key), marcado como **Reusable** y **Ephemeral**, con el tag `tag:ci`, expiración máxima (90 días — hay que rotarla antes de que caduque o los 4 jobs empezarán a fallar en el step "Connect to Tailscale").
+  - Cargar esa key como secret `TS_AUTHKEY` del entorno `homelab-production`.
+  - Añadir una ACL en Tailscale que permita a `tag:ci` alcanzar el nodo de Portainer y el nodo de Web en los puertos necesarios (webhook/API de Portainer, `/health/live` y `/health/ready` de Web).
+  - Con esto resuelto, `PORTAINER_WEBHOOK_URL`, `PORTAINER_API_URL` y `HOMELAB_WEB_URL` pueden apuntar directamente a nombres/IPs de la tailnet (MagicDNS o `100.x.y.z`) en vez de necesitar una URL pública.
+- Los 5 secretos de aplicación (`CONNECTION_STRING`, `JWT_SECRET_KEY`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `ADMIN_PASSWORD`) se pasan como **variables de entorno del stack**, igual que antes de la issue #38 (secrets management) — ver "Known issue" abajo.
+
+### Known issue: Docker secrets file-based (`secrets: <nombre>: file: ...`) no llegan a la app en este Portainer
+
+Se intentó migrar estos 5 valores a Docker Compose "secrets" file-based (que la app ya sabe leer vía `AddDockerSecrets()`/`KeyPerFile` en `/run/secrets`, ver `docs/technical/US-38-secrets-management.md`), pero **no funcionó en la práctica contra este Portainer** y se revirtió a variables de entorno planas para desbloquear el despliegue:
+
+- `secrets: <nombre>: environment: VAR` (secret alimentado desde una variable de entorno) se comprobó que **no se monta en absoluto**: el motor de compose embebido en Portainer (Business Edition 2.39.2, `docker/cli` vendorizado, distinto del `docker compose` del sistema) acepta la sintaxis sin error pero `docker inspect` mostraba `.Mounts: []` en el contenedor `api`.
+- `secrets: <nombre>: file: <ruta>` con una ruta solo visible dentro del contenedor `portainer` (p. ej. `/data/...`) falla con un error explícito del daemon (`invalid mount config for type "bind": bind source path does not exist`), porque los bind mounts los resuelve el daemon de Docker contra el filesystem del **host real**, no contra la vista del contenedor `portainer`.
+- `secrets: <nombre>: file: <ruta-real-del-host>` (p. ej. `/home/adminlab/sportsclub-secrets/...`) sí monta correctamente — confirmado con `docker inspect <contenedor> --format '{{json .Mounts}}'` mostrando los 5 binds, y confirmado leyendo el contenido del fichero desde dentro del contenedor (`docker exec ... cat /run/secrets/...`), con el valor correcto. **Aun así, la Api seguía arrancando con el connection string de fallback de `appsettings.json` (LocalDB)**, como si `AddDockerSecrets()` no estuviera incorporando `/run/secrets` a la configuración final. No se llegó a la causa raíz (requeriría depurar el proceso .NET en marcha, no solo el filesystem del contenedor).
+- **Pendiente de investigar** en una tarea aparte, sin bloquear despliegues mientras tanto: por qué `KeyPerFile` no sobrescribe `appsettings.json` en este entorno concreto, a pesar de que el mount y el contenido del fichero son correctos y hay tests unitarios (`SecretsConfigurationExtensionsTests.cs`) que cubren la lógica de mapeo de claves.
 
 Los pasos exactos para generar cada secreto/token están documentados en el `## Apéndice A` del diseño de esta issue. Ninguno de estos pasos se realiza desde este repositorio ni desde el pipeline de agentes de desarrollo — son responsabilidad del propietario del homelab.

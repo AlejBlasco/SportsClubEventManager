@@ -30,10 +30,17 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
+      - name: Connect to Tailscale
+        uses: tailscale/github-action@v3
+        with:
+          authkey: ${{ secrets.TS_AUTHKEY }}
+          tags: tag:ci
+
       - name: Update stack APP_VERSION via Portainer API and force redeploy
         env:
           PORTAINER_API_URL: ${{ secrets.PORTAINER_API_URL }}
           PORTAINER_API_KEY: ${{ secrets.PORTAINER_API_KEY }}
+          PORTAINER_STACK_NAME: ${{ vars.PORTAINER_STACK_NAME }}
         run: |
           chmod +x infrastructure/deploy/portainer-rollback.sh
           infrastructure/deploy/portainer-rollback.sh "sha-${{ inputs.version }}"
@@ -46,6 +53,12 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+
+      - name: Connect to Tailscale
+        uses: tailscale/github-action@v3
+        with:
+          authkey: ${{ secrets.TS_AUTHKEY }}
+          tags: tag:ci
 
       - name: Poll /health/live and /health/ready
         env:
