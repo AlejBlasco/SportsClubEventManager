@@ -241,6 +241,7 @@ Al ejecutar el entorno en modo `Development` (Docker con `ASPNETCORE_ENVIRONMENT
 
 - El pipeline de **CI** (`.github/workflows/ci.yml`) compila la solución y ejecuta los tests unitarios en cada Pull Request contra `develop`/`master`.
 - El pipeline de **CD** (`.github/workflows/cd.yml`) construye y publica las imágenes Docker de la API y la Web en GHCR, desplegándolas automáticamente al fusionar en `master`.
+- Antes de publicar, cada imagen pasa por un job `validate` (matriz `api`/`web`) que se ejecuta también en cada Pull Request contra `master`: escaneo de vulnerabilidades con **Trivy** (falla el pipeline ante hallazgos `CRITICAL` con parche disponible), aviso no bloqueante si el tamaño de la imagen crece significativamente respecto a `docker/image-size-baseline.json`, y un smoke test que arranca el contenedor junto a un SQL Server efímero para comprobar que responde en `/health/live`. Los informes de Trivy se publican como artefacto del workflow y en la pestaña [Security](https://github.com/AlejBlasco/SportsClubEventManager/security/code-scanning) del repositorio.
 - La cobertura de tests se mide por Historia de Usuario durante el desarrollo (entre el 75% y el 98% según el módulo, ver `.claude/docs/US-*/unit-test-report.md`); la agregación de un porcentaje único a nivel de repositorio está pendiente de reactivarse en CI.
 
 ## Proyectos personales empleados en su construcción
