@@ -30,7 +30,7 @@ services:
     restart: unless-stopped
 
   api:
-    image: ghcr.io/alejblasco/sportsclubeventsmanager-api:latest
+    image: ghcr.io/alejblasco/sportsclubeventsmanager-api:${APP_VERSION:-latest}
     pull_policy: always
     ports:
       - "${API_PORT:-5240}:8080"
@@ -53,7 +53,7 @@ services:
     restart: unless-stopped
 
   web:
-    image: ghcr.io/alejblasco/sportsclubeventsmanager-web:latest
+    image: ghcr.io/alejblasco/sportsclubeventsmanager-web:${APP_VERSION:-latest}
     pull_policy: always
     ports:
       - "${WEB_PORT:-5123}:8080"

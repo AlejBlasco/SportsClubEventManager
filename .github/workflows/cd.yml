@@ -177,3 +177,80 @@ jobs:
           response=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$PORTAINER_WEBHOOK_URL")
           echo "Portainer responded with HTTP $response"
           [ "$response" = "200" ] || exit 1
+
+  post-deploy-smoke-test:
+    name: Smoke test homelab deployment
+    runs-on: ubuntu-latest
+    needs: deploy
+    environment:
+      name: homelab-production
+      # NOTE: the "environment.url" field only supports a limited set of
+      # contexts (env, github, inputs, job, matrix, needs, runner, steps,
+      # strategy, vars) - "secrets" is not allowed here (verified with
+      # actionlint), unlike inside a step's "env:". If HOMELAB_WEB_URL is
+      # only configured as a secret (not also as a repository/environment
+      # variable), this URL will simply be blank in the Environments tab;
+      # the actual smoke test below still reads it from vars/secrets.
+      url: ${{ vars.HOMELAB_WEB_URL }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Poll /health/live and /health/ready
+        env:
+          HOMELAB_WEB_URL: ${{ vars.HOMELAB_WEB_URL || secrets.HOMELAB_WEB_URL }}
+        run: |
+          chmod +x infrastructure/deploy/smoke-test.sh
+          infrastructure/deploy/smoke-test.sh
+
+      - name: Report rollback guidance on failure
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          chmod +x infrastructure/deploy/find-last-good-tag.sh
+          last_good_tag="$(infrastructure/deploy/find-last-good-tag.sh "${{ github.sha }}" || echo 'unknown')"
+
+          {
+            echo "### :rotating_light: Homelab smoke test failed"
+            echo
+            echo "The deployment of \`${{ github.sha }}\` to \`homelab-production\` did not pass the post-deploy smoke test (\`/health/live\` and/or \`/health/ready\`)."
+            echo
+            echo "Last known good image tag: \`${last_good_tag}\`"
+            echo
+            echo "To roll back automatically, run:"
+            echo '```bash'
+            echo "gh workflow run rollback.yml -f version=${last_good_tag#sha-}"
+            echo '```'
+            echo
+            echo "See [\`infrastructure/deploy/DEPLOYMENT_RUNBOOK.md\`](https://github.com/${{ github.repository }}/blob/master/infrastructure/deploy/DEPLOYMENT_RUNBOOK.md) for the manual rollback procedure if the automated rollback is not available."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          echo "::error::Homelab smoke test failed for ${{ github.sha }}. Last known good tag: ${last_good_tag}. See the job summary for rollback instructions."
+          exit 1
+
+  tag-deployed-version:
+    name: Tag deployed homelab version
+    runs-on: ubuntu-latest
+    needs: post-deploy-smoke-test
+    if: success()
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Create and push deployed/homelab/<short-sha> tag
+        run: |
+          short_sha="$(git rev-parse --short=7 HEAD)"
+          tag="deployed/homelab/${short_sha}"
+
+          # This tag is purely for traceability and as the source of truth of
+          # valid rollback.yml "version" inputs - it does NOT replace the
+          # manual vX.Y.Z release process already used in this repository.
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag "$tag"
+          git push origin "$tag"
