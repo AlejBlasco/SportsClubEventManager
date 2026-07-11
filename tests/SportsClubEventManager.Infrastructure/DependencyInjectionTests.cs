@@ -2,6 +2,8 @@ using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Options;
 using SportsClubEventManager.Infrastructure;
 using SportsClubEventManager.Infrastructure.Persistence;
 using Xunit;
@@ -270,5 +272,114 @@ public sealed class DependencyInjectionTests
 
         // Assert
         executionStrategy.Should().NotBeNull();
+    }
+
+    /// <summary>
+    /// Tests verifying the "database" health check registration added by AddInfrastructure
+    /// (issue #41), covering registration metadata only (name and tags) via the in-memory
+    /// IOptions&lt;HealthCheckServiceOptions&gt; snapshot — building the service provider and
+    /// reading this registration does not execute the check itself, so no real database
+    /// connection is required.
+    /// </summary>
+    public sealed class WhenRegisteringHealthChecks
+    {
+        private IConfiguration CreateValidConfiguration()
+        {
+            var configBuilder = new ConfigurationBuilder()
+                .AddInMemoryCollection(new Dictionary<string, string?>
+                {
+                    { "ConnectionStrings:DefaultConnection", "Data Source=:memory:" }
+                });
+
+            return configBuilder.Build();
+        }
+
+        /// <summary>
+        /// Verifies that AddInfrastructure registers a health check named "database".
+        /// </summary>
+        [Fact]
+        public void AddInfrastructure_RegistersHealthCheckNamedDatabase()
+        {
+            // Arrange
+            var services = new ServiceCollection();
+            var configuration = CreateValidConfiguration();
+
+            // Act
+            services.AddInfrastructure(configuration);
+            var serviceProvider = services.BuildServiceProvider();
+            var healthCheckOptions = serviceProvider.GetRequiredService<IOptions<HealthCheckServiceOptions>>().Value;
+
+            // Assert
+            healthCheckOptions.Registrations.Should().Contain(registration => registration.Name == "database");
+        }
+
+        /// <summary>
+        /// Verifies that the "database" health check is tagged "ready", so it is included in
+        /// readiness probes (/health/ready, /health) but excluded from the liveness probe
+        /// (/health/live), which runs no checks by design.
+        /// </summary>
+        [Fact]
+        public void AddInfrastructure_TagsDatabaseHealthCheckAsReady()
+        {
+            // Arrange
+            var services = new ServiceCollection();
+            var configuration = CreateValidConfiguration();
+
+            // Act
+            services.AddInfrastructure(configuration);
+            var serviceProvider = services.BuildServiceProvider();
+            var healthCheckOptions = serviceProvider.GetRequiredService<IOptions<HealthCheckServiceOptions>>().Value;
+            var databaseRegistration = healthCheckOptions.Registrations.Single(registration => registration.Name == "database");
+
+            // Assert
+            databaseRegistration.Tags.Should().Contain("ready");
+        }
+
+        /// <summary>
+        /// Verifies that HealthCheckService itself resolves from the container once
+        /// AddInfrastructure has run, confirming the health checks middleware is fully wired up
+        /// (not just the options), independent of the ASP.NET Core hosting pipeline.
+        /// </summary>
+        [Fact]
+        public void AddInfrastructure_RegistersResolvableHealthCheckService()
+        {
+            // Arrange
+            var services = new ServiceCollection();
+            var configuration = CreateValidConfiguration();
+
+            // DefaultHealthCheckService requires ILogger<T> to be resolvable; a bare
+            // ServiceCollection has no logging provider registered by default, unlike a real
+            // ASP.NET Core host (which always registers one), so it is added explicitly here.
+            services.AddLogging();
+            services.AddInfrastructure(configuration);
+            var serviceProvider = services.BuildServiceProvider();
+
+            // Act
+            var healthCheckService = serviceProvider.GetService<HealthCheckService>();
+
+            // Assert
+            healthCheckService.Should().NotBeNull();
+        }
+
+        /// <summary>
+        /// Verifies that calling AddInfrastructure does not register duplicate "database" health
+        /// check entries, even though AddHealthChecks() may be invoked multiple times across the
+        /// composition root (each host's Program.cs adds its own checks afterwards).
+        /// </summary>
+        [Fact]
+        public void AddInfrastructure_RegistersExactlyOneDatabaseHealthCheck()
+        {
+            // Arrange
+            var services = new ServiceCollection();
+            var configuration = CreateValidConfiguration();
+
+            // Act
+            services.AddInfrastructure(configuration);
+            var serviceProvider = services.BuildServiceProvider();
+            var healthCheckOptions = serviceProvider.GetRequiredService<IOptions<HealthCheckServiceOptions>>().Value;
+
+            // Assert
+            healthCheckOptions.Registrations.Count(registration => registration.Name == "database").Should().Be(1);
+        }
     }
 }

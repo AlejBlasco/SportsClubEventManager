@@ -84,4 +84,18 @@ public sealed class DatabaseFixture : IAsyncLifetime
     {
         await _container.DisposeAsync();
     }
+
+    /// <summary>
+    /// Stops the SQL Server container without disposing this fixture, simulating a database
+    /// outage that occurs after the application has already started successfully (as opposed to
+    /// the database being unreachable from the very first connection attempt). Used by tests that
+    /// need to observe a health check transitioning from Healthy to Unhealthy mid-test; the
+    /// container is not restarted afterwards, so this should only be called as the last action of
+    /// a test (issue #41).
+    /// </summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    public async Task StopContainerAsync()
+    {
+        await _container.StopAsync();
+    }
 }
