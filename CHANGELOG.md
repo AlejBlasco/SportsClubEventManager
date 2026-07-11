@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- `Directory.Build.props` `<Version>` is now bumped as part of every `release: vX.Y.Z` PR, so published Docker images and GitHub Releases carry the real project version instead of a static placeholder (see "Calidad y CI/CD" in `README.md`).
+
 ## [0.2.0] - 2026-07-08
 
 ### Added

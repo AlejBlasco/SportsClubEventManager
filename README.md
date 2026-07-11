@@ -85,7 +85,7 @@ flowchart TB
 | Autorización | RBAC con dos roles (`User`, `Administrator`), políticas por claim de rol |
 | Importación de datos | **CsvHelper** para la carga masiva de eventos |
 | Contenedores | **Docker** / **Docker Compose** (SQL Server + API + Web), imágenes multi-stage sobre `mcr.microsoft.com/dotnet/sdk:10.0` y `aspnet:10.0` |
-| CI/CD | **GitHub Actions**: build + tests en cada PR a `develop`/`master`; build y publicación de imágenes a **GHCR** + despliegue vía webhook de **Portainer** en `master` |
+| CI/CD | **GitHub Actions**: build + tests en cada PR a `develop`/`master`; build y publicación de imágenes a **GHCR** + despliegue vía webhook de **Portainer** en `master`, con smoke test post-despliegue y rollback totalmente automático (ver [runbook de despliegue](infrastructure/deploy/DEPLOYMENT_RUNBOOK.md)) |
 | Testing backend | **xUnit**, **FluentAssertions**, **NSubstitute**, **Bogus** (datos de prueba), `coverlet.collector` |
 | Testing Blazor | **bUnit**, **WireMock.Net** (mock de llamadas HTTP a la API) |
 | Testing de integración | **Testcontainers** (SQL Server), **Respawn** (reseteo de BD), `Microsoft.AspNetCore.Mvc.Testing` |
@@ -108,7 +108,13 @@ flowchart TB
    cd SportsClubEventManager
    ```
 
-2. Crear un archivo `.env` en la raíz del proyecto con, al menos, las siguientes variables:
+2. Crear un archivo `.env` en la raíz del proyecto a partir de la plantilla `.env.example` (que no contiene ningún secreto real, solo la lista completa de variables esperadas):
+
+   ```bash
+   cp .env.example .env
+   ```
+
+   Y rellenar, al menos, las siguientes variables:
 
    ```env
    SA_PASSWORD=UnaContraseñaSegura123!
@@ -129,19 +135,23 @@ flowchart TB
    docker compose up --build
    ```
 
+   > El `docker-compose.yml` de la raíz es un fichero `include:` de dos líneas; el contenido real del stack vive en [`infrastructure/docker-compose/`](infrastructure/docker-compose/README.md), pero el comando anterior sigue funcionando sin cambios.
+
 4. Acceder a la aplicación:
    - Web (Blazor): http://localhost:5123
    - API + Swagger: http://localhost:5240/swagger
 
-> Con `ASPNETCORE_ENVIRONMENT=Development` se aplican también las migraciones de datos de prueba (ver [sección f](#f-usuarios-de-prueba)).
+> Con `ASPNETCORE_ENVIRONMENT=Development` se aplican también las migraciones de datos de prueba (ver [sección f](#f-usuarios-de-prueba)). Con `ASPNETCORE_ENVIRONMENT=Production` (o cualquier valor distinto de `Development`), ambos hosts cargan `appsettings.json` (fichero base) como único perfil de configuración de producción — este repositorio no define un `appsettings.Production.json` separado; el fichero base ya cumple ese rol de forma explícita y documentada, y solo `appsettings.Development.json` diverge de él (logging más verboso).
+>
+> **Validación de arranque**: ambos hosts (`Api` y `Web`) validan de forma agregada, al arrancar y antes de aceptar ninguna petición HTTP, que toda la configuración crítica (`Authentication:JwtSettings`, `Authentication:Google`, `AdminUser:Password`, `Cors:AllowedOrigins` en `Api`; `ApiSettings:BaseUrl`, `Authentication:CookieSettings` en `Web`; `ConnectionStrings:DefaultConnection` en ambos) esté presente y sea válida. Si falta o es inválida alguna variable obligatoria, el proceso **no arranca**: termina con una excepción que agrega en un único mensaje **todos** los errores de configuración detectados (no solo el primero), en lugar de fallar de forma silenciosa o solo al primer uso.
 
 ### Opción B · Ejecución local con `dotnet run`
 
 Requiere una instancia de SQL Server / LocalDB accesible.
 
 ```bash
-# Configurar secretos de usuario para la API
-dotnet user-secrets init --project src/SportsClubEventManager.Api
+# Configurar secretos de usuario para la API (el UserSecretsId ya viene precommiteado en el .csproj,
+# no hace falta ejecutar "dotnet user-secrets init")
 dotnet user-secrets set "Authentication:JwtSettings:SecretKey" "<clave-de-al-menos-32-caracteres>" --project src/SportsClubEventManager.Api
 dotnet user-secrets set "Authentication:Google:ClientId" "<google-client-id>" --project src/SportsClubEventManager.Api
 dotnet user-secrets set "Authentication:Google:ClientSecret" "<google-client-secret>" --project src/SportsClubEventManager.Api
@@ -159,7 +169,7 @@ dotnet run --project src/SportsClubEventManager.Api    # http://localhost:5240 �
 dotnet run --project src/SportsClubEventManager.Web    # http://localhost:5123
 ```
 
-Un fichero de referencia con todos los secretos necesarios está disponible en `.secrets-template.json`.
+Un fichero de referencia con todos los secretos necesarios está disponible en `.secrets-template.json`. Para el inventario completo de secretos y el procedimiento de alta/rotación de cada uno, ver [`docs/technical/secrets-management.md`](docs/technical/secrets-management.md).
 
 ### Ejecutar la batería de tests
 
@@ -189,7 +199,8 @@ El repositorio sigue una arquitectura en capas (Clean Architecture):
   /functional                              → Documentación funcional por Historia de Usuario (castellano)
   /technical                               → Documentación técnica por Historia de Usuario (inglés)
 /docker
-  Dockerfile.api, Dockerfile.web, docker-compose.prod.yml
+  Dockerfile.api, Dockerfile.web
+/infrastructure                            → Infraestructura como código (Docker Compose, documentación de despliegue)
 /.github/workflows                         → Pipelines de CI (build + test) y CD (build + deploy)
 /.claude                                   → Kit de agentes de IA usado durante el desarrollo (ver más abajo)
 docker-compose.yml                         → Orquestación local del stack completo
@@ -233,6 +244,10 @@ Al ejecutar el entorno en modo `Development` (Docker con `ASPNETCORE_ENVIRONMENT
 
 - El pipeline de **CI** (`.github/workflows/ci.yml`) compila la solución y ejecuta los tests unitarios en cada Pull Request contra `develop`/`master`.
 - El pipeline de **CD** (`.github/workflows/cd.yml`) construye y publica las imágenes Docker de la API y la Web en GHCR, desplegándolas automáticamente al fusionar en `master`.
+- Antes de publicar, cada imagen pasa por un job `validate` (matriz `api`/`web`) que se ejecuta también en cada Pull Request contra `master`: escaneo de vulnerabilidades con **Trivy** (falla el pipeline ante hallazgos `CRITICAL` con parche disponible), aviso no bloqueante si el tamaño de la imagen crece significativamente respecto a `docker/image-size-baseline.json`, y un smoke test que arranca el contenedor junto a un SQL Server efímero para comprobar que responde en `/health/live`. Los informes de Trivy se publican como artefacto del workflow y en la pestaña [Security](https://github.com/AlejBlasco/SportsClubEventManager/security/code-scanning) del repositorio.
+- Tras el despliegue real al homelab (webhook de Portainer), el job `post-deploy-smoke-test` verifica el estado real de la aplicación desplegada haciendo *polling* de `/health/live` y `/health/ready` contra la URL pública; el resultado queda registrado como un GitHub **Deployment** del entorno `homelab-production` (pestaña [Environments](https://github.com/AlejBlasco/SportsClubEventManager/deployments)). Si el smoke test falla, el job calcula y publica en el resumen la última versión correcta y las instrucciones de rollback. Si pasa, `tag-deployed-version` etiqueta el commit desplegado (`deployed/homelab/<sha-corto>`), que es la fuente de verdad para el rollback.
+- El **rollback es totalmente automático** vía `.github/workflows/rollback.yml` (`gh workflow run rollback.yml -f version=<sha-corto>`): valida la versión solicitada, llama a la API de Portainer para fijar `APP_VERSION` y forzar el redeploy, y vuelve a ejecutar el smoke test. El procedimiento completo (flujo automático, *fallback* manual vía UI de Portainer y rollback manual paso a paso) está documentado en el [runbook de despliegue](infrastructure/deploy/DEPLOYMENT_RUNBOOK.md).
+- El **versionado de las imágenes Docker y de las GitHub Releases** es manual y dirigido por el desarrollador (sin GitVersion ni semantic-release): cada release se prepara en una PR `release: vX.Y.Z` que actualiza `<Version>` en `Directory.Build.props` y mueve el contenido de `## [Unreleased]` de `CHANGELOG.md` a una nueva sección `## [X.Y.Z] - fecha`. Tras fusionar esa PR en `master` y comprobar que `cd.yml` ha publicado la imagen con el tag `X.Y.Z` esperado, crear y empujar el tag de Git `vX.Y.Z` sobre ese commit dispara `.github/workflows/release.yml`, que valida que `Directory.Build.props` coincide con el tag, comprueba que `CHANGELOG.md` documenta contenido real para esa versión (falla el job con `::error::` si la sección está vacía o no existe) y publica automáticamente la GitHub Release usando ese contenido extraído como notas, en vez de las notas autogeneradas de GitHub.
 - La cobertura de tests se mide por Historia de Usuario durante el desarrollo (entre el 75% y el 98% según el módulo, ver `.claude/docs/US-*/unit-test-report.md`); la agregación de un porcentaje único a nivel de repositorio está pendiente de reactivarse en CI.
 
 ## Proyectos personales empleados en su construcción
