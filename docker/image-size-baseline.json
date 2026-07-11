@@ -1,0 +1,13 @@
+{
+  "warnThresholdPercent": 20,
+  "images": {
+    "api": {
+      "baselineBytes": 108318152,
+      "notes": "Medido en local (docker build -f docker/Dockerfile.api .) el 2026-07-11 sobre esta misma rama. Actualizar manualmente en el PR que cause el crecimiento intencional."
+    },
+    "web": {
+      "baselineBytes": 120636769,
+      "notes": "Medido en local (docker build -f docker/Dockerfile.web .) el 2026-07-11 sobre esta misma rama. Actualizar manualmente en el PR que cause el crecimiento intencional."
+    }
+  }
+}

@@ -48,6 +48,9 @@ jobs:
           }
           JSON
 
+      # NOTE: validate (api) / validate (web) run only against pull_request events
+      # targeting master (see .github/workflows/cd.yml), so they are required
+      # here but intentionally NOT added to the develop protection step above.
       - name: Configure master protection
         env:
           GH_TOKEN: ${{ secrets.ADMIN_TOKEN }}
@@ -60,7 +63,7 @@ jobs:
           {
             "required_status_checks": {
               "strict": true,
-              "contexts": ["build-and-test"]
+              "contexts": ["build-and-test", "validate (api)", "validate (web)"]
             },
             "enforce_admins": true,
             "required_pull_request_reviews": {
