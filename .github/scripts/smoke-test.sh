@@ -59,6 +59,11 @@ SA_PASSWORD="$(openssl rand -base64 24)Aa1!"
 # never used to authenticate anything real in this smoke test.
 JWT_SECRET="$(openssl rand -base64 32)"
 
+# Admin password: required by the SeedAdministratorUser migration, which
+# throws on startup if AdminUser:Password is unset - disposable value, never
+# used to log in to anything real in this smoke test.
+ADMIN_PASSWORD="$(openssl rand -base64 24)Aa1!"
+
 cleanup() {
   echo "Cleaning up smoke test resources for ${SERVICE_NAME}..."
   docker rm -f "$APP_CONTAINER" "$API_AUX_CONTAINER" "$SQL_CONTAINER" >/dev/null 2>&1 || true
@@ -129,6 +134,7 @@ if [[ "$SERVICE_NAME" == "web" ]]; then
     -e Authentication__JwtSettings__Audience="ci-smoke-test" \
     -e Authentication__Google__ClientId="ci-smoke-test" \
     -e Authentication__Google__ClientSecret="ci-smoke-test" \
+    -e AdminUser__Password="$ADMIN_PASSWORD" \
     ghcr.io/alejblasco/sportsclubeventsmanager-api:latest >/dev/null
 
   wait_for_healthy "$API_AUX_CONTAINER" 90
@@ -147,6 +153,7 @@ if [[ "$SERVICE_NAME" == "api" ]]; then
     -e Authentication__JwtSettings__Audience="ci-smoke-test"
     -e Authentication__Google__ClientId="ci-smoke-test"
     -e Authentication__Google__ClientSecret="ci-smoke-test"
+    -e AdminUser__Password="$ADMIN_PASSWORD"
   )
 else
   APP_ENV_ARGS+=(
