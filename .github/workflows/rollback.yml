@@ -1,0 +1,55 @@
+name: Rollback Homelab Deployment
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Short sha of a previously deployed commit, e.g. abc1234 (must exist as tag deployed/homelab/<hash> - do NOT include a "sha-" prefix, the workflow adds it automatically before calling Portainer)'
+        required: true
+        type: string
+
+jobs:
+  validate-version:
+    name: Validate target version
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Check that deployed/homelab/${{ inputs.version }} exists
+        run: |
+          git ls-remote --exit-code --tags origin "deployed/homelab/${{ inputs.version }}" \
+            || { echo "::error::No previous successful deployment found with tag deployed/homelab/${{ inputs.version }}"; exit 1; }
+
+  portainer-rollback:
+    name: Roll back stack via Portainer API
+    needs: validate-version
+    runs-on: ubuntu-latest
+    environment: homelab-production
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Update stack APP_VERSION via Portainer API and force redeploy
+        env:
+          PORTAINER_API_URL: ${{ secrets.PORTAINER_API_URL }}
+          PORTAINER_API_KEY: ${{ secrets.PORTAINER_API_KEY }}
+        run: |
+          chmod +x infrastructure/deploy/portainer-rollback.sh
+          infrastructure/deploy/portainer-rollback.sh "sha-${{ inputs.version }}"
+
+  post-rollback-smoke-test:
+    name: Smoke test after rollback
+    needs: portainer-rollback
+    runs-on: ubuntu-latest
+    environment: homelab-production
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Poll /health/live and /health/ready
+        env:
+          HOMELAB_WEB_URL: ${{ vars.HOMELAB_WEB_URL || secrets.HOMELAB_WEB_URL }}
+        run: |
+          chmod +x infrastructure/deploy/smoke-test.sh
+          infrastructure/deploy/smoke-test.sh
