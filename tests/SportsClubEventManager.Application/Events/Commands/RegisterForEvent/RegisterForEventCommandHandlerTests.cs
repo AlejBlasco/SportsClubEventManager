@@ -1,5 +1,7 @@
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
+using NSubstitute;
+using SportsClubEventManager.Application.Common.Interfaces;
 using SportsClubEventManager.Application.Events.Commands.RegisterForEvent;
 using SportsClubEventManager.Application.Tests.Common;
 using SportsClubEventManager.Domain.Entities;
@@ -20,6 +22,13 @@ public class RegisterForEventCommandHandlerTests
     public RegisterForEventCommandHandlerTests()
     {
     }
+
+    /// <summary>
+    /// Creates a fresh IApplicationMetrics substitute for a single test, so metrics invocations
+    /// asserted in one test can never leak into another (issue #42).
+    /// </summary>
+    /// <returns>A substitute for <see cref="IApplicationMetrics"/>.</returns>
+    private static IApplicationMetrics CreateMetrics() => Substitute.For<IApplicationMetrics>();
 
     /// <summary>
     /// Tests that verify successful registration scenarios.
@@ -51,7 +60,8 @@ public class RegisterForEventCommandHandlerTests
             };
 
             var context = TestDbContextFactory.CreateTestContextWithEvents(events);
-            var handler = new RegisterForEventCommandHandler(context);
+            var metrics = CreateMetrics();
+            var handler = new RegisterForEventCommandHandler(context, metrics);
             var command = new RegisterForEventCommand { EventId = eventId, UserId = userId };
 
             // Act
@@ -69,6 +79,7 @@ public class RegisterForEventCommandHandlerTests
             result.Event.CurrentRegistrations.Should().Be(1);
             result.Event.AvailableSlots.Should().Be(99);
             result.Event.IsFullyBooked.Should().BeFalse();
+            metrics.Received(1).RecordRegistrationCreated("self-service");
         }
 
         /// <summary>
@@ -95,7 +106,8 @@ public class RegisterForEventCommandHandlerTests
             };
 
             var context = TestDbContextFactory.CreateTestContextWithEvents(events);
-            var handler = new RegisterForEventCommandHandler(context);
+            var metrics = CreateMetrics();
+            var handler = new RegisterForEventCommandHandler(context, metrics);
             var command = new RegisterForEventCommand { EventId = eventId, UserId = userId };
 
             // Act
@@ -109,6 +121,7 @@ public class RegisterForEventCommandHandlerTests
             persistedRegistration!.EventId.Should().Be(eventId);
             persistedRegistration.UserId.Should().Be(userId);
             persistedRegistration.Status.Should().Be(RegistrationStatus.Registered);
+            metrics.Received(1).RecordRegistrationCreated("self-service");
         }
 
         /// <summary>
@@ -142,7 +155,8 @@ public class RegisterForEventCommandHandlerTests
             };
 
             var context = TestDbContextFactory.CreateTestContextWithEvents(events);
-            var handler = new RegisterForEventCommandHandler(context);
+            var metrics = CreateMetrics();
+            var handler = new RegisterForEventCommandHandler(context, metrics);
             var command = new RegisterForEventCommand { EventId = eventId, UserId = userId };
 
             // Act
@@ -152,6 +166,7 @@ public class RegisterForEventCommandHandlerTests
             result.Should().NotBeNull();
             result.Status.Should().Be(RegistrationStatus.Registered);
             result.Event.CurrentRegistrations.Should().Be(1); // Only the new active registration
+            metrics.Received(1).RecordRegistrationCreated("self-service");
         }
     }
 
@@ -171,7 +186,8 @@ public class RegisterForEventCommandHandlerTests
             var userId = Guid.NewGuid();
 
             var context = TestDbContextFactory.CreateTestContext();
-            var handler = new RegisterForEventCommandHandler(context);
+            var metrics = CreateMetrics();
+            var handler = new RegisterForEventCommandHandler(context, metrics);
             var command = new RegisterForEventCommand { EventId = eventId, UserId = userId };
 
             // Act
@@ -180,6 +196,7 @@ public class RegisterForEventCommandHandlerTests
             // Assert
             await act.Should().ThrowAsync<EntityNotFoundException>()
                 .WithMessage($"Event with identifier '{eventId}' does not exist.");
+            metrics.DidNotReceive().RecordRegistrationCreated(Arg.Any<string>());
         }
     }
 
@@ -212,7 +229,8 @@ public class RegisterForEventCommandHandlerTests
             };
 
             var context = TestDbContextFactory.CreateTestContextWithEvents(events);
-            var handler = new RegisterForEventCommandHandler(context);
+            var metrics = CreateMetrics();
+            var handler = new RegisterForEventCommandHandler(context, metrics);
             var command = new RegisterForEventCommand { EventId = eventId, UserId = userId };
 
             // Act
@@ -221,6 +239,7 @@ public class RegisterForEventCommandHandlerTests
             // Assert
             await act.Should().ThrowAsync<DomainException>()
                 .WithMessage("Cannot register for events that have already occurred.");
+            metrics.DidNotReceive().RecordRegistrationCreated(Arg.Any<string>());
         }
     }
 
@@ -260,7 +279,8 @@ public class RegisterForEventCommandHandlerTests
             };
 
             var context = TestDbContextFactory.CreateTestContextWithEvents(events);
-            var handler = new RegisterForEventCommandHandler(context);
+            var metrics = CreateMetrics();
+            var handler = new RegisterForEventCommandHandler(context, metrics);
             var command = new RegisterForEventCommand { EventId = eventId, UserId = userId };
 
             // Act
@@ -269,6 +289,7 @@ public class RegisterForEventCommandHandlerTests
             // Assert
             await act.Should().ThrowAsync<DuplicateRegistrationException>()
                 .WithMessage($"User is already registered for this event with status '{RegistrationStatus.Registered}'.");
+            metrics.DidNotReceive().RecordRegistrationCreated(Arg.Any<string>());
         }
 
         /// <summary>
@@ -302,7 +323,8 @@ public class RegisterForEventCommandHandlerTests
             };
 
             var context = TestDbContextFactory.CreateTestContextWithEvents(events);
-            var handler = new RegisterForEventCommandHandler(context);
+            var metrics = CreateMetrics();
+            var handler = new RegisterForEventCommandHandler(context, metrics);
             var command = new RegisterForEventCommand { EventId = eventId, UserId = userId };
 
             // Act
@@ -311,6 +333,7 @@ public class RegisterForEventCommandHandlerTests
             // Assert
             await act.Should().ThrowAsync<DuplicateRegistrationException>()
                 .WithMessage($"User is already registered for this event with status '{RegistrationStatus.Waitlisted}'.");
+            metrics.DidNotReceive().RecordRegistrationCreated(Arg.Any<string>());
         }
     }
 
@@ -352,7 +375,8 @@ public class RegisterForEventCommandHandlerTests
             };
 
             var context = TestDbContextFactory.CreateTestContextWithEvents(events);
-            var handler = new RegisterForEventCommandHandler(context);
+            var metrics = CreateMetrics();
+            var handler = new RegisterForEventCommandHandler(context, metrics);
             var command = new RegisterForEventCommand { EventId = eventId, UserId = userId };
 
             // Act
@@ -361,6 +385,7 @@ public class RegisterForEventCommandHandlerTests
             // Assert
             await act.Should().ThrowAsync<CapacityExceededException>()
                 .WithMessage("Event has reached maximum capacity.");
+            metrics.DidNotReceive().RecordRegistrationCreated(Arg.Any<string>());
         }
 
         /// <summary>
@@ -402,7 +427,8 @@ public class RegisterForEventCommandHandlerTests
             };
 
             var context = TestDbContextFactory.CreateTestContextWithEvents(events);
-            var handler = new RegisterForEventCommandHandler(context);
+            var metrics = CreateMetrics();
+            var handler = new RegisterForEventCommandHandler(context, metrics);
             var command = new RegisterForEventCommand { EventId = eventId, UserId = userId };
 
             // Act
@@ -411,6 +437,7 @@ public class RegisterForEventCommandHandlerTests
             // Assert
             result.Should().NotBeNull();
             result.Event.CurrentRegistrations.Should().Be(9); // 8 existing + 1 new
+            metrics.Received(1).RecordRegistrationCreated("self-service");
         }
     }
 
@@ -452,7 +479,8 @@ public class RegisterForEventCommandHandlerTests
                 eventToModify.MaxCapacity = 100; // Modify to trigger concurrency
             }
 
-            var handler = new RegisterForEventCommandHandler(context);
+            var metrics = CreateMetrics();
+            var handler = new RegisterForEventCommandHandler(context, metrics);
             var command = new RegisterForEventCommand { EventId = eventId, UserId = userId };
 
             // Act & Assert
@@ -461,6 +489,11 @@ public class RegisterForEventCommandHandlerTests
             // concurrency behavior will be tested in integration tests
             var result = await handler.Handle(command, CancellationToken.None);
             result.Should().NotBeNull();
+
+            // Because the in-memory provider does not actually raise DbUpdateConcurrencyException
+            // here, SaveChangesAsync succeeds and the metric is recorded exactly like any other
+            // successful registration.
+            metrics.Received(1).RecordRegistrationCreated("self-service");
         }
     }
 }

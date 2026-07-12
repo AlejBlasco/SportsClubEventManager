@@ -1,5 +1,7 @@
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
+using NSubstitute;
+using SportsClubEventManager.Application.Common.Interfaces;
 using SportsClubEventManager.Application.Events.Commands.CancelRegistration;
 using SportsClubEventManager.Application.Tests.Common;
 using SportsClubEventManager.Domain.Entities;
@@ -20,6 +22,13 @@ public class CancelRegistrationCommandHandlerTests
     public CancelRegistrationCommandHandlerTests()
     {
     }
+
+    /// <summary>
+    /// Creates a fresh IApplicationMetrics substitute for a single test, so metrics invocations
+    /// asserted in one test can never leak into another (issue #42).
+    /// </summary>
+    /// <returns>A substitute for <see cref="IApplicationMetrics"/>.</returns>
+    private static IApplicationMetrics CreateMetrics() => Substitute.For<IApplicationMetrics>();
 
     /// <summary>
     /// Tests that verify successful cancellation scenarios.
@@ -59,7 +68,8 @@ public class CancelRegistrationCommandHandlerTests
             };
 
             var context = TestDbContextFactory.CreateTestContextWithEvents(events);
-            var handler = new CancelRegistrationCommandHandler(context);
+            var metrics = CreateMetrics();
+            var handler = new CancelRegistrationCommandHandler(context, metrics);
             var command = new CancelRegistrationCommand { EventId = eventId, UserId = userId };
 
             // Act
@@ -70,6 +80,7 @@ public class CancelRegistrationCommandHandlerTests
                 .FirstOrDefaultAsync(r => r.EventId == eventId && r.UserId == userId);
 
             deletedRegistration.Should().BeNull();
+            metrics.Received(1).RecordRegistrationCancelled("self-service");
         }
 
         /// <summary>
@@ -111,7 +122,8 @@ public class CancelRegistrationCommandHandlerTests
             };
 
             var context = TestDbContextFactory.CreateTestContextWithEvents(events);
-            var handler = new CancelRegistrationCommandHandler(context);
+            var metrics = CreateMetrics();
+            var handler = new CancelRegistrationCommandHandler(context, metrics);
             var command = new CancelRegistrationCommand { EventId = eventId, UserId = userId1 };
 
             // Act
@@ -123,6 +135,7 @@ public class CancelRegistrationCommandHandlerTests
 
             remainingRegistration.Should().NotBeNull();
             remainingRegistration!.Status.Should().Be(RegistrationStatus.Registered);
+            metrics.Received(1).RecordRegistrationCancelled("self-service");
         }
     }
 
@@ -142,7 +155,8 @@ public class CancelRegistrationCommandHandlerTests
             var userId = Guid.NewGuid();
 
             var context = TestDbContextFactory.CreateTestContext();
-            var handler = new CancelRegistrationCommandHandler(context);
+            var metrics = CreateMetrics();
+            var handler = new CancelRegistrationCommandHandler(context, metrics);
             var command = new CancelRegistrationCommand { EventId = eventId, UserId = userId };
 
             // Act
@@ -151,6 +165,7 @@ public class CancelRegistrationCommandHandlerTests
             // Assert
             await act.Should().ThrowAsync<EntityNotFoundException>()
                 .WithMessage($"Event with identifier '{eventId}' does not exist.");
+            metrics.DidNotReceive().RecordRegistrationCancelled(Arg.Any<string>());
         }
     }
 
@@ -190,7 +205,8 @@ public class CancelRegistrationCommandHandlerTests
             };
 
             var context = TestDbContextFactory.CreateTestContextWithEvents(events);
-            var handler = new CancelRegistrationCommandHandler(context);
+            var metrics = CreateMetrics();
+            var handler = new CancelRegistrationCommandHandler(context, metrics);
             var command = new CancelRegistrationCommand { EventId = eventId, UserId = userId };
 
             // Act
@@ -199,6 +215,7 @@ public class CancelRegistrationCommandHandlerTests
             // Assert
             await act.Should().ThrowAsync<DomainException>()
                 .WithMessage("Cannot cancel registrations for events that have already occurred.");
+            metrics.DidNotReceive().RecordRegistrationCancelled(Arg.Any<string>());
         }
     }
 
@@ -231,7 +248,8 @@ public class CancelRegistrationCommandHandlerTests
             };
 
             var context = TestDbContextFactory.CreateTestContextWithEvents(events);
-            var handler = new CancelRegistrationCommandHandler(context);
+            var metrics = CreateMetrics();
+            var handler = new CancelRegistrationCommandHandler(context, metrics);
             var command = new CancelRegistrationCommand { EventId = eventId, UserId = userId };
 
             // Act
@@ -240,6 +258,7 @@ public class CancelRegistrationCommandHandlerTests
             // Assert
             await act.Should().ThrowAsync<EntityNotFoundException>()
                 .WithMessage($"No active registration found for user '{userId}' and event '{eventId}'.");
+            metrics.DidNotReceive().RecordRegistrationCancelled(Arg.Any<string>());
         }
 
         /// <summary>
@@ -273,7 +292,8 @@ public class CancelRegistrationCommandHandlerTests
             };
 
             var context = TestDbContextFactory.CreateTestContextWithEvents(events);
-            var handler = new CancelRegistrationCommandHandler(context);
+            var metrics = CreateMetrics();
+            var handler = new CancelRegistrationCommandHandler(context, metrics);
             var command = new CancelRegistrationCommand { EventId = eventId, UserId = userId };
 
             // Act
@@ -282,6 +302,7 @@ public class CancelRegistrationCommandHandlerTests
             // Assert
             await act.Should().ThrowAsync<EntityNotFoundException>()
                 .WithMessage($"No active registration found for user '{userId}' and event '{eventId}'.");
+            metrics.DidNotReceive().RecordRegistrationCancelled(Arg.Any<string>());
         }
     }
 
@@ -331,7 +352,8 @@ public class CancelRegistrationCommandHandlerTests
                 context2.Registrations.Remove(registrationToDelete);
             }
 
-            var handler = new CancelRegistrationCommandHandler(context);
+            var metrics = CreateMetrics();
+            var handler = new CancelRegistrationCommandHandler(context, metrics);
             var command = new CancelRegistrationCommand { EventId = eventId, UserId = userId };
 
             // Act & Assert
@@ -343,6 +365,11 @@ public class CancelRegistrationCommandHandlerTests
             var deletedRegistration = await context.Registrations
                 .FirstOrDefaultAsync(r => r.EventId == eventId && r.UserId == userId);
             deletedRegistration.Should().BeNull();
+
+            // Because the in-memory provider does not actually raise DbUpdateConcurrencyException
+            // here, SaveChangesAsync succeeds and the metric is recorded exactly like any other
+            // successful cancellation.
+            metrics.Received(1).RecordRegistrationCancelled("self-service");
         }
     }
 }
