@@ -23,6 +23,7 @@
 - [d. Estructura del proyecto](#d-estructura-del-proyecto)
 - [e. Funcionalidades principales](#e-funcionalidades-principales)
 - [f. Usuarios de prueba](#f-usuarios-de-prueba)
+- [Observabilidad y métricas](#observabilidad-y-métricas)
 - [Calidad y CI/CD](#calidad-y-cicd)
 - [Proyectos personales empleados en su construcción](#proyectos-personales-empleados-en-su-construcción)
 - [Licencia](#licencia)
@@ -84,7 +85,8 @@ flowchart TB
 | Autenticación | **OAuth2 (Google)** + login local con **BCrypt** (factor de coste 12), emisión de **JWT** y cookies de sesión (expiración deslizante de 30 min) |
 | Autorización | RBAC con dos roles (`User`, `Administrator`), políticas por claim de rol |
 | Importación de datos | **CsvHelper** para la carga masiva de eventos |
-| Contenedores | **Docker** / **Docker Compose** (SQL Server + API + Web), imágenes multi-stage sobre `mcr.microsoft.com/dotnet/sdk:10.0` y `aspnet:10.0` |
+| Contenedores | **Docker** / **Docker Compose** (SQL Server + API + Web + Prometheus), imágenes multi-stage sobre `mcr.microsoft.com/dotnet/sdk:10.0` y `aspnet:10.0` |
+| Observabilidad | Métricas **Prometheus** (`prometheus-net.AspNetCore` en Api/Web, `prometheus-net` en Infrastructure) expuestas en `/metrics`; contenedor `prom/prometheus` incluido en Docker Compose |
 | CI/CD | **GitHub Actions**: build + tests en cada PR a `develop`/`master`; build y publicación de imágenes a **GHCR** + despliegue vía webhook de **Portainer** en `master`, con smoke test post-despliegue y rollback totalmente automático (ver [runbook de despliegue](infrastructure/deploy/DEPLOYMENT_RUNBOOK.md)) |
 | Testing backend | **xUnit**, **FluentAssertions**, **NSubstitute**, **Bogus** (datos de prueba), `coverlet.collector` |
 | Testing Blazor | **bUnit**, **WireMock.Net** (mock de llamadas HTTP a la API) |
@@ -122,6 +124,7 @@ flowchart TB
    API_PORT=5240
    WEB_PORT=5123
    SQL_PORT=1433
+   PROMETHEUS_PORT=9090
    ASPNETCORE_ENVIRONMENT=Development
    JWT_SECRET_KEY=<clave-base64-de-al-menos-32-caracteres>
    ADMIN_PASSWORD=<contraseña para admin@sportsclub.local>
@@ -140,6 +143,7 @@ flowchart TB
 4. Acceder a la aplicación:
    - Web (Blazor): http://localhost:5123
    - API + Swagger: http://localhost:5240/swagger
+   - UI de Prometheus: http://localhost:9090 (o `http://localhost:${PROMETHEUS_PORT:-9090}` si se personalizó el puerto) — permite comprobar que `api`/`web` aparecen como *targets* `UP` en **Status → Targets** y ejecutar consultas PromQL sobre las métricas descritas en la sección [Observabilidad y métricas](#observabilidad-y-métricas)
 
 > Con `ASPNETCORE_ENVIRONMENT=Development` se aplican también las migraciones de datos de prueba (ver [sección f](#f-usuarios-de-prueba)). Con `ASPNETCORE_ENVIRONMENT=Production` (o cualquier valor distinto de `Development`), ambos hosts cargan `appsettings.json` (fichero base) como único perfil de configuración de producción — este repositorio no define un `appsettings.Production.json` separado; el fichero base ya cumple ese rol de forma explícita y documentada, y solo `appsettings.Development.json` diverge de él (logging más verboso).
 >
@@ -201,6 +205,7 @@ El repositorio sigue una arquitectura en capas (Clean Architecture):
 /docker
   Dockerfile.api, Dockerfile.web
 /infrastructure                            → Infraestructura como código (Docker Compose, documentación de despliegue)
+  /docker-compose/prometheus               → Configuración de scrape de Prometheus (prometheus.yml)
 /.github/workflows                         → Pipelines de CI (build + test) y CD (build + deploy)
 /.claude                                   → Kit de agentes de IA usado durante el desarrollo (ver más abajo)
 docker-compose.yml                         → Orquestación local del stack completo
@@ -239,6 +244,20 @@ Al ejecutar el entorno en modo `Development` (Docker con `ASPNETCORE_ENVIRONMENT
 | Socio | `carlos.jimenez@example.com` | `Password1!` |
 
 > El acceso mediante **Google OAuth2** requiere registrar credenciales reales en [Google Cloud Console](https://console.cloud.google.com/apis/credentials); no existe un proveedor simulado para ese flujo.
+
+## Observabilidad y métricas
+
+Desde la issue #42, ambos hosts (`Api`, `Web`) exponen un endpoint `/metrics` anónimo (mismo patrón ya establecido por `/health*` en la issue #41), con formato de exposición de Prometheus, usando **`prometheus-net.AspNetCore`**:
+
+- **Métricas HTTP por defecto** (`http_requests_received_total`, `http_request_duration_seconds`, `http_requests_in_progress`, `process_*`, `dotnet_*`) en `Api` y `Web`, vía `app.UseHttpMetrics()`.
+- **Métricas de negocio** (solo en `Api`, que es quien ejecuta los comandos MediatR), a través de la abstracción `IApplicationMetrics` (definida en `Application`, implementada en `Infrastructure` con `prometheus-net`):
+  - `sportsclubeventmanager_event_registrations_total{source="self-service"|"admin"}` — inscripciones creadas.
+  - `sportsclubeventmanager_registration_cancellations_total{source="self-service"|"admin"}` — inscripciones canceladas.
+  - `sportsclubeventmanager_active_events` — número de eventos cuya fecha aún no ha pasado, recalculado cada 30s (configurable vía `Metrics:ActiveEventsRefreshIntervalSeconds`) por el `BackgroundService` `ActiveEventsGaugeUpdater`.
+
+El contenedor **`prometheus`** (imagen `prom/prometheus`, añadido al Docker Compose de desarrollo y de producción) scrapea ambos hosts cada 15s (`infrastructure/docker-compose/prometheus/prometheus.yml`) y retiene los datos 15 días. Su UI queda accesible en `http://localhost:${PROMETHEUS_PORT:-9090}` (ver [sección c](#c-instalación-y-ejecución)).
+
+> **Nota de seguridad — solo aplica a producción/homelab**: en `infrastructure/docker-compose/docker-compose.prod.yml`, el puerto de `prometheus` se publica acotado a `${PROMETHEUS_BIND_ADDRESS:-127.0.0.1}` (forma larga de mapeo de puertos de Compose), nunca en todas las interfaces. Tanto `/metrics` (de `api`/`web`) como la UI de Prometheus están pensados para ser accesibles **únicamente** desde la red interna del homelab o vía **Tailscale VPN** — nunca a través del *reverse proxy* público (Nginx + Cloudflare) que expone `web` en producción (issue #46). El propietario del homelab debe fijar `PROMETHEUS_BIND_ADDRESS`, en el `.env` del servidor, a la IP Tailscale del host (interfaz `tailscale0`) o a la interfaz de red interna — nunca a `0.0.0.0` ni a la IP pública. En desarrollo local (`docker-compose.yml`), el valor por defecto `127.0.0.1` ya es suficiente para acceder desde la propia máquina.
 
 ## Calidad y CI/CD
 
