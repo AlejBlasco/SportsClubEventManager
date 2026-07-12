@@ -11,7 +11,8 @@ namespace SportsClubEventManager.Application.Registrations.Commands.CancelRegist
 /// </summary>
 public sealed class CancelRegistrationByIdCommandHandler(
     IApplicationDbContext context,
-    IAuditService auditService) : IRequestHandler<CancelRegistrationByIdCommand>
+    IAuditService auditService,
+    IApplicationMetrics metrics) : IRequestHandler<CancelRegistrationByIdCommand>
 {
     /// <summary>
     /// Handles the cancellation command.
@@ -63,5 +64,9 @@ public sealed class CancelRegistrationByIdCommandHandler(
         {
             throw new DomainException("The registration was modified or deleted by another process. Please try again.");
         }
+
+        // Recorded only after a successful SaveChangesAsync, so operations that roll back are
+        // never counted (issue #42).
+        metrics.RecordRegistrationCancelled(request.IsAdministrator ? "admin" : "self-service");
     }
 }

@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.IdentityModel.Tokens;
+using Prometheus;
 using Serilog;
 using Serilog.Events;
 using SportsClubEventManager.Api.Configuration;
@@ -156,15 +157,21 @@ app.UseMiddleware<CorrelationIdMiddleware>();
 
 app.UseSerilogRequestLogging(options =>
 {
-    // Verbose (not Information) for /health*, so periodic Docker/orchestrator probes (issue #41)
-    // don't flood the logs with a line every few seconds; they still show up if the minimum
-    // level is raised.
+    // Verbose (not Information) for /health* and /metrics, so periodic Docker/orchestrator
+    // probes (issue #41) and Prometheus scrapes every 15s (issue #42) don't flood the logs with
+    // a line each; they still show up if the minimum level is raised.
     options.GetLevel = (httpContext, elapsed, ex) =>
-        httpContext.Request.Path.StartsWithSegments("/health") ? LogEventLevel.Verbose : LogEventLevel.Information;
+        httpContext.Request.Path.StartsWithSegments("/health") || httpContext.Request.Path.StartsWithSegments("/metrics")
+            ? LogEventLevel.Verbose
+            : LogEventLevel.Information;
 });
 
 // Global exception handling
 app.UseMiddleware<ExceptionHandlingMiddleware>();
+
+// Records default ASP.NET Core HTTP metrics (requests, duration, in-progress, by
+// method/controller/action/status code) into prometheus-net's default registry (issue #42).
+app.UseHttpMetrics();
 
 app.UseHttpsRedirection();
 
@@ -207,6 +214,14 @@ app.MapHealthChecks("/health/live", new HealthCheckOptions
         ResponseWriter = HealthCheckResponseWriter.WriteAsync
     })
     .WithTags("Health").WithSummary("Liveness: the process is responding")
+    .AllowAnonymous();
+
+// Prometheus scrape endpoint (issue #42). Anonymous for the same reason as /health*: Prometheus
+// cannot authenticate against the application when scraping. Restricted to the homelab's
+// internal network/Tailscale VPN at the infrastructure level (see docker-compose.prod.yml and
+// README.md), not through this application-level check.
+app.MapMetrics("/metrics")
+    .WithTags("Observability").WithSummary("Prometheus scrape endpoint")
     .AllowAnonymous();
 
 app.MapControllers();

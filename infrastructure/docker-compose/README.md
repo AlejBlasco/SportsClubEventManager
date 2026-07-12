@@ -2,7 +2,9 @@
 
 > Referencia de diseño: [`issue-46-infraestructura-como-codigo.md`](../../.claude/docs/sdlc/design/issue-46-infraestructura-como-codigo.md).
 
-Esta carpeta contiene los dos ficheros Docker Compose reales del proyecto. Ambos declaran el mismo stack lógico (`sqlserver`, `api`, `web`) sobre una red interna nombrada `sportsclub-network` (`driver: bridge`), pero difieren en cómo obtienen las imágenes de `api`/`web`.
+Esta carpeta contiene los dos ficheros Docker Compose reales del proyecto. Ambos declaran el mismo stack lógico (`sqlserver`, `api`, `web`, `prometheus` desde la issue #42) sobre una red interna nombrada `sportsclub-network` (`driver: bridge`), pero difieren en cómo obtienen las imágenes de `api`/`web`.
+
+> El servicio `prometheus` (issue #42) scrapea `/metrics` de `api` y `web` según [`prometheus/prometheus.yml`](prometheus/prometheus.yml) y publica su UI únicamente en `${PROMETHEUS_BIND_ADDRESS:-127.0.0.1}:${PROMETHEUS_PORT:-9090}` — ver la sección de observabilidad del [`README`](../../README.md) del repositorio para el detalle completo, incluida la restricción de acceso en producción a la red interna del homelab/Tailscale VPN.
 
 ## `docker-compose.yml` — desarrollo local
 

@@ -88,5 +88,29 @@ services:
       api:
         condition: service_healthy
 
+  prometheus:
+    image: prom/prometheus:latest
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=15d"
+    ports:
+      # Bound to 127.0.0.1 by default: Prometheus's UI/API is never published on all interfaces,
+      # only reachable from the same machine (dev) or the homelab's internal network/Tailscale
+      # VPN (production, see docker-compose.prod.yml) — see issue #42 design, "Riesgos y
+      # Decisiones Abiertas" point 1.
+      - "${PROMETHEUS_BIND_ADDRESS:-127.0.0.1}:${PROMETHEUS_PORT:-9090}:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    networks:
+      - sportsclub-network
+    depends_on:
+      api:
+        condition: service_healthy
+      web:
+        condition: service_healthy
+
 volumes:
   sqlserver_data:
+  prometheus_data:

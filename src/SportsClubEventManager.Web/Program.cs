@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Prometheus;
 using Radzen;
 using Serilog;
 using SportsClubEventManager.Application.Authorization.Policies;
@@ -173,6 +174,11 @@ await app.Services.MigrateDatabaseAsync();
 app.UseMiddleware<CorrelationIdMiddleware>();
 app.UseSerilogRequestLogging();
 
+// Records default ASP.NET Core HTTP metrics (requests, duration, in-progress, by method/status
+// code) into prometheus-net's default registry (issue #42). Web has no OpenAPI and does not
+// execute MediatR commands, so it only exposes these default HTTP metrics, not business metrics.
+app.UseHttpMetrics();
+
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error", createScopeForErrors: true);
@@ -217,6 +223,14 @@ app.MapHealthChecks("/health/live", new HealthCheckOptions
         Predicate = _ => false,
         ResponseWriter = HealthCheckResponseWriter.WriteAsync
     })
+    .AllowAnonymous();
+
+// Prometheus scrape endpoint (issue #42). Anonymous for the same reason as /health*: Prometheus
+// cannot authenticate against the application when scraping. Restricted to the homelab's
+// internal network/Tailscale VPN at the infrastructure level (see docker-compose.prod.yml and
+// README.md), not through this application-level check. Web has no OpenAPI, so no
+// .WithTags/.WithSummary metadata here, same as its /health* endpoints above.
+app.MapMetrics("/metrics")
     .AllowAnonymous();
 
 app.MapStaticAssets().AllowAnonymous();
