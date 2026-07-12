@@ -11,7 +11,7 @@ namespace SportsClubEventManager.Application.Events.Commands.RegisterForEvent;
 /// <summary>
 /// Handles the RegisterForEventCommand by creating a new registration for a user to an event.
 /// </summary>
-public sealed class RegisterForEventCommandHandler(IApplicationDbContext context)
+public sealed class RegisterForEventCommandHandler(IApplicationDbContext context, IApplicationMetrics metrics)
     : IRequestHandler<RegisterForEventCommand, RegistrationCreatedDto>
 {
     /// <summary>
@@ -80,6 +80,10 @@ public sealed class RegisterForEventCommandHandler(IApplicationDbContext context
             // Concurrency conflict occurred - likely another registration was created simultaneously
             throw new DomainException("Event capacity was reached while processing this registration. Please try again.");
         }
+
+        // Recorded only after a successful SaveChangesAsync, so operations that roll back are
+        // never counted (issue #42).
+        metrics.RecordRegistrationCreated("self-service");
 
         // Return DTO with full event details
         return new RegistrationCreatedDto

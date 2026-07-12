@@ -12,7 +12,8 @@ namespace SportsClubEventManager.Application.Registrations.Commands.CreateAdminR
 /// </summary>
 public sealed class CreateAdminRegistrationCommandHandler(
     IApplicationDbContext context,
-    IAuditService auditService) : IRequestHandler<CreateAdminRegistrationCommand, Guid>
+    IAuditService auditService,
+    IApplicationMetrics metrics) : IRequestHandler<CreateAdminRegistrationCommand, Guid>
 {
     /// <summary>
     /// Handles the command and creates a new registration.
@@ -84,6 +85,10 @@ public sealed class CreateAdminRegistrationCommandHandler(
             cancellationToken: cancellationToken);
 
         await context.SaveChangesAsync(cancellationToken);
+
+        // Recorded only after a successful SaveChangesAsync, so operations that roll back are
+        // never counted (issue #42).
+        metrics.RecordRegistrationCreated("admin");
 
         return registration.Id;
     }

@@ -5,7 +5,9 @@ using SportsClubEventManager.Application.Common.Interfaces;
 using SportsClubEventManager.Infrastructure.Authentication;
 using SportsClubEventManager.Infrastructure.Authentication.OAuth2;
 using SportsClubEventManager.Infrastructure.Common;
+using SportsClubEventManager.Infrastructure.Configuration;
 using SportsClubEventManager.Infrastructure.Import;
+using SportsClubEventManager.Infrastructure.Metrics;
 using SportsClubEventManager.Infrastructure.Persistence;
 using SportsClubEventManager.Infrastructure.Services;
 
@@ -62,6 +64,21 @@ public static class DependencyInjection
         services.AddScoped<GoogleOAuth2Handler>();
         services.AddScoped<IAuditService, AuditService>();
         services.AddScoped<ICsvEventImportParser, CsvEventImportParser>();
+
+        // Binds and validates the "Metrics" configuration section (issue #42), consumed by
+        // ActiveEventsGaugeUpdater below to make its refresh interval configurable instead of
+        // hardcoded, following the same ValidateOnStart() pattern as the Api/Web host options.
+        services.AddOptions<MetricsOptions>()
+            .Bind(configuration.GetSection(MetricsOptions.SectionName))
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+
+        // Business metrics (issue #42): IApplicationMetrics is a singleton because the
+        // prometheus-net Counter/Gauge instances it wraps must be created once per process and
+        // reused; ActiveEventsGaugeUpdater is a hosted service that periodically recomputes the
+        // "active events" gauge, resolving IApplicationDbContext through its own scope.
+        services.AddSingleton<IApplicationMetrics, ApplicationMetrics>();
+        services.AddHostedService<ActiveEventsGaugeUpdater>();
 
         return services;
     }
