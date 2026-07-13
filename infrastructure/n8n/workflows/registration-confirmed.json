@@ -1,0 +1,87 @@
+{
+  "name": "registration-confirmed",
+  "nodes": [
+    {
+      "parameters": {
+        "fromEmail": "notificaciones@notifications.ablasco.com",
+        "toEmail": "={{ $json.body.UserEmail }}",
+        "subject": "=Confirmación de registro: {{ $json.body.EventTitle }}",
+        "emailFormat": "=html",
+        "html": "=Hola {{ $json.body.UserName }},\n\n  Tu registro para \"{{ $json.body.EventTitle }}\" el {{ $json.body.EventDate }} en {{\n  $json.body.Location }} está confirmado.\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        208,
+        0
+      ],
+      "id": "440ad00f-62f8-4d9e-9432-209068040fc4",
+      "name": "Send an Email",
+      "webhookId": "2eb2c267-d67a-4f4a-8c39-e11f1aaea995",
+      "credentials": {
+        "smtp": {
+          "id": "dXXATQIyfmrr75ZY",
+          "name": "SMTP account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "registration-confirmed",
+        "authentication": "headerAuth",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "0ae69f15-f2ea-4dd1-ac3e-8f5664d420cb",
+      "name": "Webhook",
+      "webhookId": "c2d3c94a-6001-4c6b-886f-8e3076173ed9",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "KiJSVbmrxJtD8UZ3",
+          "name": "Header Auth account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Send an Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "e10f4f9a-08ba-4a77-b7e4-76acdca8abe0",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "e3e9fb866bcd2a8ec3343a2b8e7ab00391a67721c3e32731f2cdbd2c639fcc95"
+  },
+  "id": "gsqjyzD7cEPDR3F2",
+  "tags": [
+    {
+      "name": "sportsclubeventmanager",
+      "id": "sxKMGHq0yhehgwUf",
+      "updatedAt": "2026-07-13T11:42:24.312Z",
+      "createdAt": "2026-07-13T11:42:24.312Z"
+    }
+  ]
+}
