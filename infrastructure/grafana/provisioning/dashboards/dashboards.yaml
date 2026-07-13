@@ -1,0 +1,21 @@
+# Grafana provisioning: dashboard providers (issue #43).
+# Tells Grafana to load every dashboard JSON model found under
+# /etc/grafana/provisioning/dashboards/json (mounted read-only from
+# infrastructure/grafana/dashboards). In development, see infrastructure/docker-compose/
+# docker-compose.yml; there is no equivalent mount in docker-compose.prod.yml — in production
+# this same folder is mounted read-only into the homelab's existing "monitoring" stack's Grafana
+# container instead, as a manual step (see the issue #43 design doc, "Apéndice A"). Into the
+# "SportsClubEventManager" folder either way. Fulfils AC 3 of issue #43 ("dashboard is saved as
+# code (JSON) for version control").
+apiVersion: 1
+
+providers:
+  - name: SportsClubEventManager
+    orgId: 1
+    folder: "SportsClubEventManager"
+    type: file
+    disableDeletion: true
+    updateIntervalSeconds: 30
+    allowUiUpdates: false
+    options:
+      path: /etc/grafana/provisioning/dashboards/json

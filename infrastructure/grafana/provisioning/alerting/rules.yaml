@@ -1,0 +1,149 @@
+# Grafana provisioning: Unified Alerting rules (issue #43), file-based provisioning format
+# supported since Grafana 9+. Fulfils AC 4 ("alerts configured for critical thresholds: error
+# rate > 5%, high latency").
+#
+# UNCERTAINTY NOTE (see implementation summary, ".claude/docs/sdlc/development/
+# issue-43-dashboard-grafana-monitorizacion.md", for full detail): the design doc's own YAML
+# sketch for this file was explicitly a simplified placeholder ("condition: C" with a single
+# unexpanded "data" entry and a comment instead of a real threshold node). The structure below is
+# hand-authored to match Grafana's documented alert-rule provisioning schema (query node A +
+# "reduce" expression node B + "threshold" expression node C, the same shape Grafana itself writes
+# when a rule is exported from the UI), but it has not been validated by actually loading it into
+# a running Grafana instance. Fields most likely to need adjustment against the exact Grafana
+# version pinned in production: whether "datasource" must also be nested inside each "model" block
+# (in addition to the sibling "datasourceUid" key used here), and the exact set of fields Grafana
+# expects on "reduce"/"threshold" expression models across versions.
+apiVersion: 1
+
+groups:
+  - orgId: 1
+    name: sportsclubeventmanager-alerts
+    folder: SportsClubEventManager
+    interval: 1m
+    rules:
+      # AC 4 — "error rate > 5%". Queries the 5xx error rate (refId A), reduces it to a single
+      # scalar (refId B), then evaluates the threshold (refId C, condition of the rule).
+      - uid: error-rate-high
+        title: "Error rate > 5%"
+        condition: C
+        data:
+          - refId: A
+            datasourceUid: prometheus
+            relativeTimeRange:
+              from: 600
+              to: 0
+            model:
+              editorMode: code
+              expr: >-
+                100 * sum(rate(http_requests_received_total{code=~"5.."}[5m])) /
+                sum(rate(http_requests_received_total[5m]))
+              instant: true
+              range: false
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+          - refId: B
+            datasourceUid: "__expr__"
+            model:
+              type: reduce
+              expression: A
+              reducer: last
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: B
+          - refId: C
+            datasourceUid: "__expr__"
+            model:
+              type: threshold
+              expression: B
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: C
+              # Fires when the reduced value of B (last value of A, the error-rate percentage)
+              # is greater than 5.
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [5]
+                  operator:
+                    type: and
+                  query:
+                    params: ["C"]
+                  reducer:
+                    type: last
+                  type: query
+        noDataState: NoData
+        execErrState: Error
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "HTTP 5xx error rate has exceeded 5% for more than 5 minutes."
+        isPaused: false
+
+      # AC 4 — "high latency". Threshold confirmed at p95 > 2s (design doc, "Riesgos y Decisiones
+      # Abiertas", point 5).
+      - uid: latency-p95-high
+        title: "High latency (p95)"
+        condition: C
+        data:
+          - refId: A
+            datasourceUid: prometheus
+            relativeTimeRange:
+              from: 600
+              to: 0
+            model:
+              editorMode: code
+              expr: >-
+                histogram_quantile(0.95,
+                sum(rate(http_request_duration_seconds_bucket[5m])) by (le))
+              instant: true
+              range: false
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+          - refId: B
+            datasourceUid: "__expr__"
+            model:
+              type: reduce
+              expression: A
+              reducer: last
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: B
+          - refId: C
+            datasourceUid: "__expr__"
+            model:
+              type: threshold
+              expression: B
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: C
+              # Fires when the reduced value of B (last value of A, p95 latency in seconds) is
+              # greater than 2 seconds.
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [2]
+                  operator:
+                    type: and
+                  query:
+                    params: ["C"]
+                  reducer:
+                    type: last
+                  type: query
+        noDataState: NoData
+        execErrState: Error
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "p95 request latency has exceeded 2 seconds for more than 5 minutes."
+        isPaused: false
+
+# [RESOLVED, see design doc "Riesgos y Decisiones Abiertas" point 4] No external notification
+# channel for now (neither SMTP nor Slack): no "contactPoints" or "policies" other than Grafana's
+# own default contact point ("grafana-default-email", with no SMTP configured, so in practice it
+# does not deliver anything) are declared here. Fired alerts are only visible in Alerting > Alert
+# rules / Fired alerts in the Grafana UI. Documented as a future improvement — if it is picked up
+# later, it should follow the same Docker secrets pattern already established by issue #38.

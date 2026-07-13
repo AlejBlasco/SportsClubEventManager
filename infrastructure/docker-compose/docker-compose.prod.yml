@@ -64,33 +64,14 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
-  prometheus:
-    image: prom/prometheus:latest
-    command:
-      - "--config.file=/etc/prometheus/prometheus.yml"
-      - "--storage.tsdb.path=/prometheus"
-      - "--storage.tsdb.retention.time=15d"
-    ports:
-      # SECURITY: bound to PROMETHEUS_BIND_ADDRESS, never published without a bind address.
-      # The homelab owner MUST set PROMETHEUS_BIND_ADDRESS in the server's .env to the host's
-      # Tailscale IP (tailscale0, typically 100.64.0.0/10) or internal network interface —
-      # never 0.0.0.0 nor the host's public IP. This is what guarantees, at the Docker level,
-      # that port 9090 stays unreachable from the server's public interface regardless of any
-      # external firewall rule (see issue #42 design, "Riesgos y Decisiones Abiertas" point 1,
-      # and "Apéndice A").
-      - "${PROMETHEUS_BIND_ADDRESS:-127.0.0.1}:${PROMETHEUS_PORT:-9090}:9090"
-    volumes:
-      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      - prometheus_data:/prometheus
-    networks:
-      - sportsclub-network
-    depends_on:
-      api:
-        condition: service_healthy
-      web:
-        condition: service_healthy
-    restart: unless-stopped
+  # No "prometheus", "grafana", "node-exporter" or "cadvisor" services here on purpose: the
+  # homelab already runs its own independent "monitoring" Portainer stack with all four. Adding
+  # a project-owned copy in production would duplicate host/container metrics and risk port
+  # collisions with the real ones. api/web still expose /metrics (issue #42); it's scraped by
+  # monitoring's own Prometheus via a manual runbook, not by a container from this repository —
+  # see ".claude/docs/sdlc/design/issue-42-integracion-prometheus-metricas.md" (Apéndice A) and
+  # ".claude/docs/sdlc/design/issue-43-dashboard-grafana-monitorizacion.md" (Apéndice A). All four
+  # containers still exist, dev-only, in "docker-compose.yml" (this same folder).
 
 volumes:
   sqlserver_data:
-  prometheus_data:

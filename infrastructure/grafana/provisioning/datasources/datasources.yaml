@@ -1,0 +1,24 @@
+# Grafana provisioning: data sources (issue #43).
+# Loaded automatically on container start from /etc/grafana/provisioning/datasources (mounted
+# read-only from this folder — dev: infrastructure/docker-compose/docker-compose.yml; there is no
+# equivalent mount in docker-compose.prod.yml, since production has no grafana container of its
+# own — see the issue #43 design doc, "Apéndice A"). Fulfils AC 1 of issue #43 ("Grafana instance
+# connected to Prometheus as a data source") without any manual UI step.
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    # Fixed uid so it can be referenced deterministically from the alert rules provisioning file
+    # (infrastructure/grafana/provisioning/alerting/rules.yaml) instead of relying on Grafana's
+    # auto-generated uid. Not present in the design doc's sketch; added here for stability.
+    uid: prometheus
+    type: prometheus
+    access: proxy
+    # Internal Docker network name — resolved through the "sportsclub-network" bridge network
+    # shared by grafana/prometheus/api/web in DEVELOPMENT ONLY, never through a published host
+    # port. When this file is applied to the homelab's "monitoring" Grafana in production (see
+    # "Apéndice A"), this "url" must be adjusted to wherever that stack exposes its own
+    # Prometheus — "prometheus:9090" only resolves inside this project's dev-only network.
+    url: http://prometheus:9090
+    isDefault: true
+    editable: false

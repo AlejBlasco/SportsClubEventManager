@@ -1,0 +1,4 @@
+services:
+  api:
+    environment:
+      AdminUser__Password: ${ADMIN_PASSWORD}
