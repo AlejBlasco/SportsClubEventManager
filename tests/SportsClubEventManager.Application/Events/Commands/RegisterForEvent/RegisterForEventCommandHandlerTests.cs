@@ -1,7 +1,8 @@
-using FluentAssertions;
+﻿using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using NSubstitute;
 using SportsClubEventManager.Application.Common.Interfaces;
+using SportsClubEventManager.Application.Common.Models.Notifications;
 using SportsClubEventManager.Application.Events.Commands.RegisterForEvent;
 using SportsClubEventManager.Application.Tests.Common;
 using SportsClubEventManager.Domain.Entities;
@@ -29,6 +30,13 @@ public class RegisterForEventCommandHandlerTests
     /// </summary>
     /// <returns>A substitute for <see cref="IApplicationMetrics"/>.</returns>
     private static IApplicationMetrics CreateMetrics() => Substitute.For<IApplicationMetrics>();
+
+    /// <summary>
+    /// Creates a fresh IWorkflowNotifier substitute for a single test, so notification
+    /// invocations asserted in one test can never leak into another (issue #37).
+    /// </summary>
+    /// <returns>A substitute for <see cref="IWorkflowNotifier"/>.</returns>
+    private static IWorkflowNotifier CreateNotifier() => Substitute.For<IWorkflowNotifier>();
 
     /// <summary>
     /// Tests that verify successful registration scenarios.
@@ -61,7 +69,8 @@ public class RegisterForEventCommandHandlerTests
 
             var context = TestDbContextFactory.CreateTestContextWithEvents(events);
             var metrics = CreateMetrics();
-            var handler = new RegisterForEventCommandHandler(context, metrics);
+            var notifier = CreateNotifier();
+            var handler = new RegisterForEventCommandHandler(context, metrics, notifier);
             var command = new RegisterForEventCommand { EventId = eventId, UserId = userId };
 
             // Act
@@ -107,7 +116,8 @@ public class RegisterForEventCommandHandlerTests
 
             var context = TestDbContextFactory.CreateTestContextWithEvents(events);
             var metrics = CreateMetrics();
-            var handler = new RegisterForEventCommandHandler(context, metrics);
+            var notifier = CreateNotifier();
+            var handler = new RegisterForEventCommandHandler(context, metrics, notifier);
             var command = new RegisterForEventCommand { EventId = eventId, UserId = userId };
 
             // Act
@@ -156,7 +166,8 @@ public class RegisterForEventCommandHandlerTests
 
             var context = TestDbContextFactory.CreateTestContextWithEvents(events);
             var metrics = CreateMetrics();
-            var handler = new RegisterForEventCommandHandler(context, metrics);
+            var notifier = CreateNotifier();
+            var handler = new RegisterForEventCommandHandler(context, metrics, notifier);
             var command = new RegisterForEventCommand { EventId = eventId, UserId = userId };
 
             // Act
@@ -187,7 +198,8 @@ public class RegisterForEventCommandHandlerTests
 
             var context = TestDbContextFactory.CreateTestContext();
             var metrics = CreateMetrics();
-            var handler = new RegisterForEventCommandHandler(context, metrics);
+            var notifier = CreateNotifier();
+            var handler = new RegisterForEventCommandHandler(context, metrics, notifier);
             var command = new RegisterForEventCommand { EventId = eventId, UserId = userId };
 
             // Act
@@ -197,6 +209,7 @@ public class RegisterForEventCommandHandlerTests
             await act.Should().ThrowAsync<EntityNotFoundException>()
                 .WithMessage($"Event with identifier '{eventId}' does not exist.");
             metrics.DidNotReceive().RecordRegistrationCreated(Arg.Any<string>());
+            await notifier.DidNotReceive().NotifyRegistrationConfirmedAsync(Arg.Any<RegistrationConfirmedPayload>(), Arg.Any<CancellationToken>());
         }
     }
 
@@ -230,7 +243,8 @@ public class RegisterForEventCommandHandlerTests
 
             var context = TestDbContextFactory.CreateTestContextWithEvents(events);
             var metrics = CreateMetrics();
-            var handler = new RegisterForEventCommandHandler(context, metrics);
+            var notifier = CreateNotifier();
+            var handler = new RegisterForEventCommandHandler(context, metrics, notifier);
             var command = new RegisterForEventCommand { EventId = eventId, UserId = userId };
 
             // Act
@@ -240,6 +254,7 @@ public class RegisterForEventCommandHandlerTests
             await act.Should().ThrowAsync<DomainException>()
                 .WithMessage("Cannot register for events that have already occurred.");
             metrics.DidNotReceive().RecordRegistrationCreated(Arg.Any<string>());
+            await notifier.DidNotReceive().NotifyRegistrationConfirmedAsync(Arg.Any<RegistrationConfirmedPayload>(), Arg.Any<CancellationToken>());
         }
     }
 
@@ -280,7 +295,8 @@ public class RegisterForEventCommandHandlerTests
 
             var context = TestDbContextFactory.CreateTestContextWithEvents(events);
             var metrics = CreateMetrics();
-            var handler = new RegisterForEventCommandHandler(context, metrics);
+            var notifier = CreateNotifier();
+            var handler = new RegisterForEventCommandHandler(context, metrics, notifier);
             var command = new RegisterForEventCommand { EventId = eventId, UserId = userId };
 
             // Act
@@ -290,6 +306,7 @@ public class RegisterForEventCommandHandlerTests
             await act.Should().ThrowAsync<DuplicateRegistrationException>()
                 .WithMessage($"User is already registered for this event with status '{RegistrationStatus.Registered}'.");
             metrics.DidNotReceive().RecordRegistrationCreated(Arg.Any<string>());
+            await notifier.DidNotReceive().NotifyRegistrationConfirmedAsync(Arg.Any<RegistrationConfirmedPayload>(), Arg.Any<CancellationToken>());
         }
 
         /// <summary>
@@ -324,7 +341,8 @@ public class RegisterForEventCommandHandlerTests
 
             var context = TestDbContextFactory.CreateTestContextWithEvents(events);
             var metrics = CreateMetrics();
-            var handler = new RegisterForEventCommandHandler(context, metrics);
+            var notifier = CreateNotifier();
+            var handler = new RegisterForEventCommandHandler(context, metrics, notifier);
             var command = new RegisterForEventCommand { EventId = eventId, UserId = userId };
 
             // Act
@@ -334,6 +352,7 @@ public class RegisterForEventCommandHandlerTests
             await act.Should().ThrowAsync<DuplicateRegistrationException>()
                 .WithMessage($"User is already registered for this event with status '{RegistrationStatus.Waitlisted}'.");
             metrics.DidNotReceive().RecordRegistrationCreated(Arg.Any<string>());
+            await notifier.DidNotReceive().NotifyRegistrationConfirmedAsync(Arg.Any<RegistrationConfirmedPayload>(), Arg.Any<CancellationToken>());
         }
     }
 
@@ -376,7 +395,8 @@ public class RegisterForEventCommandHandlerTests
 
             var context = TestDbContextFactory.CreateTestContextWithEvents(events);
             var metrics = CreateMetrics();
-            var handler = new RegisterForEventCommandHandler(context, metrics);
+            var notifier = CreateNotifier();
+            var handler = new RegisterForEventCommandHandler(context, metrics, notifier);
             var command = new RegisterForEventCommand { EventId = eventId, UserId = userId };
 
             // Act
@@ -386,6 +406,7 @@ public class RegisterForEventCommandHandlerTests
             await act.Should().ThrowAsync<CapacityExceededException>()
                 .WithMessage("Event has reached maximum capacity.");
             metrics.DidNotReceive().RecordRegistrationCreated(Arg.Any<string>());
+            await notifier.DidNotReceive().NotifyRegistrationConfirmedAsync(Arg.Any<RegistrationConfirmedPayload>(), Arg.Any<CancellationToken>());
         }
 
         /// <summary>
@@ -428,7 +449,8 @@ public class RegisterForEventCommandHandlerTests
 
             var context = TestDbContextFactory.CreateTestContextWithEvents(events);
             var metrics = CreateMetrics();
-            var handler = new RegisterForEventCommandHandler(context, metrics);
+            var notifier = CreateNotifier();
+            var handler = new RegisterForEventCommandHandler(context, metrics, notifier);
             var command = new RegisterForEventCommand { EventId = eventId, UserId = userId };
 
             // Act
@@ -480,7 +502,8 @@ public class RegisterForEventCommandHandlerTests
             }
 
             var metrics = CreateMetrics();
-            var handler = new RegisterForEventCommandHandler(context, metrics);
+            var notifier = CreateNotifier();
+            var handler = new RegisterForEventCommandHandler(context, metrics, notifier);
             var command = new RegisterForEventCommand { EventId = eventId, UserId = userId };
 
             // Act & Assert
@@ -494,6 +517,103 @@ public class RegisterForEventCommandHandlerTests
             // here, SaveChangesAsync succeeds and the metric is recorded exactly like any other
             // successful registration.
             metrics.Received(1).RecordRegistrationCreated("self-service");
+        }
+    }
+
+    /// <summary>
+    /// Tests that verify the n8n "registration confirmed" notification triggered after a
+    /// successful registration (issue #37).
+    /// </summary>
+    public sealed class WhenNotifyingRegistrationConfirmed : RegisterForEventCommandHandlerTests
+    {
+        /// <summary>
+        /// Verifies that when the registering user can be found, the notifier is invoked exactly
+        /// once with a payload whose fields match the event and the registering user.
+        /// </summary>
+        [Fact]
+        public async Task Handle_WhenRegisteringUserExists_NotifiesWithMatchingPayload()
+        {
+            // Arrange
+            var eventId = Guid.NewGuid();
+            var userId = Guid.NewGuid();
+            var eventDate = DateTime.UtcNow.AddDays(7);
+
+            var events = new List<Event>
+            {
+                new()
+                {
+                    Id = eventId,
+                    Title = "Basketball Tournament",
+                    Date = eventDate,
+                    Location = "Sports Hall A",
+                    MaxCapacity = 100,
+                    Registrations = new List<Registration>()
+                }
+            };
+
+            var context = TestDbContextFactory.CreateTestContextWithEvents(events);
+            context.Users.Add(new User { Id = userId, Name = "Alex Player", Email = "alex@example.com", Gender = Gender.Male });
+            await context.SaveChangesAsync(CancellationToken.None);
+
+            var metrics = CreateMetrics();
+            var notifier = CreateNotifier();
+            var handler = new RegisterForEventCommandHandler(context, metrics, notifier);
+            var command = new RegisterForEventCommand { EventId = eventId, UserId = userId };
+
+            // Act
+            await handler.Handle(command, CancellationToken.None);
+
+            // Assert
+            await notifier.Received(1).NotifyRegistrationConfirmedAsync(
+                Arg.Is<RegistrationConfirmedPayload>(p =>
+                    p.EventId == eventId &&
+                    p.EventTitle == "Basketball Tournament" &&
+                    p.EventDate == eventDate &&
+                    p.Location == "Sports Hall A" &&
+                    p.UserEmail == "alex@example.com" &&
+                    p.UserName == "Alex Player"),
+                Arg.Any<CancellationToken>());
+        }
+
+        /// <summary>
+        /// Verifies that when the registering user cannot be found in the database (an
+        /// inconsistency that should not normally occur, but is handled defensively by the
+        /// handler), the notifier is never invoked, since there would be no valid recipient
+        /// email/name to notify.
+        /// </summary>
+        [Fact]
+        public async Task Handle_WhenRegisteringUserDoesNotExist_DoesNotNotify()
+        {
+            // Arrange
+            var eventId = Guid.NewGuid();
+            var userId = Guid.NewGuid();
+
+            var events = new List<Event>
+            {
+                new()
+                {
+                    Id = eventId,
+                    Title = "Volleyball Match",
+                    Date = DateTime.UtcNow.AddDays(7),
+                    Location = "Court B",
+                    MaxCapacity = 50,
+                    Registrations = new List<Registration>()
+                }
+            };
+
+            var context = TestDbContextFactory.CreateTestContextWithEvents(events);
+            var metrics = CreateMetrics();
+            var notifier = CreateNotifier();
+            var handler = new RegisterForEventCommandHandler(context, metrics, notifier);
+            var command = new RegisterForEventCommand { EventId = eventId, UserId = userId };
+
+            // Act
+            var result = await handler.Handle(command, CancellationToken.None);
+
+            // Assert
+            result.Should().NotBeNull();
+            await notifier.DidNotReceive().NotifyRegistrationConfirmedAsync(
+                Arg.Any<RegistrationConfirmedPayload>(), Arg.Any<CancellationToken>());
         }
     }
 }
