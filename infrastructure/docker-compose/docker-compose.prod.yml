@@ -39,6 +39,20 @@ services:
       Authentication__Google__ClientId: ${GOOGLE_CLIENT_ID}
       Authentication__Google__ClientSecret: ${GOOGLE_CLIENT_SECRET}
       AdminUser__Password: ${ADMIN_PASSWORD}
+      # n8n workflow notifications (issue #37) — reuses the shared homelab n8n instance, no
+      # project-owned n8n container here either. WebhookToken travels as a plain environment
+      # variable, not a file-based secret, same known gap already documented in
+      # DEPLOYMENT_RUNBOOK.md for the rest of api's credentials in this file (file-based secrets
+      # don't reach the real homelab Portainer). Activated only after the manual runbook in the
+      # design doc's "Apéndice A" has been executed.
+      Notifications__N8n__Enabled: ${NOTIFICATIONS_N8N_ENABLED:-false}
+      Notifications__N8n__RegistrationConfirmedWebhookUrl: ${NOTIFICATIONS_N8N_REGISTRATION_CONFIRMED_WEBHOOK_URL:-}
+      Notifications__N8n__EventUpdatedWebhookUrl: ${NOTIFICATIONS_N8N_EVENT_UPDATED_WEBHOOK_URL:-}
+      Notifications__N8n__EventCancelledWebhookUrl: ${NOTIFICATIONS_N8N_EVENT_CANCELLED_WEBHOOK_URL:-}
+      Notifications__N8n__EventReminderWebhookUrl: ${NOTIFICATIONS_N8N_EVENT_REMINDER_WEBHOOK_URL:-}
+      Notifications__N8n__WebhookToken: ${N8N_WEBHOOK_TOKEN}
+      Notifications__N8n__ReminderIntervalHours__0: "24"
+      Notifications__N8n__ReminderIntervalHours__1: "1"
     networks:
       - sportsclub-network
     depends_on:
@@ -63,6 +77,15 @@ services:
       api:
         condition: service_healthy
     restart: unless-stopped
+
+  # No "prometheus", "grafana", "node-exporter" or "cadvisor" services here on purpose: the
+  # homelab already runs its own independent "monitoring" Portainer stack with all four. Adding
+  # a project-owned copy in production would duplicate host/container metrics and risk port
+  # collisions with the real ones. api/web still expose /metrics (issue #42); it's scraped by
+  # monitoring's own Prometheus via a manual runbook, not by a container from this repository —
+  # see ".claude/docs/sdlc/design/issue-42-integracion-prometheus-metricas.md" (Apéndice A) and
+  # ".claude/docs/sdlc/design/issue-43-dashboard-grafana-monitorizacion.md" (Apéndice A). All four
+  # containers still exist, dev-only, in "docker-compose.yml" (this same folder).
 
 volumes:
   sqlserver_data:

@@ -9,6 +9,10 @@ secrets:
     environment: ADMIN_PASSWORD
   connectionstrings__defaultconnection:
     environment: CONNECTION_STRING
+  grafana__admin_password:
+    environment: GRAFANA_ADMIN_PASSWORD
+  n8n__webhooktoken:
+    environment: N8N_WEBHOOK_TOKEN
 
 networks:
   sportsclub-network:
@@ -54,12 +58,25 @@ services:
       # from here: they now arrive as file-based secrets (see "secrets:" below).
       Cors__AllowedOrigins__0: http://localhost:${WEB_PORT:-5123}
       Cors__AllowedOrigins__1: ${WEB_EXTERNAL_URL:-}
+      # n8n workflow notifications (issue #37) — Notifications__N8n__WebhookToken arrives via the
+      # "secrets:" block below (n8n__webhooktoken), not as an environment variable here, same
+      # pattern already used for the rest of api's credentials. Stays disabled by default; only
+      # enabled in production once the manual runbook has been executed against the real n8n
+      # instance (no project-owned n8n container exists in this file, dev or prod).
+      Notifications__N8n__Enabled: ${NOTIFICATIONS_N8N_ENABLED:-false}
+      Notifications__N8n__RegistrationConfirmedWebhookUrl: ${NOTIFICATIONS_N8N_REGISTRATION_CONFIRMED_WEBHOOK_URL:-}
+      Notifications__N8n__EventUpdatedWebhookUrl: ${NOTIFICATIONS_N8N_EVENT_UPDATED_WEBHOOK_URL:-}
+      Notifications__N8n__EventCancelledWebhookUrl: ${NOTIFICATIONS_N8N_EVENT_CANCELLED_WEBHOOK_URL:-}
+      Notifications__N8n__EventReminderWebhookUrl: ${NOTIFICATIONS_N8N_EVENT_REMINDER_WEBHOOK_URL:-}
+      Notifications__N8n__ReminderIntervalHours__0: "24"
+      Notifications__N8n__ReminderIntervalHours__1: "1"
     secrets:
       - authentication__jwtsettings__secretkey
       - authentication__google__clientid
       - authentication__google__clientsecret
       - adminuser__password
       - connectionstrings__defaultconnection
+      - n8n__webhooktoken
     networks:
       - sportsclub-network
     depends_on:
@@ -88,5 +105,82 @@ services:
       api:
         condition: service_healthy
 
+  prometheus:
+    image: prom/prometheus:latest
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=15d"
+    ports:
+      # Bound to 127.0.0.1 by default: Prometheus's UI/API is never published on all interfaces,
+      # only reachable from the same machine (dev) or the homelab's internal network/Tailscale
+      # VPN (production, see docker-compose.prod.yml) — see issue #42 design, "Riesgos y
+      # Decisiones Abiertas" point 1.
+      - "${PROMETHEUS_BIND_ADDRESS:-127.0.0.1}:${PROMETHEUS_PORT:-9090}:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    networks:
+      - sportsclub-network
+    depends_on:
+      api:
+        condition: service_healthy
+      web:
+        condition: service_healthy
+
+  grafana:
+    image: grafana/grafana-oss:latest
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD__FILE: /run/secrets/grafana__admin_password
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      # This is a dev-only container (see "docker-compose.prod.yml" — no grafana/prometheus/
+      # node-exporter/cadvisor there at all, the homelab's own pre-existing "monitoring" stack
+      # covers production). Anonymous access stays explicitly disabled anyway, for coherence with
+      # what's recommended for the homelab's shared Grafana in the Apéndice A runbook.
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+    secrets:
+      - grafana__admin_password
+    ports:
+      # Bound to GRAFANA_BIND_ADDRESS, same pattern as "prometheus" above (PROMETHEUS_BIND_ADDRESS)
+      # — no Nginx/host process needs to reach this dev-only container from outside this machine.
+      - "${GRAFANA_BIND_ADDRESS:-127.0.0.1}:${GRAFANA_PORT:-3000}:3000"
+    volumes:
+      - ../grafana/provisioning:/etc/grafana/provisioning:ro
+      - ../grafana/dashboards:/etc/grafana/provisioning/dashboards/json:ro
+      - grafana_data:/var/lib/grafana
+    networks:
+      - sportsclub-network
+    depends_on:
+      prometheus:
+        condition: service_started
+
+  node-exporter:
+    image: prom/node-exporter:latest
+    command:
+      - "--path.rootfs=/host"
+    volumes:
+      - /:/host:ro,rslave
+    pid: host
+    networks:
+      - sportsclub-network
+    # No "ports:" — only reachable within the internal Docker network, scraped by Prometheus.
+    # networks: is not shown in the design doc's sketch, but every other service in this file
+    # declares it explicitly (same deviation already applied to "prometheus" itself in issue #42):
+    # without it, Prometheus could not resolve "node-exporter" by Docker service name.
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+    networks:
+      - sportsclub-network
+    # No "ports:" — only reachable within the internal Docker network, scraped by Prometheus.
+
 volumes:
   sqlserver_data:
+  prometheus_data:
+  grafana_data:

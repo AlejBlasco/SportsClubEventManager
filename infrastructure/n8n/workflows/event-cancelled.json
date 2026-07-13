@@ -1,0 +1,114 @@
+{
+  "name": "event-cancelled",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "event-cancelled",
+        "authentication": "headerAuth",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "79e344df-5cd0-488a-a6a2-f1e140ac4892",
+      "name": "Webhook",
+      "webhookId": "975acdad-20de-4aab-9d6d-c988316fb1ae",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "KiJSVbmrxJtD8UZ3",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "body.Recipients",
+        "include": "allOtherFields",
+        "options": {
+          "destinationFieldName": "recipient"
+        }
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        208,
+        0
+      ],
+      "id": "ccc08926-0e4a-4686-b545-50b2bcf86616",
+      "name": "Split Out"
+    },
+    {
+      "parameters": {
+        "fromEmail": "notificaciones@notifications.ablasco.com",
+        "toEmail": "={{ $json.recipient.Email }}",
+        "subject": "=Evento cancelado: {{ $json.EventTitle }}",
+        "html": "=Hola {{ $json.recipient.Name }},\n\n  Lamentamos informarte de que el evento \"{{ $json.EventTitle }}\" previsto para {{ $json.EventDate }}\n  en {{ $json.Location }} ha sido cancelado.",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        268.40625,
+        0
+      ],
+      "id": "a4bfb8d6-4fa4-44d7-b93a-bc920eaa47ef",
+      "name": "Send an Email",
+      "webhookId": "9cc09fe7-81af-4518-a02c-bd6c22337b98",
+      "credentials": {
+        "smtp": {
+          "id": "dXXATQIyfmrr75ZY",
+          "name": "SMTP account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Split Out",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out": {
+      "main": [
+        [
+          {
+            "node": "Send an Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "365c3803-9a74-4f21-aab4-8989d8ac90ed",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "e3e9fb866bcd2a8ec3343a2b8e7ab00391a67721c3e32731f2cdbd2c639fcc95"
+  },
+  "id": "mLDAhnvtHIXbj6MQ",
+  "tags": [
+    {
+      "updatedAt": "2026-07-13T11:42:24.312Z",
+      "createdAt": "2026-07-13T11:42:24.312Z",
+      "id": "sxKMGHq0yhehgwUf",
+      "name": "sportsclubeventmanager"
+    }
+  ]
+}

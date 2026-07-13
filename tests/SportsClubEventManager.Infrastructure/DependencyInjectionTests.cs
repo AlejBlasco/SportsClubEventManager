@@ -3,8 +3,12 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
+using SportsClubEventManager.Application.Common.Interfaces;
 using SportsClubEventManager.Infrastructure;
+using SportsClubEventManager.Infrastructure.Configuration;
+using SportsClubEventManager.Infrastructure.Notifications;
 using SportsClubEventManager.Infrastructure.Persistence;
 using Xunit;
 
@@ -380,6 +384,164 @@ public sealed class DependencyInjectionTests
 
             // Assert
             healthCheckOptions.Registrations.Count(registration => registration.Name == "database").Should().Be(1);
+        }
+    }
+
+    /// <summary>
+    /// Tests verifying the n8n workflow-notification registrations added by AddInfrastructure
+    /// (issue #37): N8nOptions binding/validation, the named "N8n" HttpClient, IWorkflowNotifier,
+    /// and EventReminderBackgroundService.
+    /// </summary>
+    public sealed class WhenRegisteringWorkflowNotifications
+    {
+        private IConfiguration CreateValidConfiguration() =>
+            new ConfigurationBuilder()
+                .AddInMemoryCollection(new Dictionary<string, string?>
+                {
+                    { "ConnectionStrings:DefaultConnection", "Data Source=:memory:" }
+                })
+                .Build();
+
+        /// <summary>
+        /// Verifies that IWorkflowNotifier resolves to an N8nWorkflowNotifier instance.
+        /// </summary>
+        [Fact]
+        public void AddInfrastructure_RegistersN8nWorkflowNotifierAsIWorkflowNotifier()
+        {
+            // Arrange
+            var services = new ServiceCollection();
+            var configuration = CreateValidConfiguration();
+            services.AddLogging();
+
+            // Act
+            services.AddInfrastructure(configuration);
+            var serviceProvider = services.BuildServiceProvider();
+
+            using var scope = serviceProvider.CreateScope();
+            var notifier = scope.ServiceProvider.GetService<IWorkflowNotifier>();
+
+            // Assert
+            notifier.Should().BeOfType<N8nWorkflowNotifier>();
+        }
+
+        /// <summary>
+        /// Verifies that IWorkflowNotifier is registered with Scoped lifetime, consistent with
+        /// IApplicationDbContext (both resolved once per request/scope).
+        /// </summary>
+        [Fact]
+        public void AddInfrastructure_RegistersIWorkflowNotifierAsScoped()
+        {
+            // Arrange
+            var services = new ServiceCollection();
+            var configuration = CreateValidConfiguration();
+
+            // Act
+            services.AddInfrastructure(configuration);
+
+            // Assert
+            var descriptor = services.FirstOrDefault(sd => sd.ServiceType == typeof(IWorkflowNotifier));
+            descriptor.Should().NotBeNull();
+            descriptor!.Lifetime.Should().Be(ServiceLifetime.Scoped);
+        }
+
+        /// <summary>
+        /// Verifies that EventReminderBackgroundService is registered as an IHostedService, so it
+        /// starts automatically with the application host.
+        /// </summary>
+        [Fact]
+        public void AddInfrastructure_RegistersEventReminderBackgroundServiceAsHostedService()
+        {
+            // Arrange
+            var services = new ServiceCollection();
+            var configuration = CreateValidConfiguration();
+
+            // Act
+            services.AddInfrastructure(configuration);
+
+            // Assert
+            services.Should().Contain(sd =>
+                sd.ServiceType == typeof(IHostedService) &&
+                sd.ImplementationType == typeof(EventReminderBackgroundService));
+        }
+
+        /// <summary>
+        /// Verifies that N8nOptions binds from the "Notifications:N8n" configuration section.
+        /// </summary>
+        [Fact]
+        public void AddInfrastructure_BindsN8nOptionsFromConfiguredSection()
+        {
+            // Arrange
+            var services = new ServiceCollection();
+            var configuration = new ConfigurationBuilder()
+                .AddInMemoryCollection(new Dictionary<string, string?>
+                {
+                    { "ConnectionStrings:DefaultConnection", "Data Source=:memory:" },
+                    { "Notifications:N8n:Enabled", "true" },
+                    { "Notifications:N8n:RegistrationConfirmedWebhookUrl", "https://n8n.example.com/webhook/registration-confirmed" },
+                    { "Notifications:N8n:EventUpdatedWebhookUrl", "https://n8n.example.com/webhook/event-updated" },
+                    { "Notifications:N8n:EventCancelledWebhookUrl", "https://n8n.example.com/webhook/event-cancelled" },
+                    { "Notifications:N8n:EventReminderWebhookUrl", "https://n8n.example.com/webhook/event-reminder" },
+                    { "Notifications:N8n:WebhookToken", "shared-secret-token" }
+                })
+                .Build();
+
+            // Act
+            services.AddInfrastructure(configuration);
+            var serviceProvider = services.BuildServiceProvider();
+            var options = serviceProvider.GetRequiredService<IOptions<N8nOptions>>().Value;
+
+            // Assert
+            options.Enabled.Should().BeTrue();
+            options.WebhookToken.Should().Be("shared-secret-token");
+        }
+
+        /// <summary>
+        /// Verifies that an invalid N8nOptions configuration (enabled but missing required
+        /// values) fails ValidateOnStart, so a misconfigured production deployment fails fast
+        /// instead of silently never sending notifications.
+        /// </summary>
+        [Fact]
+        public void AddInfrastructure_WhenN8nEnabledWithMissingValues_FailsValidateOnStart()
+        {
+            // Arrange
+            var services = new ServiceCollection();
+            var configuration = new ConfigurationBuilder()
+                .AddInMemoryCollection(new Dictionary<string, string?>
+                {
+                    { "ConnectionStrings:DefaultConnection", "Data Source=:memory:" },
+                    { "Notifications:N8n:Enabled", "true" }
+                })
+                .Build();
+
+            services.AddInfrastructure(configuration);
+            var serviceProvider = services.BuildServiceProvider();
+
+            // Act
+            var act = () => serviceProvider.GetRequiredService<IOptions<N8nOptions>>().Value;
+
+            // Assert
+            act.Should().Throw<OptionsValidationException>();
+        }
+
+        /// <summary>
+        /// Verifies that the named "N8n" HttpClient is resolvable via IHttpClientFactory, which
+        /// N8nWorkflowNotifier depends on to send outbound requests.
+        /// </summary>
+        [Fact]
+        public void AddInfrastructure_RegistersNamedN8nHttpClient()
+        {
+            // Arrange
+            var services = new ServiceCollection();
+            var configuration = CreateValidConfiguration();
+
+            // Act
+            services.AddInfrastructure(configuration);
+            var serviceProvider = services.BuildServiceProvider();
+            var httpClientFactory = serviceProvider.GetRequiredService<IHttpClientFactory>();
+
+            // Assert
+            var act = () => httpClientFactory.CreateClient("N8n");
+            act.Should().NotThrow();
         }
     }
 }

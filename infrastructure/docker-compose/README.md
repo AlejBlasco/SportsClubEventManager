@@ -1,8 +1,12 @@
 # Docker Compose
 
-> Referencia de diseño: [`issue-46-infraestructura-como-codigo.md`](../../.claude/docs/sdlc/design/issue-46-infraestructura-como-codigo.md).
+> Referencia de diseño: [`issue-46-infraestructura-como-codigo.md`](../../.claude/docs/sdlc/design/issue-46-infraestructura-como-codigo.md), [`issue-42-integracion-prometheus-metricas.md`](../../.claude/docs/sdlc/design/issue-42-integracion-prometheus-metricas.md), [`issue-43-dashboard-grafana-monitorizacion.md`](../../.claude/docs/sdlc/design/issue-43-dashboard-grafana-monitorizacion.md).
 
-Esta carpeta contiene los dos ficheros Docker Compose reales del proyecto. Ambos declaran el mismo stack lógico (`sqlserver`, `api`, `web`) sobre una red interna nombrada `sportsclub-network` (`driver: bridge`), pero difieren en cómo obtienen las imágenes de `api`/`web`.
+Esta carpeta contiene los dos ficheros Docker Compose reales del proyecto. Ambos declaran `sqlserver`, `api` y `web` sobre una red interna nombrada `sportsclub-network` (`driver: bridge`), pero difieren en cómo obtienen las imágenes de `api`/`web`. **Solo `docker-compose.yml` (desarrollo)** añade además `prometheus` (issue #42), `grafana`, `node-exporter` y `cadvisor` (issue #43) — `docker-compose.prod.yml` no declara ninguno de los cuatro: el homelab ya tiene su propio stack de Portainer independiente (`monitoring`) con los cuatro, y añadir una segunda copia en producción duplicaría métricas de host/contenedor y arriesgaría colisión de puertos con los servicios reales de `monitoring`.
+>
+> El `prometheus` de desarrollo scrapea `/metrics` de `api` y `web`, además de `node-exporter` y `cadvisor`, según [`prometheus/prometheus.yml`](prometheus/prometheus.yml), y publica su UI únicamente en `${PROMETHEUS_BIND_ADDRESS:-127.0.0.1}:${PROMETHEUS_PORT:-9090}`. En producción, ese mismo scrape lo hace el Prometheus ya existente del stack `monitoring`, mediante un runbook manual — ver la sección de observabilidad del [`README`](../../README.md) del repositorio y el `## Apéndice A` del [diseño de la issue #42](../../.claude/docs/sdlc/design/issue-42-integracion-prometheus-metricas.md).
+>
+> El `grafana` de desarrollo consume el *datasource* Prometheus y el dashboard versionado en [`../grafana/`](../grafana/), y publica su UI en `${GRAFANA_BIND_ADDRESS:-127.0.0.1}:${GRAFANA_PORT:-3000}` — acotado a la propia máquina, igual que `prometheus`. En producción, ese mismo dashboard se aplica sobre la Grafana ya existente del stack `monitoring` (*provisioning* por fichero) y se publica de forma acotada mediante Grafana Public Dashboards + una ruta dedicada del Cloudflare Tunnel del homelab — ver el `## Apéndice A` del [diseño de la issue #43](../../.claude/docs/sdlc/design/issue-43-dashboard-grafana-monitorizacion.md) y la sección "Observabilidad y métricas" del [`README`](../../README.md) raíz.
 
 ## `docker-compose.yml` — desarrollo local
 
@@ -30,7 +34,8 @@ Esta carpeta contiene los dos ficheros Docker Compose reales del proyecto. Ambos
 | Origen de la imagen | `build:` local (`context: ../..`) | `image:` publicada en GHCR + `pull_policy: always` |
 | Reinicio | Por defecto de Docker (no declarado) | `restart: unless-stopped` |
 | Versión desplegada | Siempre la última construida en local | `${APP_VERSION:-latest}` — permite fijar un tag concreto para rollback |
-| Resto (`secrets:`, `healthcheck`, `depends_on`, `networks:`, `volumes:`) | Idéntico |
+| Observabilidad (`prometheus`/`grafana`/`node-exporter`/`cadvisor`) | Los cuatro presentes (issues #42/#43) | **Ninguno de los cuatro** — el homelab ya los tiene en su stack `monitoring`, ver nota al principio de este documento |
+| Resto (`sqlserver`/`api`/`web`: `healthcheck`, `depends_on`, `networks:`, `volumes:`) | Idéntico |
 
 ## Comandos de verificación
 
@@ -49,6 +54,32 @@ Levantar el stack de desarrollo completo (equivalente a ejecutar el fichero incl
 ```bash
 docker compose up --build
 ```
+
+## Limitación conocida — `cadvisor` en WSL2 (desarrollo local)
+
+Al ejecutar `docker compose up --build` en un host **Windows con Docker corriendo sobre WSL2**, el servicio `cadvisor` (issue #43) puede fallar al arrancar con:
+
+```
+Error response from daemon: path / is mounted on / but it is not a shared or slave mount
+```
+
+**Causa:** `cadvisor` monta `/:/rootfs:ro` (ver `volumes:` del servicio en [`docker-compose.yml`](docker-compose.yml), el único fichero de este repositorio que lo declara — no existe en `docker-compose.prod.yml`) para poder inspeccionar los contenedores del host. Docker necesita que la raíz `/` tenga *mount propagation* `shared` o `slave` para permitir ese bind-mount, pero la distro WSL2 monta `/` como privada por defecto — no es un problema del stack en sí, sino del entorno WSL2.
+
+Al ser un problema del **host de desarrollo**, no del homelab de producción (servidor Linux real detrás de Portainer), no se corrige en ningún fichero de este repositorio. Se soluciona en la propia distro WSL2:
+
+```bash
+# Dentro de una terminal WSL2 (no PowerShell), una vez por arranque:
+sudo mount --make-rshared /
+```
+
+Para que se aplique automáticamente en cada arranque de WSL2, añadir en `/etc/wsl.conf` de esa distro:
+
+```ini
+[boot]
+command = "mount --make-rshared /"
+```
+
+y reiniciar WSL2 desde PowerShell con `wsl --shutdown`.
 
 ## Paso manual pendiente — actualizar la ruta del stack en Portainer
 

@@ -29,7 +29,7 @@ public class ValidationBehaviorTests
             var validators = new List<IValidator<GetEventsQuery>>();
             var behavior = new ValidationBehavior<GetEventsQuery, List<SportsClubEventManager.Shared.DTOs.EventDto>>(validators);
             var nextHandlerCalled = false;
-            RequestHandlerDelegate<List<SportsClubEventManager.Shared.DTOs.EventDto>> next = async () =>
+            RequestHandlerDelegate<List<SportsClubEventManager.Shared.DTOs.EventDto>> next = async _ =>
             {
                 nextHandlerCalled = true;
                 return new List<SportsClubEventManager.Shared.DTOs.EventDto>();
@@ -67,7 +67,7 @@ public class ValidationBehaviorTests
             var behavior = new ValidationBehavior<GetEventsQuery, List<SportsClubEventManager.Shared.DTOs.EventDto>>(validators);
 
             var nextHandlerCalled = false;
-            RequestHandlerDelegate<List<SportsClubEventManager.Shared.DTOs.EventDto>> next = async () =>
+            RequestHandlerDelegate<List<SportsClubEventManager.Shared.DTOs.EventDto>> next = async _ =>
             {
                 nextHandlerCalled = true;
                 return new List<SportsClubEventManager.Shared.DTOs.EventDto>();
@@ -103,7 +103,7 @@ public class ValidationBehaviorTests
             var validators = new List<IValidator<GetEventsQuery>> { validator1, validator2 };
             var behavior = new ValidationBehavior<GetEventsQuery, List<SportsClubEventManager.Shared.DTOs.EventDto>>(validators);
 
-            RequestHandlerDelegate<List<SportsClubEventManager.Shared.DTOs.EventDto>> next = async () =>
+            RequestHandlerDelegate<List<SportsClubEventManager.Shared.DTOs.EventDto>> next = async _ =>
             {
                 return new List<SportsClubEventManager.Shared.DTOs.EventDto>();
             };
@@ -147,7 +147,7 @@ public class ValidationBehaviorTests
             var validators = new List<IValidator<GetEventsQuery>> { validator };
             var behavior = new ValidationBehavior<GetEventsQuery, List<SportsClubEventManager.Shared.DTOs.EventDto>>(validators);
 
-            RequestHandlerDelegate<List<SportsClubEventManager.Shared.DTOs.EventDto>> next = async () =>
+            RequestHandlerDelegate<List<SportsClubEventManager.Shared.DTOs.EventDto>> next = async _ =>
             {
                 return new List<SportsClubEventManager.Shared.DTOs.EventDto>();
             };
@@ -180,7 +180,7 @@ public class ValidationBehaviorTests
             var behavior = new ValidationBehavior<GetEventsQuery, List<SportsClubEventManager.Shared.DTOs.EventDto>>(validators);
 
             var nextHandlerCalled = false;
-            RequestHandlerDelegate<List<SportsClubEventManager.Shared.DTOs.EventDto>> next = async () =>
+            RequestHandlerDelegate<List<SportsClubEventManager.Shared.DTOs.EventDto>> next = async _ =>
             {
                 nextHandlerCalled = true;
                 return new List<SportsClubEventManager.Shared.DTOs.EventDto>();
@@ -223,7 +223,7 @@ public class ValidationBehaviorTests
             var validators = new List<IValidator<GetEventsQuery>> { validator1, validator2 };
             var behavior = new ValidationBehavior<GetEventsQuery, List<SportsClubEventManager.Shared.DTOs.EventDto>>(validators);
 
-            RequestHandlerDelegate<List<SportsClubEventManager.Shared.DTOs.EventDto>> next = async () =>
+            RequestHandlerDelegate<List<SportsClubEventManager.Shared.DTOs.EventDto>> next = async _ =>
             {
                 return new List<SportsClubEventManager.Shared.DTOs.EventDto>();
             };

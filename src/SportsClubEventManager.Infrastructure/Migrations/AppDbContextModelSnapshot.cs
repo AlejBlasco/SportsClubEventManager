@@ -17,7 +17,7 @@ namespace SportsClubEventManager.Infrastructure.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.1")
+                .HasAnnotation("ProductVersion", "10.0.9")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -46,13 +46,13 @@ namespace SportsClubEventManager.Infrastructure.Migrations
                     b.Property<Guid>("PerformedByUserId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<Guid>("TargetUserId")
-                        .HasColumnType("uniqueidentifier");
-
                     b.Property<string>("TargetUserEmail")
                         .IsRequired()
                         .HasMaxLength(256)
                         .HasColumnType("nvarchar(256)");
+
+                    b.Property<Guid>("TargetUserId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime>("Timestamp")
                         .HasColumnType("datetime2");
@@ -123,6 +123,35 @@ namespace SportsClubEventManager.Infrastructure.Migrations
                     b.HasIndex("Date");
 
                     b.ToTable("Events", (string)null);
+                });
+
+            modelBuilder.Entity("SportsClubEventManager.Domain.Entities.EventReminderNotification", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("EventId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("IntervalHours")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("SentAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EventId", "IntervalHours")
+                        .IsUnique();
+
+                    b.ToTable("EventReminderNotifications", (string)null);
                 });
 
             modelBuilder.Entity("SportsClubEventManager.Domain.Entities.Registration", b =>
@@ -256,6 +285,17 @@ namespace SportsClubEventManager.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("PerformedByUser");
+                });
+
+            modelBuilder.Entity("SportsClubEventManager.Domain.Entities.EventReminderNotification", b =>
+                {
+                    b.HasOne("SportsClubEventManager.Domain.Entities.Event", "Event")
+                        .WithMany()
+                        .HasForeignKey("EventId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Event");
                 });
 
             modelBuilder.Entity("SportsClubEventManager.Domain.Entities.Registration", b =>

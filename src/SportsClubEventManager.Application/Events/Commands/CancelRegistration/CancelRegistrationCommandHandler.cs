@@ -9,7 +9,7 @@ namespace SportsClubEventManager.Application.Events.Commands.CancelRegistration;
 /// <summary>
 /// Handles the CancelRegistrationCommand by removing a user's registration for an event.
 /// </summary>
-public sealed class CancelRegistrationCommandHandler(IApplicationDbContext context)
+public sealed class CancelRegistrationCommandHandler(IApplicationDbContext context, IApplicationMetrics metrics)
     : IRequestHandler<CancelRegistrationCommand>
 {
     /// <summary>
@@ -58,5 +58,9 @@ public sealed class CancelRegistrationCommandHandler(IApplicationDbContext conte
             // Concurrency conflict occurred - likely the registration was already deleted
             throw new DomainException("The registration was modified or deleted by another process. Please try again.");
         }
+
+        // Recorded only after a successful SaveChangesAsync, so operations that roll back are
+        // never counted (issue #42).
+        metrics.RecordRegistrationCancelled("self-service");
     }
 }

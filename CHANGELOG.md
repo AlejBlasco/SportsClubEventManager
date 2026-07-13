@@ -7,9 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-07-13
+
+### Added
+
+- Health check endpoints (`/health/live`, `/health/ready`) for container orchestration and deployment readiness checks (#41)
+- Prometheus metrics integration exposing business and infrastructure metrics, visualized in a Grafana dashboard (#42)
+- Docker image validation in the CD pipeline: Trivy vulnerability scanning, image size baseline checks, and smoke tests before publishing (#44)
+- Automated deployment to the homelab via Portainer webhook, with post-deploy smoke tests and automatic rollback (#45)
+- Infrastructure as Code for the homelab Docker Compose stack (#46)
+- n8n workflows for member notifications: registration confirmation, event updates/cancellations, and reminders (#37)
+
 ### Changed
 
-- `Directory.Build.props` `<Version>` is now bumped as part of every `release: vX.Y.Z` PR, so published Docker images and GitHub Releases carry the real project version instead of a static placeholder (see "Calidad y CI/CD" in `README.md`).
+- Environment-based configuration for application settings across Development/Production (US-39)
+- Structured logging across API and Web (US-40)
+- Secrets management for connection string, JWT key, Google OAuth credentials, and admin password (US-38)
+- Real Docker image/GitHub Release versioning driven by `Directory.Build.props` `<Version>`, replacing the static placeholder (#99)
+- Dependency updates (Dependabot: GitHub Actions multi-ecosystem group)
+
+### Fixed
+
+- Portainer webhook `204 No Content` response now treated as success in `cd.yml`
+- Trivy SARIF scan no longer crashes when combined with `severity: CRITICAL`; the severity gate is now driven off the table report instead
+- `AdminUser__Password` now passed through to the container at deploy time
 
 ## [0.2.0] - 2026-07-08
 

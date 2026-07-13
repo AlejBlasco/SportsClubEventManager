@@ -30,6 +30,11 @@ public interface IApplicationDbContext
     DbSet<AuditLog> AuditLogs { get; }
 
     /// <summary>
+    /// Gets the EventReminderNotifications table.
+    /// </summary>
+    DbSet<EventReminderNotification> EventReminderNotifications { get; }
+
+    /// <summary>
     /// Provides access to database-related information and operations.
     /// </summary>
     DatabaseFacade Database { get; }
