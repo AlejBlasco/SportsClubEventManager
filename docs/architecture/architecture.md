@@ -251,7 +251,7 @@ sequenceDiagram
     Med->>Log: Handle(request, next)
     Log->>Log: LogInformation("Handling {Request}")
     Log->>Val: next()
-    Val->>Val: Ejecuta todos los IValidator&lt;T&gt;
+    Val->>Val: Ejecuta todos los validadores registrados (FluentValidation)
     alt Validación falla
         Val-->>Log: throw ValidationException
         Log->>Log: LogWarning(errores)
