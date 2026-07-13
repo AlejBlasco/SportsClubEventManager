@@ -46,8 +46,15 @@ fi
 # definitions block at the foot of the file ("[x.y.z]: https://...", as used
 # today at the bottom of CHANGELOG.md). This keeps those footer links out of
 # the body when the matched section is the last one in the file.
-SECTION="$(awk -v pattern="$HEADER_PATTERN" '
-  BEGIN { capturing = 0 }
+# Passed via the environment (not "awk -v pattern=...") on purpose: awk's -v
+# assignment re-processes backslash escape sequences in its value, and since
+# "\[", "\." and "\]" aren't recognized C-style escapes, gawk silently strips
+# the backslashes (with an "escape sequence treated as plain" warning),
+# turning the pattern into an unescaped character class that never matches
+# the real header line. ENVIRON values are read as-is, with no such
+# reprocessing, so the escaped pattern survives intact.
+SECTION="$(PATTERN="$HEADER_PATTERN" awk '
+  BEGIN { capturing = 0; pattern = ENVIRON["PATTERN"] }
   $0 ~ pattern { capturing = 1; next }
   capturing && ($0 ~ /^## \[/ || $0 ~ /^\[[^]]+\]:/) { capturing = 0 }
   capturing { print }
