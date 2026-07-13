@@ -50,7 +50,7 @@ public class LoggingBehaviorTests
             var logger = Substitute.For<ILogger<LoggingBehavior<TestRequest, TestResponse>>>();
             var behavior = new LoggingBehavior<TestRequest, TestResponse>(logger);
             var request = new TestRequest("request-marker");
-            RequestHandlerDelegate<TestResponse> next = () => Task.FromResult(new TestResponse("response-marker"));
+            RequestHandlerDelegate<TestResponse> next = _ => Task.FromResult(new TestResponse("response-marker"));
 
             // Act
             var result = await behavior.Handle(request, next, CancellationToken.None);
@@ -72,7 +72,7 @@ public class LoggingBehaviorTests
             var behavior = new LoggingBehavior<TestRequest, TestResponse>(logger);
             var request = new TestRequest("request-marker");
             var expectedResponse = new TestResponse("expected-response");
-            RequestHandlerDelegate<TestResponse> next = () => Task.FromResult(expectedResponse);
+            RequestHandlerDelegate<TestResponse> next = _ => Task.FromResult(expectedResponse);
 
             // Act
             var result = await behavior.Handle(request, next, CancellationToken.None);
@@ -92,7 +92,7 @@ public class LoggingBehaviorTests
             var logger = Substitute.For<ILogger<LoggingBehavior<TestRequest, TestResponse>>>();
             var behavior = new LoggingBehavior<TestRequest, TestResponse>(logger);
             var request = new TestRequest("REQUEST_MARKER_XYZ");
-            RequestHandlerDelegate<TestResponse> next = () => Task.FromResult(new TestResponse("RESPONSE_MARKER_XYZ"));
+            RequestHandlerDelegate<TestResponse> next = _ => Task.FromResult(new TestResponse("RESPONSE_MARKER_XYZ"));
 
             // Act
             await behavior.Handle(request, next, CancellationToken.None);
@@ -113,7 +113,7 @@ public class LoggingBehaviorTests
             var logger = Substitute.For<ILogger<LoggingBehavior<TestRequest, TestResponse>>>();
             var behavior = new LoggingBehavior<TestRequest, TestResponse>(logger);
             var request = new TestRequest("ONLY_IN_DEBUG_MARKER");
-            RequestHandlerDelegate<TestResponse> next = () => Task.FromResult(new TestResponse("irrelevant"));
+            RequestHandlerDelegate<TestResponse> next = _ => Task.FromResult(new TestResponse("irrelevant"));
 
             // Act
             await behavior.Handle(request, next, CancellationToken.None);
@@ -140,7 +140,7 @@ public class LoggingBehaviorTests
             var behavior = new LoggingBehavior<TestRequest, TestResponse>(logger);
             var request = new TestRequest("request-marker");
             var thrown = new InvalidOperationException("handler exploded");
-            RequestHandlerDelegate<TestResponse> next = () => throw thrown;
+            RequestHandlerDelegate<TestResponse> next = _ => throw thrown;
 
             // Act
             var act = async () => await behavior.Handle(request, next, CancellationToken.None);
@@ -166,7 +166,7 @@ public class LoggingBehaviorTests
             var request = new TestRequest("request-marker");
             var validationFailure = new ValidationFailure("Property", "Property is required");
             var thrown = new ValidationException(new[] { validationFailure });
-            RequestHandlerDelegate<TestResponse> next = () => throw thrown;
+            RequestHandlerDelegate<TestResponse> next = _ => throw thrown;
 
             // Act
             var act = async () => await behavior.Handle(request, next, CancellationToken.None);
@@ -189,7 +189,7 @@ public class LoggingBehaviorTests
             var logger = Substitute.For<ILogger<LoggingBehavior<TestRequest, TestResponse>>>();
             var behavior = new LoggingBehavior<TestRequest, TestResponse>(logger);
             var request = new TestRequest("request-marker");
-            RequestHandlerDelegate<TestResponse> next = () => throw new InvalidOperationException("boom");
+            RequestHandlerDelegate<TestResponse> next = _ => throw new InvalidOperationException("boom");
 
             // Act
             var act = async () => await behavior.Handle(request, next, CancellationToken.None);
