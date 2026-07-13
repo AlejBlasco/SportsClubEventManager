@@ -18,4 +18,11 @@ public interface IApplicationMetrics
     /// </summary>
     /// <param name="source">Bounded label: "self-service" or "admin" — who cancelled the registration.</param>
     void RecordRegistrationCancelled(string source);
+
+    /// <summary>
+    /// Records the outcome of an attempt to notify n8n about a workflow-relevant event.
+    /// </summary>
+    /// <param name="workflow">Bounded label: "registration-confirmed" | "event-updated" | "event-cancelled" | "event-reminder".</param>
+    /// <param name="success"><c>true</c> if the outbound HTTP call to n8n succeeded (2xx response); otherwise <c>false</c>.</param>
+    void RecordWorkflowNotificationSent(string workflow, bool success);
 }

@@ -38,6 +38,11 @@ public sealed class AppDbContext : DbContext, IApplicationDbContext
     public DbSet<AuditLog> AuditLogs { get; set; } = null!;
 
     /// <summary>
+    /// Gets or sets the EventReminderNotifications table.
+    /// </summary>
+    public DbSet<EventReminderNotification> EventReminderNotifications { get; set; } = null!;
+
+    /// <summary>
     /// Configures the model using Fluent API configurations.
     /// </summary>
     /// <param name="modelBuilder">The builder used to construct the model.</param>

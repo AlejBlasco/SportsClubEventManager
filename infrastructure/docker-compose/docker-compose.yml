@@ -11,6 +11,8 @@ secrets:
     environment: CONNECTION_STRING
   grafana__admin_password:
     environment: GRAFANA_ADMIN_PASSWORD
+  n8n__webhooktoken:
+    environment: N8N_WEBHOOK_TOKEN
 
 networks:
   sportsclub-network:
@@ -56,12 +58,25 @@ services:
       # from here: they now arrive as file-based secrets (see "secrets:" below).
       Cors__AllowedOrigins__0: http://localhost:${WEB_PORT:-5123}
       Cors__AllowedOrigins__1: ${WEB_EXTERNAL_URL:-}
+      # n8n workflow notifications (issue #37) — Notifications__N8n__WebhookToken arrives via the
+      # "secrets:" block below (n8n__webhooktoken), not as an environment variable here, same
+      # pattern already used for the rest of api's credentials. Stays disabled by default; only
+      # enabled in production once the manual runbook has been executed against the real n8n
+      # instance (no project-owned n8n container exists in this file, dev or prod).
+      Notifications__N8n__Enabled: ${NOTIFICATIONS_N8N_ENABLED:-false}
+      Notifications__N8n__RegistrationConfirmedWebhookUrl: ${NOTIFICATIONS_N8N_REGISTRATION_CONFIRMED_WEBHOOK_URL:-}
+      Notifications__N8n__EventUpdatedWebhookUrl: ${NOTIFICATIONS_N8N_EVENT_UPDATED_WEBHOOK_URL:-}
+      Notifications__N8n__EventCancelledWebhookUrl: ${NOTIFICATIONS_N8N_EVENT_CANCELLED_WEBHOOK_URL:-}
+      Notifications__N8n__EventReminderWebhookUrl: ${NOTIFICATIONS_N8N_EVENT_REMINDER_WEBHOOK_URL:-}
+      Notifications__N8n__ReminderIntervalHours__0: "24"
+      Notifications__N8n__ReminderIntervalHours__1: "1"
     secrets:
       - authentication__jwtsettings__secretkey
       - authentication__google__clientid
       - authentication__google__clientsecret
       - adminuser__password
       - connectionstrings__defaultconnection
+      - n8n__webhooktoken
     networks:
       - sportsclub-network
     depends_on:

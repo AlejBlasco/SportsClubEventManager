@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using SportsClubEventManager.Application.Common.Interfaces;
+using SportsClubEventManager.Application.Common.Models.Notifications;
 using SportsClubEventManager.Domain.Entities;
 using SportsClubEventManager.Domain.Enums;
 using SportsClubEventManager.Domain.Exceptions;
@@ -11,7 +12,8 @@ namespace SportsClubEventManager.Application.Events.Commands.RegisterForEvent;
 /// <summary>
 /// Handles the RegisterForEventCommand by creating a new registration for a user to an event.
 /// </summary>
-public sealed class RegisterForEventCommandHandler(IApplicationDbContext context, IApplicationMetrics metrics)
+public sealed class RegisterForEventCommandHandler(
+    IApplicationDbContext context, IApplicationMetrics metrics, IWorkflowNotifier notifier)
     : IRequestHandler<RegisterForEventCommand, RegistrationCreatedDto>
 {
     /// <summary>
@@ -84,6 +86,25 @@ public sealed class RegisterForEventCommandHandler(IApplicationDbContext context
         // Recorded only after a successful SaveChangesAsync, so operations that roll back are
         // never counted (issue #42).
         metrics.RecordRegistrationCreated("self-service");
+
+        // Notified only after a successful SaveChangesAsync, same criterion as the metric above
+        // (issue #37). The registering user wasn't loaded above (only its Guid was known), so it's
+        // fetched here purely to build the notification payload.
+        var registeringUser = await context.Users.FindAsync([request.UserId], cancellationToken);
+        if (registeringUser is not null)
+        {
+            await notifier.NotifyRegistrationConfirmedAsync(
+                new RegistrationConfirmedPayload
+                {
+                    EventId = eventEntity.Id,
+                    EventTitle = eventEntity.Title,
+                    EventDate = eventEntity.Date,
+                    Location = eventEntity.Location,
+                    UserEmail = registeringUser.Email,
+                    UserName = registeringUser.Name
+                },
+                cancellationToken);
+        }
 
         // Return DTO with full event details
         return new RegistrationCreatedDto
