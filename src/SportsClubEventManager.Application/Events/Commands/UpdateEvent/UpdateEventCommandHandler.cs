@@ -2,6 +2,7 @@ using System.Text.Json;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using SportsClubEventManager.Application.Common.Interfaces;
+using SportsClubEventManager.Application.Common.Models.Notifications;
 using SportsClubEventManager.Domain.Enums;
 using SportsClubEventManager.Domain.Exceptions;
 using SportsClubEventManager.Shared.DTOs;
@@ -15,16 +16,19 @@ public class UpdateEventCommandHandler : IRequestHandler<UpdateEventCommand, Eve
 {
     private readonly IApplicationDbContext _context;
     private readonly IAuditService _auditService;
+    private readonly IWorkflowNotifier _notifier;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="UpdateEventCommandHandler"/> class.
     /// </summary>
     /// <param name="context">The application database context.</param>
     /// <param name="auditService">The audit logging service.</param>
-    public UpdateEventCommandHandler(IApplicationDbContext context, IAuditService auditService)
+    /// <param name="notifier">The n8n workflow notifier.</param>
+    public UpdateEventCommandHandler(IApplicationDbContext context, IAuditService auditService, IWorkflowNotifier notifier)
     {
         _context = context;
         _auditService = auditService;
+        _notifier = notifier;
     }
 
     /// <summary>
@@ -40,6 +44,7 @@ public class UpdateEventCommandHandler : IRequestHandler<UpdateEventCommand, Eve
     {
         var eventEntity = await _context.Events
             .Include(e => e.Registrations)
+            .ThenInclude(r => r.User)
             .FirstOrDefaultAsync(e => e.Id == request.EventId, cancellationToken);
 
         if (eventEntity == null)
@@ -109,6 +114,24 @@ public class UpdateEventCommandHandler : IRequestHandler<UpdateEventCommand, Eve
         {
             throw new InvalidOperationException("The event was modified by another user. Please reload and try again.");
         }
+
+        // Notified only after a successful SaveChangesAsync, same criterion already applied to the
+        // audit log entry above (issue #37). Recipients reuse the Registrations already loaded via
+        // ThenInclude(r => r.User) — no extra query needed.
+        await _notifier.NotifyEventUpdatedAsync(
+            new EventChangedPayload
+            {
+                EventId = eventEntity.Id,
+                EventTitle = eventEntity.Title,
+                EventDate = eventEntity.Date,
+                Location = eventEntity.Location,
+                ChangeType = "updated",
+                Recipients = eventEntity.Registrations
+                    .Where(r => r.Status != RegistrationStatus.Cancelled)
+                    .Select(r => new NotificationRecipient { Email = r.User.Email, Name = r.User.Name })
+                    .ToList()
+            },
+            cancellationToken);
 
         return new EventAdminListDto
         {

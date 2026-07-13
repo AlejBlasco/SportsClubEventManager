@@ -24,6 +24,7 @@
 - [e. Funcionalidades principales](#e-funcionalidades-principales)
 - [f. Usuarios de prueba](#f-usuarios-de-prueba)
 - [Observabilidad y métricas](#observabilidad-y-métricas)
+- [Notificaciones automatizadas (n8n)](#notificaciones-automatizadas-n8n)
 - [Calidad y CI/CD](#calidad-y-cicd)
 - [Proyectos personales empleados en su construcción](#proyectos-personales-empleados-en-su-construcción)
 - [Licencia](#licencia)
@@ -275,6 +276,19 @@ El contenedor **`grafana`** (imagen `grafana/grafana-oss`) consume Prometheus co
 Acceso local: `http://localhost:${GRAFANA_PORT:-3000}`, usuario `admin`, contraseña la definida en `GRAFANA_ADMIN_PASSWORD`.
 
 > **Solo desarrollo local, igual que Prometheus**: `grafana`, `node-exporter` y `cadvisor` se añaden únicamente a `infrastructure/docker-compose/docker-compose.yml`, acotados a `${GRAFANA_BIND_ADDRESS:-127.0.0.1}` (`grafana`) o sin publicar puerto (`node-exporter`/`cadvisor`, solo accesibles dentro de la red Docker interna). **No existe ningún `grafana`/`node-exporter`/`cadvisor` propio de este proyecto en `docker-compose.prod.yml`**: el homelab ya tiene los tres en el mismo stack `monitoring` mencionado arriba. En producción, el dashboard/reglas de alerta versionados en `infrastructure/grafana/` se aplican sobre esa Grafana ya existente mediante *provisioning* por fichero (montaje de solo lectura, configurado por el propietario del homelab), y se publican de forma acotada — no toda la Grafana compartida — mediante la funcionalidad nativa **Grafana Public Dashboards** más una ruta dedicada en el Cloudflare Tunnel ya usado por este mismo homelab para exponer `sportsclub.ablasco.com` (ver la issue [#109](https://github.com/AlejBlasco/SportsClubEventManager/issues/109), ya cerrada, y su runbook [`issue-109-exponer-sportsclub-cloudflare-tunnel.md`](.claude/docs/sdlc/design/issue-109-exponer-sportsclub-cloudflare-tunnel.md) como precedente verificado del mismo mecanismo). El runbook completo está en el `## Apéndice A` de [`issue-43-dashboard-grafana-monitorizacion.md`](.claude/docs/sdlc/design/issue-43-dashboard-grafana-monitorizacion.md).
+
+## Notificaciones automatizadas (n8n)
+
+Desde la issue #37, la `Api` dispara notificaciones de negocio (email a los socios) invocando *webhooks* de una instancia **n8n ya existente y compartida del homelab** — este repositorio **no despliega ningún contenedor n8n propio**, ni en desarrollo ni en producción (a diferencia de Prometheus/Grafana, que sí mantienen una copia ligera solo en desarrollo local).
+
+- **Dirección de la integración**: la `Api` llama a los *webhooks* de n8n (`HTTP POST`), nunca al revés — no se añade ningún *endpoint* nuevo a la `Api`. Tres *command handlers* existentes invocan la abstracción `IWorkflowNotifier` (definida en `Application`, implementada en `Infrastructure` con `IHttpClientFactory`) **después** de un `SaveChangesAsync`/`CommitAsync` exitoso, mismo patrón ya usado por `IApplicationMetrics`/`IAuditService` (issue #42):
+  - `RegisterForEventCommandHandler` → flujo "confirmación de registro".
+  - `UpdateEventCommandHandler` → flujo "actualización de evento".
+  - `DeleteEventCommandHandler` → flujo "cancelación de evento".
+- **Recordatorios de evento**: el `BackgroundService` `EventReminderBackgroundService` (mismo patrón `PeriodicTimer` + `IServiceScope` por iteración que `ActiveEventsGaugeUpdater`, issue #42) sondea cada `Notifications:N8n:PollingIntervalMinutes` (5 min por defecto) los eventos que entran en alguno de los intervalos configurados en `Notifications:N8n:ReminderIntervalHours` (24h/1h por defecto), y registra cada recordatorio ya enviado en la tabla `EventReminderNotifications` (índice único `EventId`+`IntervalHours`) para no duplicarlo, ni siquiera tras un reinicio del contenedor.
+- **Deshabilitado por defecto en todo entorno** (`Notifications:N8n:Enabled=false`): las llamadas HTTP salientes nunca bloquean ni fallan la operación de negocio que las origina (excepciones capturadas y registradas con `LogWarning`, nunca propagadas) y quedan contabilizadas vía el contador `sportsclubeventmanager_workflow_notifications_total{workflow, result}` (extensión de `IApplicationMetrics`, issue #42).
+- **Flujos versionados como código**: las 4 exportaciones JSON de los flujos de n8n (`registration-confirmed`, `event-updated`, `event-cancelled`, `event-reminder`) viven en [`infrastructure/n8n/workflows/`](infrastructure/n8n/workflows/), a **importar manualmente** en la instancia n8n real del homelab — mismo tratamiento ya dado al dashboard JSON de Grafana (issue #43).
+- **Activación en producción**: solo tras ejecutar el runbook manual de [`infrastructure/n8n/README.md`](infrastructure/n8n/README.md) (credencial *Header Auth*, etiquetado, credencial de email vía Brevo) se activa `NOTIFICATIONS_N8N_ENABLED=true` con las URLs de *webhook* reales y `N8N_WEBHOOK_TOKEN` en el `.env` de producción — ver el `## Apéndice A` de [`issue-37-workflows-n8n-notificaciones-eventos.md`](.claude/docs/sdlc/design/issue-37-workflows-n8n-notificaciones-eventos.md) para el detalle completo.
 
 ## Calidad y CI/CD
 

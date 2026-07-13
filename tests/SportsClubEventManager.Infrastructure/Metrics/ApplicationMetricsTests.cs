@@ -33,6 +33,12 @@ public class ApplicationMetricsTests
             "Total number of event registrations cancelled.",
             new CounterConfiguration { LabelNames = ["source"] });
 
+    private static Counter WorkflowNotificationsSentCounter() =>
+        Prometheus.Metrics.CreateCounter(
+            "sportsclubeventmanager_workflow_notifications_total",
+            "Total number of n8n workflow notification attempts, by workflow and outcome.",
+            new CounterConfiguration { LabelNames = ["workflow", "result"] });
+
     /// <summary>
     /// Tests covering <see cref="ApplicationMetrics.RecordRegistrationCreated"/>.
     /// </summary>
@@ -175,6 +181,91 @@ public class ApplicationMetricsTests
 
             // Assert
             createdCounter.WithLabels(source).Value.Should().Be(0);
+        }
+    }
+
+    /// <summary>
+    /// Tests covering <see cref="ApplicationMetrics.RecordWorkflowNotificationSent"/> (issue #37).
+    /// </summary>
+    public sealed class RecordWorkflowNotificationSentTests : ApplicationMetricsTests
+    {
+        /// <summary>
+        /// Verifies that a successful notification increments the counter with the "success"
+        /// result label for the given workflow.
+        /// </summary>
+        [Fact]
+        public void RecordWorkflowNotificationSent_WhenSuccessful_IncrementsCounterWithSuccessLabel()
+        {
+            // Arrange
+            var workflow = $"registration-confirmed-{Guid.NewGuid()}";
+            var counter = WorkflowNotificationsSentCounter();
+
+            // Act
+            _metrics.RecordWorkflowNotificationSent(workflow, success: true);
+
+            // Assert
+            counter.WithLabels(workflow, "success").Value.Should().Be(1);
+        }
+
+        /// <summary>
+        /// Verifies that a failed notification increments the counter with the "failure" result
+        /// label for the given workflow, instead of the "success" label.
+        /// </summary>
+        [Fact]
+        public void RecordWorkflowNotificationSent_WhenFailed_IncrementsCounterWithFailureLabel()
+        {
+            // Arrange
+            var workflow = $"event-updated-{Guid.NewGuid()}";
+            var counter = WorkflowNotificationsSentCounter();
+
+            // Act
+            _metrics.RecordWorkflowNotificationSent(workflow, success: false);
+
+            // Assert
+            counter.WithLabels(workflow, "failure").Value.Should().Be(1);
+            counter.WithLabels(workflow, "success").Value.Should().Be(0);
+        }
+
+        /// <summary>
+        /// Verifies that successes and failures for the same workflow are tracked as independent
+        /// time series (distinct "result" label values), so one does not affect the other.
+        /// </summary>
+        [Fact]
+        public void RecordWorkflowNotificationSent_WhenCalledWithBothOutcomes_TracksThemIndependently()
+        {
+            // Arrange
+            var workflow = $"event-cancelled-{Guid.NewGuid()}";
+            var counter = WorkflowNotificationsSentCounter();
+
+            // Act
+            _metrics.RecordWorkflowNotificationSent(workflow, success: true);
+            _metrics.RecordWorkflowNotificationSent(workflow, success: true);
+            _metrics.RecordWorkflowNotificationSent(workflow, success: false);
+
+            // Assert
+            counter.WithLabels(workflow, "success").Value.Should().Be(2);
+            counter.WithLabels(workflow, "failure").Value.Should().Be(1);
+        }
+
+        /// <summary>
+        /// Verifies that distinct "workflow" label values are tracked independently, so recording
+        /// a notification for one workflow does not affect another workflow's counter.
+        /// </summary>
+        [Fact]
+        public void RecordWorkflowNotificationSent_WhenCalledWithDifferentWorkflows_TracksEachWorkflowIndependently()
+        {
+            // Arrange
+            var reminderWorkflow = $"event-reminder-{Guid.NewGuid()}";
+            var registrationWorkflow = $"registration-confirmed-{Guid.NewGuid()}";
+            var counter = WorkflowNotificationsSentCounter();
+
+            // Act
+            _metrics.RecordWorkflowNotificationSent(reminderWorkflow, success: true);
+            _metrics.RecordWorkflowNotificationSent(registrationWorkflow, success: false);
+
+            // Assert
+            counter.WithLabels(reminderWorkflow, "success").Value.Should().Be(1);
+            counter.WithLabels(registrationWorkflow, "failure").Value.Should().Be(1);
         }
     }
 }

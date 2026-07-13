@@ -68,4 +68,9 @@ internal sealed class TestApplicationDbContext : DbContext, IApplicationDbContex
     /// Gets the AuditLogs table.
     /// </summary>
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
+
+    /// <summary>
+    /// Gets the EventReminderNotifications table.
+    /// </summary>
+    public DbSet<EventReminderNotification> EventReminderNotifications => Set<EventReminderNotification>();
 }
