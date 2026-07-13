@@ -85,8 +85,8 @@ flowchart TB
 | Autenticación | **OAuth2 (Google)** + login local con **BCrypt** (factor de coste 12), emisión de **JWT** y cookies de sesión (expiración deslizante de 30 min) |
 | Autorización | RBAC con dos roles (`User`, `Administrator`), políticas por claim de rol |
 | Importación de datos | **CsvHelper** para la carga masiva de eventos |
-| Contenedores | **Docker** / **Docker Compose** (SQL Server + API + Web + Prometheus), imágenes multi-stage sobre `mcr.microsoft.com/dotnet/sdk:10.0` y `aspnet:10.0` |
-| Observabilidad | Métricas **Prometheus** (`prometheus-net.AspNetCore` en Api/Web, `prometheus-net` en Infrastructure) expuestas en `/metrics`; contenedor `prom/prometheus` incluido en Docker Compose |
+| Contenedores | **Docker** / **Docker Compose** (SQL Server + API + Web en producción; añade Prometheus + Grafana + node_exporter + cAdvisor solo en desarrollo local), imágenes multi-stage sobre `mcr.microsoft.com/dotnet/sdk:10.0` y `aspnet:10.0` |
+| Observabilidad | Métricas **Prometheus** (`prometheus-net.AspNetCore` en Api/Web, `prometheus-net` en Infrastructure) expuestas en `/metrics`; **Prometheus/Grafana/node_exporter/cAdvisor propios del proyecto solo en desarrollo local** — en producción el homelab ya tiene su propio stack `monitoring` (ver [Observabilidad y métricas](#observabilidad-y-métricas)) |
 | CI/CD | **GitHub Actions**: build + tests en cada PR a `develop`/`master`; build y publicación de imágenes a **GHCR** + despliegue vía webhook de **Portainer** en `master`, con smoke test post-despliegue y rollback totalmente automático (ver [runbook de despliegue](infrastructure/deploy/DEPLOYMENT_RUNBOOK.md)) |
 | Testing backend | **xUnit**, **FluentAssertions**, **NSubstitute**, **Bogus** (datos de prueba), `coverlet.collector` |
 | Testing Blazor | **bUnit**, **WireMock.Net** (mock de llamadas HTTP a la API) |
@@ -125,6 +125,8 @@ flowchart TB
    WEB_PORT=5123
    SQL_PORT=1433
    PROMETHEUS_PORT=9090
+   GRAFANA_PORT=3000
+   GRAFANA_ADMIN_PASSWORD=<contraseña-fuerte-para-el-usuario-admin-de-grafana>
    ASPNETCORE_ENVIRONMENT=Development
    JWT_SECRET_KEY=<clave-base64-de-al-menos-32-caracteres>
    ADMIN_PASSWORD=<contraseña para admin@sportsclub.local>
@@ -144,6 +146,7 @@ flowchart TB
    - Web (Blazor): http://localhost:5123
    - API + Swagger: http://localhost:5240/swagger
    - UI de Prometheus: http://localhost:9090 (o `http://localhost:${PROMETHEUS_PORT:-9090}` si se personalizó el puerto) — permite comprobar que `api`/`web` aparecen como *targets* `UP` en **Status → Targets** y ejecutar consultas PromQL sobre las métricas descritas en la sección [Observabilidad y métricas](#observabilidad-y-métricas)
+   - Dashboard de Grafana: http://localhost:3000 (o `http://localhost:${GRAFANA_PORT:-3000}` si se personalizó el puerto) — usuario `admin`, contraseña la definida en `GRAFANA_ADMIN_PASSWORD`; el dashboard "SportsClubEventManager - Overview" ya aparece provisionado en la carpeta "SportsClubEventManager" sin ningún paso manual, ver [Observabilidad y métricas](#observabilidad-y-métricas)
 
 > Con `ASPNETCORE_ENVIRONMENT=Development` se aplican también las migraciones de datos de prueba (ver [sección f](#f-usuarios-de-prueba)). Con `ASPNETCORE_ENVIRONMENT=Production` (o cualquier valor distinto de `Development`), ambos hosts cargan `appsettings.json` (fichero base) como único perfil de configuración de producción — este repositorio no define un `appsettings.Production.json` separado; el fichero base ya cumple ese rol de forma explícita y documentada, y solo `appsettings.Development.json` diverge de él (logging más verboso).
 >
@@ -206,6 +209,7 @@ El repositorio sigue una arquitectura en capas (Clean Architecture):
   Dockerfile.api, Dockerfile.web
 /infrastructure                            → Infraestructura como código (Docker Compose, documentación de despliegue)
   /docker-compose/prometheus               → Configuración de scrape de Prometheus (prometheus.yml)
+  /grafana                                 → Provisioning de Grafana como código (datasources, dashboards, reglas de alerta) y el dashboard JSON versionado (issue #43)
 /.github/workflows                         → Pipelines de CI (build + test) y CD (build + deploy)
 /.claude                                   → Kit de agentes de IA usado durante el desarrollo (ver más abajo)
 docker-compose.yml                         → Orquestación local del stack completo
@@ -255,9 +259,22 @@ Desde la issue #42, ambos hosts (`Api`, `Web`) exponen un endpoint `/metrics` an
   - `sportsclubeventmanager_registration_cancellations_total{source="self-service"|"admin"}` — inscripciones canceladas.
   - `sportsclubeventmanager_active_events` — número de eventos cuya fecha aún no ha pasado, recalculado cada 30s (configurable vía `Metrics:ActiveEventsRefreshIntervalSeconds`) por el `BackgroundService` `ActiveEventsGaugeUpdater`.
 
-El contenedor **`prometheus`** (imagen `prom/prometheus`, añadido al Docker Compose de desarrollo y de producción) scrapea ambos hosts cada 15s (`infrastructure/docker-compose/prometheus/prometheus.yml`) y retiene los datos 15 días. Su UI queda accesible en `http://localhost:${PROMETHEUS_PORT:-9090}` (ver [sección c](#c-instalación-y-ejecución)).
+El contenedor **`prometheus`** (imagen `prom/prometheus`) scrapea ambos hosts cada 15s (`infrastructure/docker-compose/prometheus/prometheus.yml`) y retiene los datos 15 días. Su UI queda accesible en `http://localhost:${PROMETHEUS_PORT:-9090}` (ver [sección c](#c-instalación-y-ejecución)).
 
-> **Nota de seguridad — solo aplica a producción/homelab**: en `infrastructure/docker-compose/docker-compose.prod.yml`, el puerto de `prometheus` se publica acotado a `${PROMETHEUS_BIND_ADDRESS:-127.0.0.1}` (forma larga de mapeo de puertos de Compose), nunca en todas las interfaces. Tanto `/metrics` (de `api`/`web`) como la UI de Prometheus están pensados para ser accesibles **únicamente** desde la red interna del homelab o vía **Tailscale VPN** — nunca a través del *reverse proxy* público (Nginx + Cloudflare) que expone `web` en producción (issue #46). El propietario del homelab debe fijar `PROMETHEUS_BIND_ADDRESS`, en el `.env` del servidor, a la IP Tailscale del host (interfaz `tailscale0`) o a la interfaz de red interna — nunca a `0.0.0.0` ni a la IP pública. En desarrollo local (`docker-compose.yml`), el valor por defecto `127.0.0.1` ya es suficiente para acceder desde la propia máquina.
+> **Solo desarrollo local**: `prometheus` se añade únicamente a `infrastructure/docker-compose/docker-compose.yml`, acotado a `${PROMETHEUS_BIND_ADDRESS:-127.0.0.1}` (nunca a todas las interfaces). **No existe ningún `prometheus` propio de este proyecto en `docker-compose.prod.yml`**: el homelab ya tiene su propio Prometheus en un stack de Portainer independiente (`monitoring`), ajeno a este repositorio. En producción, `/metrics` de `api`/`web` es scrapeado por ese Prometheus ya existente, dado de alta como *scrape target* mediante un runbook manual — ver el `## Apéndice A` de [`issue-42-integracion-prometheus-metricas.md`](.claude/docs/sdlc/design/issue-42-integracion-prometheus-metricas.md). Añadir un segundo Prometheus propio en producción duplicaría métricas de host ya recolectadas por `monitoring` y arriesgaría colisión de puertos con sus servicios reales.
+
+### Dashboard de Grafana (issue #43)
+
+El contenedor **`grafana`** (imagen `grafana/grafana-oss`) consume Prometheus como fuente de datos y expone un dashboard versionado como código en [`infrastructure/grafana/`](infrastructure/grafana/):
+
+- **Provisioning por fichero** (sin ningún paso manual en la UI): `infrastructure/grafana/provisioning/datasources/datasources.yaml` (fuente de datos Prometheus), `infrastructure/grafana/provisioning/dashboards/dashboards.yaml` (carga los dashboards JSON de `infrastructure/grafana/dashboards/`) e `infrastructure/grafana/provisioning/alerting/rules.yaml` (reglas de alerta de *Unified Alerting*).
+- **Dashboard "SportsClubEventManager - Overview"** (`infrastructure/grafana/dashboards/sportsclubeventmanager-overview.json`), con paneles de tasa de peticiones HTTP, latencia p50/p95/p99, tasa de error 5xx, eventos activos, tendencias de registro/cancelación, uso de CPU/memoria/disco del host, y uso de CPU/memoria por contenedor.
+- **Uso de recursos de host y contenedor**: los contenedores **`node-exporter`** (`prom/node-exporter`) y **`cadvisor`** (`gcr.io/cadvisor/cadvisor`), añadidos como *scrape targets* del Prometheus de desarrollo (`infrastructure/docker-compose/prometheus/prometheus.yml`), cubren las métricas de CPU/memoria/disco del host y por contenedor que ninguna métrica de la issue #42 exponía.
+- **Alertas** (visibles en `Alerting > Alert rules` de la UI de Grafana, sin ningún canal de notificación externo configurado por ahora): tasa de error 5xx > 5% durante 5 minutos (`severity: critical`) y latencia p95 > 2 segundos durante 5 minutos (`severity: warning`).
+
+Acceso local: `http://localhost:${GRAFANA_PORT:-3000}`, usuario `admin`, contraseña la definida en `GRAFANA_ADMIN_PASSWORD`.
+
+> **Solo desarrollo local, igual que Prometheus**: `grafana`, `node-exporter` y `cadvisor` se añaden únicamente a `infrastructure/docker-compose/docker-compose.yml`, acotados a `${GRAFANA_BIND_ADDRESS:-127.0.0.1}` (`grafana`) o sin publicar puerto (`node-exporter`/`cadvisor`, solo accesibles dentro de la red Docker interna). **No existe ningún `grafana`/`node-exporter`/`cadvisor` propio de este proyecto en `docker-compose.prod.yml`**: el homelab ya tiene los tres en el mismo stack `monitoring` mencionado arriba. En producción, el dashboard/reglas de alerta versionados en `infrastructure/grafana/` se aplican sobre esa Grafana ya existente mediante *provisioning* por fichero (montaje de solo lectura, configurado por el propietario del homelab), y se publican de forma acotada — no toda la Grafana compartida — mediante la funcionalidad nativa **Grafana Public Dashboards** más una ruta dedicada en el Cloudflare Tunnel ya usado por este mismo homelab para exponer `sportsclub.ablasco.com` (ver la issue [#109](https://github.com/AlejBlasco/SportsClubEventManager/issues/109), ya cerrada, y su runbook [`issue-109-exponer-sportsclub-cloudflare-tunnel.md`](.claude/docs/sdlc/design/issue-109-exponer-sportsclub-cloudflare-tunnel.md) como precedente verificado del mismo mecanismo). El runbook completo está en el `## Apéndice A` de [`issue-43-dashboard-grafana-monitorizacion.md`](.claude/docs/sdlc/design/issue-43-dashboard-grafana-monitorizacion.md).
 
 ## Calidad y CI/CD
 
