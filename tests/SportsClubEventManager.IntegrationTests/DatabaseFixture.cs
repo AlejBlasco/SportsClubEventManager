@@ -19,8 +19,7 @@ public sealed class DatabaseFixture : IAsyncLifetime
     /// </summary>
     public DatabaseFixture()
     {
-        _container = new MsSqlBuilder()
-            .WithImage("mcr.microsoft.com/mssql/server:2022-latest")
+        _container = new MsSqlBuilder("mcr.microsoft.com/mssql/server:2022-latest")
             .WithPassword("YourStrong!Passw0rd")
             .Build();
     }
