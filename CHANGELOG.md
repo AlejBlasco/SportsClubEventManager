@@ -31,6 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Portainer webhook `204 No Content` response now treated as success in `cd.yml`
 - Trivy SARIF scan no longer crashes when combined with `severity: CRITICAL`; the severity gate is now driven off the table report instead
 - `AdminUser__Password` now passed through to the container at deploy time
+- `extract-changelog-section.sh` no longer loses the escaped section-header pattern when handing it to `awk` via `-v` (gawk silently strips backslash sequences it doesn't recognize as C escapes, turning `\[X\.Y\.Z\]` into an unescaped character class that never matched); the pattern is now passed through `ENVIRON` instead, which is not re-escaped
 
 ## [0.2.0] - 2026-07-08
 
