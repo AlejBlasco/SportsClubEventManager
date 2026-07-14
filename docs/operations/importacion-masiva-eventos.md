@@ -1,6 +1,6 @@
 # Importación masiva de eventos por CSV
 
-Exclusiva del rol `Administrator`: permite dar de alta en un solo paso todos los eventos del CSV que la federación publica online, en vez de transcribirlos uno a uno a mano. Referenciado desde la sección [`e. Funcionalidades principales`](../../README.md#e-funcionalidades-principales) del README.
+Exclusiva del rol `Administrator`: permite dar de alta en un solo paso todos los eventos del CSV que la federación publica online, en vez de transcribirlos uno a uno a mano. Referenciado desde la sección [`g. Funcionalidades principales`](../../README.md#g-funcionalidades-principales) del README.
 
 ## Flujo
 

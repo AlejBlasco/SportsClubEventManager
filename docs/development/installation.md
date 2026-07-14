@@ -76,7 +76,7 @@ Este comando construye las imágenes de `api` y `web`, y levanta `sqlserver`, `a
 
 En Prometheus, comprobar en **Status → Targets** que `api` y `web` aparecen como `UP`. En Grafana, el dashboard **"SportsClubEventManager - Overview"** ya aparece provisionado en la carpeta "SportsClubEventManager" sin ningún paso manual.
 
-> Con `ASPNETCORE_ENVIRONMENT=Development` se aplican también las migraciones de datos de prueba (ver [`f. Usuario y contraseña de prueba`](../../README.md#f-usuario-y-contraseña-de-prueba)).
+> Con `ASPNETCORE_ENVIRONMENT=Development` se aplican también las migraciones de datos de prueba (ver [`h. Usuario y contraseña de prueba`](../../README.md#h-usuario-y-contraseña-de-prueba)).
 >
 > **Validación de arranque**: ambos hosts (`Api` y `Web`) validan de forma agregada, al arrancar y antes de aceptar ninguna petición HTTP, que toda la configuración crítica esté presente y sea válida. Si falta o es inválida alguna variable obligatoria, el proceso **no arranca**: termina con una excepción que agrega en un único mensaje **todos** los errores de configuración detectados (no solo el primero). Revisar los logs del contenedor (`docker compose logs api` / `docker compose logs web`) para ver el detalle.
 
@@ -168,4 +168,4 @@ SQL Server exige una contraseña compleja (mínimo 8 caracteres, con mayúscula,
 
 ### Login con Google no funciona
 
-El acceso mediante Google OAuth2 requiere registrar credenciales reales en [Google Cloud Console](https://console.cloud.google.com/apis/credentials) y rellenar `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` — no existe ningún proveedor simulado para este flujo. Si no se necesita probar este login, usar el login local con email/contraseña (ver [`f. Usuario y contraseña de prueba`](../../README.md#f-usuario-y-contraseña-de-prueba)).
+El acceso mediante Google OAuth2 requiere registrar credenciales reales en [Google Cloud Console](https://console.cloud.google.com/apis/credentials) y rellenar `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` — no existe ningún proveedor simulado para este flujo. Si no se necesita probar este login, usar el login local con email/contraseña (ver [`h. Usuario y contraseña de prueba`](../../README.md#h-usuario-y-contraseña-de-prueba)).

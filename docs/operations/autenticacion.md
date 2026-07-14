@@ -1,6 +1,6 @@
 # Autenticación (inicio y cierre de sesión)
 
-Funcionalidad transversal: es el punto de entrada obligatorio para cualquier operación que no sea pública (consultar el calendario de eventos es la única excepción — ver [`calendario-eventos.md`](calendario-eventos.md)). Referenciado desde la sección [`e. Funcionalidades principales`](../../README.md#e-funcionalidades-principales) del README.
+Funcionalidad transversal: es el punto de entrada obligatorio para cualquier operación que no sea pública (consultar el calendario de eventos es la única excepción — ver [`calendario-eventos.md`](calendario-eventos.md)). Referenciado desde la sección [`g. Funcionalidades principales`](../../README.md#g-funcionalidades-principales) del README.
 
 ## Flujo
 

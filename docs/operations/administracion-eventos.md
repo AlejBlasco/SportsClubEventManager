@@ -1,6 +1,6 @@
 # Administración de eventos (CRUD)
 
-Exclusiva del rol `Administrator`: alta, edición y baja de los eventos que los socios pueden consultar y a los que pueden inscribirse. Referenciado desde la sección [`e. Funcionalidades principales`](../../README.md#e-funcionalidades-principales) del README.
+Exclusiva del rol `Administrator`: alta, edición y baja de los eventos que los socios pueden consultar y a los que pueden inscribirse. Referenciado desde la sección [`g. Funcionalidades principales`](../../README.md#g-funcionalidades-principales) del README.
 
 ## Flujo
 
