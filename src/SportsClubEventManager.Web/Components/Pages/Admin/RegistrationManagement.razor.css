@@ -1,0 +1,8 @@
+.export-dropdown {
+    position: relative;
+}
+
+.export-dropdown:hover .dropdown-menu,
+.export-dropdown:focus-within .dropdown-menu {
+    display: block;
+}

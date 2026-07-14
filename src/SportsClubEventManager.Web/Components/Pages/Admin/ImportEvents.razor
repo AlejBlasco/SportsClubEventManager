@@ -166,7 +166,12 @@
                                 <td>@row.Title</td>
                                 <td>@(row.Date?.ToString("yyyy-MM-dd HH:mm") ?? "-")</td>
                                 <td>@row.Location</td>
-                                <td>@row.Description</td>
+                                <td style="min-width: 160px;">
+                                    <input type="text" class="form-control form-control-sm"
+                                           value="@_rowDescriptionOverrides.GetValueOrDefault(row.RowNumber, string.Empty)"
+                                           placeholder="Optional description"
+                                           @onchange="@(e => SetRowDescription(row.RowNumber, e.Value?.ToString() ?? string.Empty))" />
+                                </td>
                                 <td style="max-width: 110px;">
                                     <input type="number" min="1" class="form-control form-control-sm"
                                            value="@_rowCapacityOverrides.GetValueOrDefault(row.RowNumber, row.MaxCapacity ?? 0)"

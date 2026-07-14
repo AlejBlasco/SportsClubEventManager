@@ -27,15 +27,49 @@ public partial class RegistrationManagement
     private DateTime? _eventDateFrom;
     private DateTime? _eventDateTo;
 
-    private string _manualUserId = string.Empty;
-    private string _manualEventId = string.Empty;
+    private Guid? _manualUserId;
+    private Guid? _manualEventId;
+    private IReadOnlyList<UserListDto> _activeUsers = [];
+    private IReadOnlyList<EventAdminListDto> _upcomingEvents = [];
 
     /// <summary>
-    /// Initializes the page and loads registrations.
+    /// Initializes the page, loading registrations and the dropdown data for manual registration.
     /// </summary>
     protected override async Task OnInitializedAsync()
     {
         await LoadRegistrationsAsync();
+        await LoadManualRegistrationOptionsAsync();
+    }
+
+    /// <summary>
+    /// Loads the active users and upcoming events used to populate the manual registration dropdowns.
+    /// Only active users and upcoming events are offered, since both are rejected by
+    /// <c>CreateAdminRegistrationCommandHandler</c> anyway.
+    /// </summary>
+    private async Task LoadManualRegistrationOptionsAsync()
+    {
+        try
+        {
+            var usersResult = await UserManagementService.GetAllUsersAsync(
+                pageNumber: 1,
+                pageSize: 100,
+                isActiveFilter: true,
+                sortBy: "Name",
+                sortOrder: "asc");
+            _activeUsers = usersResult.Items.ToList();
+
+            var eventsResult = await EventManagementService.GetAllEventsAsync(
+                pageNumber: 1,
+                pageSize: 100,
+                isUpcoming: true,
+                sortBy: "Date",
+                sortOrder: "asc");
+            _upcomingEvents = eventsResult.Items.ToList();
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Failed to load users/events for manual registration: {ex.Message}";
+        }
     }
 
     private async Task LoadRegistrationsAsync()
@@ -94,15 +128,9 @@ public partial class RegistrationManagement
         _errorMessage = null;
         _successMessage = null;
 
-        if (!Guid.TryParse(_manualUserId, out var userId))
+        if (_manualUserId is null || _manualEventId is null)
         {
-            _errorMessage = "Manual registration requires a valid user GUID.";
-            return;
-        }
-
-        if (!Guid.TryParse(_manualEventId, out var eventId))
-        {
-            _errorMessage = "Manual registration requires a valid event GUID.";
+            _errorMessage = "Select both a user and an event for the manual registration.";
             return;
         }
 
@@ -111,12 +139,12 @@ public partial class RegistrationManagement
             _creatingRegistration = true;
             await AdminRegistrationManagementService.CreateRegistrationAsync(new CreateAdminRegistrationRequest
             {
-                UserId = userId,
-                EventId = eventId
+                UserId = _manualUserId.Value,
+                EventId = _manualEventId.Value
             });
 
-            _manualUserId = string.Empty;
-            _manualEventId = string.Empty;
+            _manualUserId = null;
+            _manualEventId = null;
             _successMessage = "Registration created successfully.";
             await LoadRegistrationsAsync();
         }

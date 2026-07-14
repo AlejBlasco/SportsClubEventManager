@@ -9,8 +9,8 @@ using Xunit;
 namespace SportsClubEventManager.Tests.Infrastructure.Import;
 
 /// <summary>
-/// Tests for CsvEventImportParser covering column mapping, date/time combination, composite
-/// description building, encoding handling, and structural error detection.
+/// Tests for CsvEventImportParser covering column mapping, date/time combination,
+/// encoding handling, and structural error detection.
 /// </summary>
 public sealed class CsvEventImportParserTests
 {
@@ -52,7 +52,7 @@ public sealed class CsvEventImportParserTests
         row.Title.Should().Be("1ª Tirada El Balín");
         row.Location.Should().Be("Club de Tiro Norte");
         row.Date.Should().Be(new DateTime(2026, 9, 15, 10, 0, 0));
-        row.Description.Should().Be("Modality: Trap | Field: Campo 2 | Category: S1");
+        row.Description.Should().BeNull();
         row.MaxCapacity.Should().Be(30);
         row.SourceDay.Should().Be("15/09/2026");
         row.SourceTime.Should().Be("10:00");
@@ -100,40 +100,26 @@ public sealed class CsvEventImportParserTests
     }
 
     /// <summary>
-    /// Verifies that blank "MODAL."/"CAMPO"/"CAT" segments are omitted from the composite description.
+    /// Verifies that the parser never derives a description from "MODAL."/"CAMPO"/"CAT" —
+    /// those remain source-only columns, and the admin fills in the description manually.
     /// </summary>
     [Fact]
-    public void Parse_WhenModalityFieldAndCategoryAreBlank_OmitsBlankSegmentsFromDescription()
+    public void Parse_WhenModalityFieldAndCategoryArePresent_DoesNotDeriveDescription()
     {
         // Arrange
         var parser = CreateParser();
         var csv = StandardHeader + "\r\n" +
-            "15/09/2026,,Event,10:00,,Club de Tiro Norte,S1\r\n";
+            "15/09/2026,Trap,Event,10:00,Campo 2,Club de Tiro Norte,S1\r\n";
 
         // Act
         var result = parser.Parse(ToStream(csv), null, defaultMaxCapacity: 30, CancellationToken.None);
 
         // Assert
         var row = result.Rows.Single();
-        row.Description.Should().Be("Category: S1");
-    }
-
-    /// <summary>
-    /// Verifies that a completely blank modality/field/category set produces a null description.
-    /// </summary>
-    [Fact]
-    public void Parse_WhenModalityFieldAndCategoryAreAllBlank_ReturnsNullDescription()
-    {
-        // Arrange
-        var parser = CreateParser();
-        var csv = StandardHeader + "\r\n" +
-            "15/09/2026,,Event,10:00,,Club de Tiro Norte,\r\n";
-
-        // Act
-        var result = parser.Parse(ToStream(csv), null, defaultMaxCapacity: 30, CancellationToken.None);
-
-        // Assert
-        result.Rows.Single().Description.Should().BeNull();
+        row.Description.Should().BeNull();
+        row.SourceModality.Should().Be("Trap");
+        row.SourceField.Should().Be("Campo 2");
+        row.SourceCategory.Should().Be("S1");
     }
 
     /// <summary>

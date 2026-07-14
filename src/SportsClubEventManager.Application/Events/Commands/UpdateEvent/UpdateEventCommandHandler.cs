@@ -139,6 +139,7 @@ public class UpdateEventCommandHandler : IRequestHandler<UpdateEventCommand, Eve
             Title = eventEntity.Title,
             Date = eventEntity.Date,
             Location = eventEntity.Location,
+            Description = eventEntity.Description,
             MaxCapacity = eventEntity.MaxCapacity,
             CurrentRegistrations = eventEntity.CurrentRegistrations,
             IsPastEvent = eventEntity.Date < DateTime.UtcNow,

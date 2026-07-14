@@ -1,6 +1,6 @@
 # Administración de eventos (CRUD)
 
-Exclusiva del rol `Administrator`: alta, edición y baja de los eventos que los socios pueden consultar y a los que pueden inscribirse. Referenciado desde la sección [`e. Funcionalidades principales`](../../README.md#e-funcionalidades-principales) del README.
+Exclusiva del rol `Administrator`: alta, edición y baja de los eventos que los socios pueden consultar y a los que pueden inscribirse. Referenciado desde la sección [`g. Funcionalidades principales`](../../README.md#g-funcionalidades-principales) del README.
 
 ## Flujo
 
@@ -36,6 +36,8 @@ flowchart TD
     DeleteOk --> Notify["Webhook n8n:<br/>email de cancelación a cada inscrito"]
     DeleteOk --> Audit3["AuditLog: EventDeleted"]
 ```
+
+> Para la interacción completa componente-a-componente de las tres operaciones (Create/Update/Delete), ver el [sequence diagram de CRUD de eventos](../technical/diagrams/sequence-event-crud.md).
 
 ## Explicación del flujo
 

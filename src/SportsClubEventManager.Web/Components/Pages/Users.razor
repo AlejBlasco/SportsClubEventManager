@@ -1,5 +1,5 @@
 @page "/users"
-@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Administrator")]
 
 <PageTitle>Members &mdash; Sports Club</PageTitle>
 

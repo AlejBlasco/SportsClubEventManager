@@ -20,8 +20,6 @@ Desde la página de inicio, haz click en **"Iniciar Sesión"** (esquina superior
 #### Paso 2: Selecciona Google
 En la página de Inicio de Sesión, haz click en el botón **"Iniciar sesión con Google"**.
 
-![Paso 2](./images/US-27-google-button.png)
-
 #### Paso 3: Autentica en Google
 Serás redirigido a Google. Sigue estos pasos:
 - Si ya has iniciado sesión en Google → Google te pedirá permiso para compartir tu información
@@ -44,8 +42,6 @@ Desde la página de inicio, haz click en **"Iniciar Sesión"** (esquina superior
 En la sección **"Iniciar sesión"** de la página:
 - **Email:** Ingresa tu dirección de correo registrada
 - **Contraseña:** Ingresa tu contraseña
-
-![Paso 2](./images/US-27-login-form.png)
 
 #### Paso 3: Valida tu contraseña
 Tu contraseña debe tener al menos:

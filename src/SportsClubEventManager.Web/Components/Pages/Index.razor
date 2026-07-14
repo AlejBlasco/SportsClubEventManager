@@ -85,7 +85,11 @@
                     </div>
                     <h3>Member Directory</h3>
                     <p>Connect with fellow club members and keep track of event participation across the season.</p>
-                    <a class="feature-link" href="/users">View Members &rarr;</a>
+                    <AuthorizeView Roles="Administrator">
+                        <Authorized>
+                            <a class="feature-link" href="/users">View Members &rarr;</a>
+                        </Authorized>
+                    </AuthorizeView>
                 </article>
             </div>
         </div>

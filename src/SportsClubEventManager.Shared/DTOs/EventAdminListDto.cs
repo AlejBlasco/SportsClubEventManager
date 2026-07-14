@@ -27,6 +27,11 @@ public class EventAdminListDto
     public string Location { get; set; } = string.Empty;
 
     /// <summary>
+    /// Gets or sets the description of the event.
+    /// </summary>
+    public string? Description { get; set; }
+
+    /// <summary>
     /// Gets or sets the maximum capacity of the event.
     /// </summary>
     public int MaxCapacity { get; set; }

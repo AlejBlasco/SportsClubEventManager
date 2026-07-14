@@ -5,6 +5,8 @@
 @using SportsClubEventManager.Shared.DTOs
 @using SportsClubEventManager.Web.Services
 @inject IAdminRegistrationManagementService AdminRegistrationManagementService
+@inject IUserManagementService UserManagementService
+@inject IEventManagementService EventManagementService
 @inject IJSRuntime JSRuntime
 @attribute [Authorize(Roles = "Administrator")]
 
@@ -20,6 +22,25 @@
             <p class="page-subtitle">
                 Manage registrations globally, apply filters, and perform manual registrations.
             </p>
+            <div class="page-header-actions">
+                <div class="export-dropdown">
+                    <button class="btn btn-outline-light dropdown-toggle" type="button">
+                        <i class="bi bi-download"></i> Export
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li>
+                            <button class="dropdown-item" type="button" @onclick="ExportCsvAsync">
+                                <i class="bi bi-filetype-csv"></i> CSV
+                            </button>
+                        </li>
+                        <li>
+                            <button class="dropdown-item" type="button" @onclick="ExportPdfAsync">
+                                <i class="bi bi-file-earmark-pdf"></i> PDF
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -87,12 +108,24 @@
                 </select>
             </div>
             <div class="col-md-3">
-                <label class="form-label">Manual Registration - User ID</label>
-                <input type="text" class="form-control" placeholder="GUID" @bind="_manualUserId" />
+                <label class="form-label">Manual Registration - User</label>
+                <select class="form-select" @bind="_manualUserId">
+                    <option value="">Select a user...</option>
+                    @foreach (var user in _activeUsers)
+                    {
+                        <option value="@user.Id">@user.Name (@user.Email)</option>
+                    }
+                </select>
             </div>
             <div class="col-md-3">
-                <label class="form-label">Manual Registration - Event ID</label>
-                <input type="text" class="form-control" placeholder="GUID" @bind="_manualEventId" />
+                <label class="form-label">Manual Registration - Event</label>
+                <select class="form-select" @bind="_manualEventId">
+                    <option value="">Select an event...</option>
+                    @foreach (var evt in _upcomingEvents)
+                    {
+                        <option value="@evt.Id">@evt.Title (@evt.Date.ToString("yyyy-MM-dd HH:mm"))</option>
+                    }
+                </select>
             </div>
             <div class="col-md-2 d-flex align-items-end">
                 <button class="btn btn-success w-100" @onclick="CreateManualRegistrationAsync" disabled="@_creatingRegistration">
@@ -104,17 +137,6 @@
                     {
                         <span>Create</span>
                     }
-                </button>
-            </div>
-        </div>
-
-        <div class="row g-3 mt-2">
-            <div class="col-md-12 d-flex gap-2 justify-content-end">
-                <button class="btn btn-outline-secondary" @onclick="ExportCsvAsync">
-                    <i class="bi bi-filetype-csv"></i> Export CSV
-                </button>
-                <button class="btn btn-outline-secondary" @onclick="ExportPdfAsync">
-                    <i class="bi bi-file-earmark-pdf"></i> Export PDF
                 </button>
             </div>
         </div>

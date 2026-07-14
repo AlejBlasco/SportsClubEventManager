@@ -1,6 +1,6 @@
 # Gestión del perfil propio
 
-Permite a cualquier socio consultar y actualizar sus propios datos, y cambiar su contraseña, sin intervención de un administrador. Referenciado desde la sección [`e. Funcionalidades principales`](../../README.md#e-funcionalidades-principales) del README.
+Permite a cualquier socio consultar y actualizar sus propios datos, y cambiar su contraseña, sin intervención de un administrador. Referenciado desde la sección [`g. Funcionalidades principales`](../../README.md#g-funcionalidades-principales) del README.
 
 ## Flujo
 

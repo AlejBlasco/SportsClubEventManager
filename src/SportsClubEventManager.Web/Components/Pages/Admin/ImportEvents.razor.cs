@@ -33,6 +33,7 @@ public partial class ImportEvents
     private CsvImportPreviewResponse? _preview;
     private readonly Dictionary<int, bool> _rowSelections = [];
     private readonly Dictionary<int, int> _rowCapacityOverrides = [];
+    private readonly Dictionary<int, string> _rowDescriptionOverrides = [];
     private readonly Dictionary<string, string> _columnMappingSelections = [];
 
     private CsvImportResultDto? _importResult;
@@ -54,6 +55,7 @@ public partial class ImportEvents
         _importResult = null;
         _rowSelections.Clear();
         _rowCapacityOverrides.Clear();
+        _rowDescriptionOverrides.Clear();
 
         try
         {
@@ -169,6 +171,7 @@ public partial class ImportEvents
                 _selectedFileName = null;
                 _rowSelections.Clear();
                 _rowCapacityOverrides.Clear();
+                _rowDescriptionOverrides.Clear();
             }
             else
             {
@@ -194,7 +197,9 @@ public partial class ImportEvents
     {
         Title = row.Title,
         Date = row.Date ?? default,
-        Description = row.Description,
+        Description = string.IsNullOrWhiteSpace(_rowDescriptionOverrides.GetValueOrDefault(row.RowNumber))
+            ? null
+            : _rowDescriptionOverrides[row.RowNumber],
         Location = row.Location,
         MaxCapacity = _rowCapacityOverrides.GetValueOrDefault(row.RowNumber, row.MaxCapacity ?? 0)
     };
@@ -241,6 +246,17 @@ public partial class ImportEvents
     private void SetRowCapacity(int rowNumber, int value)
     {
         _rowCapacityOverrides[rowNumber] = value;
+    }
+
+    /// <summary>
+    /// Updates the description override for a row. The CSV parser never derives a description
+    /// from the "MODAL."/"CAMPO"/"CAT" source columns — it is left blank for the admin to fill in.
+    /// </summary>
+    /// <param name="rowNumber">The row number to update.</param>
+    /// <param name="value">The new description value.</param>
+    private void SetRowDescription(int rowNumber, string value)
+    {
+        _rowDescriptionOverrides[rowNumber] = value;
     }
 
     /// <summary>

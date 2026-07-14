@@ -1,6 +1,6 @@
 # Arquitectura del sistema
 
-Documento de referencia para la sección [`d. Estructura del proyecto`](../../README.md#d-estructura-del-proyecto) del README. Describe la arquitectura de **SportsClubEventManager**, los patrones de diseño aplicados y por qué, con diagramas [Mermaid](https://mermaid.js.org/) que respaldan cada decisión sobre la base del código real del repositorio (no un diseño aspiracional).
+Documento de referencia para la sección [`f. Estructura del proyecto`](../../README.md#f-estructura-del-proyecto) del README. Describe la arquitectura de **SportsClubEventManager**, los patrones de diseño aplicados y por qué, con diagramas [Mermaid](https://mermaid.js.org/) que respaldan cada decisión sobre la base del código real del repositorio (no un diseño aspiracional).
 
 ## Índice
 
@@ -113,6 +113,8 @@ flowchart TB
 ```
 
 `SportsClubEventManager.Shared` (DTOs) no aparece en el diagrama por claridad: es referenciado transversalmente por `Api`, `Application` y `Web` para definir los contratos de datos que cruzan la frontera HTTP, sin acoplar `Web` a los tipos internos de `Application`/`Domain`.
+
+> Este diagrama muestra las **capas de código** dentro de cada proceso. Para la vista C4 Container equivalente (unidades de despliegue reales — `Api`, `Web`, `SQL Server`, y los sistemas externos `Google`/`n8n`/`Prometheus`/`Grafana`, sin exponer las capas internas), ver [`docs/technical/diagrams/c4-container.md`](../technical/diagrams/c4-container.md).
 
 ## 3. Grafo de referencias entre proyectos
 
@@ -342,6 +344,8 @@ classDiagram
 ```
 
 El modelo aplica **encapsulación real** (no son simples *anemic models*): `Event.MaxCapacity` valida en su propio setter que sea mayor que cero (`ValidateCapacity`), lanzando `DomainException` si no lo es; `User.Email` valida su formato en el setter con una expresión regular compilada; `Event.IsFull`/`CanAcceptRegistration()` calculan invariantes de negocio (aforo) a partir de sus propias colecciones, en vez de delegar esa lógica a la capa de aplicación. `Event.RowVersion` habilita **concurrencia optimista** de EF Core para evitar condiciones de carrera cuando dos socios se inscriben simultáneamente en la última plaza disponible.
+
+> Este `classDiagram` muestra el **modelo de dominio rico** (comportamiento, invariantes). Para el **esquema relacional** (columnas, tipos, claves foráneas y cardinalidad, verificado contra las 5 `IEntityTypeConfiguration<T>` reales), ver [`docs/technical/diagrams/er-diagram.md`](../technical/diagrams/er-diagram.md).
 
 ## 8. Persistencia: inversión de dependencias sobre EF Core
 
