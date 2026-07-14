@@ -20,6 +20,25 @@
             <p class="page-subtitle">
                 Manage registrations globally, apply filters, and perform manual registrations.
             </p>
+            <div class="page-header-actions">
+                <div class="export-dropdown">
+                    <button class="btn btn-outline-light dropdown-toggle" type="button">
+                        <i class="bi bi-download"></i> Export
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li>
+                            <button class="dropdown-item" type="button" @onclick="ExportCsvAsync">
+                                <i class="bi bi-filetype-csv"></i> CSV
+                            </button>
+                        </li>
+                        <li>
+                            <button class="dropdown-item" type="button" @onclick="ExportPdfAsync">
+                                <i class="bi bi-file-earmark-pdf"></i> PDF
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -104,17 +123,6 @@
                     {
                         <span>Create</span>
                     }
-                </button>
-            </div>
-        </div>
-
-        <div class="row g-3 mt-2">
-            <div class="col-md-12 d-flex gap-2 justify-content-end">
-                <button class="btn btn-outline-secondary" @onclick="ExportCsvAsync">
-                    <i class="bi bi-filetype-csv"></i> Export CSV
-                </button>
-                <button class="btn btn-outline-secondary" @onclick="ExportPdfAsync">
-                    <i class="bi bi-file-earmark-pdf"></i> Export PDF
                 </button>
             </div>
         </div>
