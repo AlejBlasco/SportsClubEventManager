@@ -66,6 +66,8 @@ El dashboard resultante es público y de solo lectura, sin necesidad de iniciar 
 
 La aplicación sigue una arquitectura en capas (Clean Architecture), con separación estricta entre dominio, aplicación, infraestructura y presentación (API + Blazor), CQRS con MediatR y los patrones de diseño derivados de ambos. El detalle completo — vistas de capas, grafo de dependencias entre proyectos, árbol de carpetas, modelo de dominio y flujos end-to-end, todo respaldado con diagramas Mermaid — está documentado en [`docs/architecture/architecture.md`](docs/architecture/architecture.md).
 
+Para una vista más formal, orientada a quien evalúa el proyecto sin conocer el código: diagramas C4 (Contexto y Contenedores), el modelo Entidad-Relación verificado contra las migraciones, sequence diagrams de los flujos principales y el flujo de CI/CD, todos catalogados en [`docs/technical/diagrams/`](docs/technical/diagrams/).
+
 ## g. Funcionalidades principales
 
 Cada funcionalidad está documentada en detalle en [`docs/operations/`](docs/operations/), con un diagrama de flujo Mermaid y su explicación.
