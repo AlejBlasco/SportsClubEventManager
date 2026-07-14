@@ -99,6 +99,7 @@ public class GetEventsAdminQueryHandler : IRequestHandler<GetEventsAdminQuery, P
                 Title = e.Title,
                 Date = e.Date,
                 Location = e.Location,
+                Description = e.Description,
                 MaxCapacity = e.MaxCapacity,
                 CurrentRegistrations = e.Registrations.Count(r => r.Status != RegistrationStatus.Cancelled),
                 IsPastEvent = e.Date < now,

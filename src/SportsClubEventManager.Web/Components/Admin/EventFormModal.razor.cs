@@ -56,7 +56,7 @@ public partial class EventFormModal
         _formModel = new EventFormModel
         {
             Title = eventItem.Title,
-            Description = null,
+            Description = eventItem.Description,
             Date = eventItem.Date,
             Location = eventItem.Location,
             MaxCapacity = eventItem.MaxCapacity
