@@ -191,8 +191,11 @@
 
     private string GetGoogleOAuthUrl()
     {
-        var apiBaseUrl = Configuration["ApiSettings:BaseUrl"] ?? "http://localhost:5240";
-        return $"{apiBaseUrl}/api/authentication/google";
+        // Unlike the other ApiSettings:BaseUrl usages on this page, this becomes an <a href>
+        // the browser navigates to directly, so it must be the Api's publicly reachable URL,
+        // not the internal Docker hostname.
+        var apiPublicBaseUrl = Configuration["ApiSettings:PublicBaseUrl"] ?? "http://localhost:5240";
+        return $"{apiPublicBaseUrl}/api/authentication/google";
     }
 
     private async Task HandleLocalLogin()

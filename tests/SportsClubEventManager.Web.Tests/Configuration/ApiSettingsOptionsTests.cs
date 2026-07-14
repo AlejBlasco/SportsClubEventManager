@@ -70,13 +70,18 @@ public sealed class ApiSettingsOptionsTests
     }
 
     /// <summary>
-    /// Verifies that a well-formed absolute URL passes both [Required] and [Url] validation.
+    /// Verifies that a well-formed absolute URL passes both [Required] and [Url] validation for
+    /// both BaseUrl and PublicBaseUrl.
     /// </summary>
     [Fact]
     public void Validate_WithValidAbsoluteUrl_Succeeds()
     {
         // Arrange
-        var options = new ApiSettingsOptions { BaseUrl = "https://api.sportsclub.example.com" };
+        var options = new ApiSettingsOptions
+        {
+            BaseUrl = "https://api.sportsclub.example.com",
+            PublicBaseUrl = "https://api.sportsclub.example.com"
+        };
 
         // Act
         var results = ValidateOptions(options);
@@ -100,5 +105,47 @@ public sealed class ApiSettingsOptionsTests
 
         // Assert
         results.Should().NotBeEmpty();
+    }
+
+    /// <summary>
+    /// Verifies that an empty PublicBaseUrl fails validation because of the [Required] attribute,
+    /// even when BaseUrl is well-formed.
+    /// </summary>
+    [Fact]
+    public void Validate_WithEmptyPublicBaseUrl_FailsRequiredValidation()
+    {
+        // Arrange
+        var options = new ApiSettingsOptions
+        {
+            BaseUrl = "https://api.sportsclub.example.com",
+            PublicBaseUrl = string.Empty
+        };
+
+        // Act
+        var results = ValidateOptions(options);
+
+        // Assert
+        results.Should().Contain(r => r.MemberNames.Contains(nameof(ApiSettingsOptions.PublicBaseUrl)));
+    }
+
+    /// <summary>
+    /// Verifies that a non-URL string fails validation for PublicBaseUrl because of the [Url]
+    /// attribute, even though it satisfies [Required].
+    /// </summary>
+    [Fact]
+    public void Validate_WithNonUrlPublicBaseUrl_FailsUrlValidation()
+    {
+        // Arrange
+        var options = new ApiSettingsOptions
+        {
+            BaseUrl = "https://api.sportsclub.example.com",
+            PublicBaseUrl = "not-a-valid-url"
+        };
+
+        // Act
+        var results = ValidateOptions(options);
+
+        // Assert
+        results.Should().Contain(r => r.MemberNames.Contains(nameof(ApiSettingsOptions.PublicBaseUrl)));
     }
 }

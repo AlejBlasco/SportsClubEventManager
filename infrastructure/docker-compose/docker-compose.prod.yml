@@ -73,6 +73,9 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Production}
       ApiSettings__BaseUrl: http://api:8080
+      # Publicly reachable URL of the Api, used only for browser-facing links (e.g. the "Sign in
+      # with Google" button) — the internal Docker hostname above is unreachable from the browser.
+      ApiSettings__PublicBaseUrl: ${API_EXTERNAL_URL:-http://localhost:5240}
       ConnectionStrings__DefaultConnection: ${CONNECTION_STRING}
     networks:
       - sportsclub-network
