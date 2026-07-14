@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -166,7 +167,12 @@ public class AuthenticationController : ControllerBase
     [AllowAnonymous]
     public async Task<IActionResult> GoogleCallback()
     {
-        var authenticateResult = await HttpContext.AuthenticateAsync(GoogleDefaults.AuthenticationScheme);
+        // The Google handler (Program.cs, options.SignInScheme) persists its ticket into the
+        // Cookie scheme, not its own "Google" scheme — RemoteAuthenticationHandler-derived
+        // handlers like Google can't be re-authenticated by name on a later request the way
+        // Cookie/JwtBearer can, since the actual OAuth2 code exchange already happened on the
+        // previous request (/signin-google) and isn't repeatable here.
+        var authenticateResult = await HttpContext.AuthenticateAsync(CookieAuthenticationDefaults.AuthenticationScheme);
 
         if (!authenticateResult.Succeeded)
         {
@@ -175,6 +181,11 @@ public class AuthenticationController : ControllerBase
 
         var accessToken = authenticateResult.Principal?.FindFirstValue("access_token");
         var refreshToken = authenticateResult.Principal?.FindFirstValue("refresh_token");
+
+        // The Cookie scheme was only a temporary carrier for the Google ticket; the app's real
+        // session state is the access_token/refresh_token cookies set below, so this one is
+        // cleared once consumed rather than left behind unused.
+        await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
 
         if (string.IsNullOrEmpty(accessToken) || string.IsNullOrEmpty(refreshToken))
         {

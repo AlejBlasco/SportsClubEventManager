@@ -936,6 +936,38 @@ seguidos para activar el login con Google en producción:
    varía según la ruta de acceso (túnel vs. LAN/Tailscale vía npm) y no es una dirección fija que
    se pueda dar de alta de forma segura.
 
+5. **Fix de código necesario — `ApiSettings:PublicBaseUrl` (`Web`):** el botón "Sign in with
+   Google" de `Login.razor` construía su `href` con `ApiSettings:BaseUrl`
+   (`http://api:8080`, el hostname interno de Docker que usa `Web` para llamar a la Api
+   servidor-a-servidor). Ese `href` lo sigue el **navegador**, no el servidor, así que con el
+   hostname interno daba "no se puede acceder a este sitio web". Se introdujo
+   `ApiSettingsOptions.PublicBaseUrl` (env `API_EXTERNAL_URL`, por defecto
+   `https://sportsclub-api.ablasco.com` en producción) específicamente para enlaces que el
+   navegador sigue directamente; `HandleLocalLogin` (el POST de login local, que sí es
+   servidor-a-servidor) se dejó con `ApiSettings:BaseUrl` sin cambios. Ver el troubleshooting
+   "check all usages" — el mismo patrón de bug ya se había dado en la Api con `WebAppBaseUrl`
+   (punto 3) y no se revisó el resto del código hasta que el usuario lo encontró probando el botón.
+
+6. **Fix de código necesario — `SignInScheme` ausente (`Program.cs` / `AuthenticationController`):**
+   una vez resueltos los 5 puntos anteriores, el primer intento de login real con Google
+   (código de autorización válido, `redirect_uri` correcto) seguía fallando con
+   `500 — "No authenticationScheme was specified, and there was no DefaultSignInScheme found."`.
+   Causa: `AddAuthentication()` fija `DefaultAuthenticateScheme`/`DefaultChallengeScheme` a
+   `JwtBearer` (sin estado, no puede recibir un sign-in), pero nunca se configuró
+   `DefaultSignInScheme` ni `GoogleOptions.SignInScheme` — así que
+   `RemoteAuthenticationHandler` no tenía dónde persistir el ticket de Google entre la petición a
+   `/signin-google` y la redirección a `AuthenticationController.GoogleCallback` (una petición
+   distinta). Fix: `options.SignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;` en
+   la config de Google, y `GoogleCallback()` ahora lee el resultado con
+   `HttpContext.AuthenticateAsync(CookieAuthenticationDefaults.AuthenticationScheme)` (no
+   `GoogleDefaults.AuthenticationScheme` — un handler `RemoteAuthenticationHandler` no puede
+   re-autenticarse por su propio nombre en una petición posterior, el intercambio OAuth2 ya
+   ocurrió y no es repetible), y hace `SignOutAsync` de ese cookie temporal justo después de
+   leerlo, ya que la sesión real de la app la llevan las cookies `access_token`/`refresh_token`
+   (`SetAuthCookies`), no esta. Este bug llevaba presente desde la implementación original de esta
+   historia — nunca se había probado el flujo de punta a punta contra un Google real hasta que la
+   Api tuvo una URL pública (punto 1).
+
 ---
 
 **Documento preparado por:** Documentation Agent  
