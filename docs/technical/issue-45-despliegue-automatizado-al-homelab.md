@@ -8,34 +8,7 @@ Antes de esta issue, `deploy` llamaba al webhook de GitOps de Portainer y el pip
 
 ## Architecture
 
-```mermaid
-flowchart TD
-    Push["push(master) | workflow_dispatch"] --> Validate["Job validate (issue #44)"]
-    Validate --> BuildPush["Job build-and-push\ntags: latest, sha-&lt;sha&gt;, &lt;version&gt;"]
-    BuildPush --> Deploy["Job deploy\nwebhook GitOps de Portainer"]
-
-    Deploy -->|needs: deploy| Smoke["Job post-deploy-smoke-test\nenvironment: homelab-production"]
-
-    subgraph Smoke_detail["post-deploy-smoke-test"]
-        direction TB
-        S1["smoke-test.sh\nGET /health/live (bloqueante)"]
-        S2["smoke-test.sh\nGET /health/ready (bloqueante)"]
-        S1 --> S2
-    end
-    Smoke -.-> Smoke_detail
-
-    Smoke -->|éxito| Tag["Job tag-deployed-version\nneeds: post-deploy-smoke-test, if: success()"]
-    Tag --> GitTag["git tag deployed/homelab/&lt;sha-corto&gt;\ngit push origin &lt;tag&gt;"]
-
-    Smoke -->|fallo| Report["find-last-good-tag.sh\n+ ::error:: en $GITHUB_STEP_SUMMARY\nexit 1"]
-    Report -.sugiere.-> RollbackTrigger["gh workflow run rollback.yml -f version=&lt;hash&gt;"]
-
-    RollbackTrigger --> RB1["Job validate-version\ngit ls-remote tag deployed/homelab/&lt;version&gt;"]
-    RB1 -->|needs| RB2["Job portainer-rollback\nenvironment: homelab-production\nportainer-rollback.sh"]
-    RB2 -->|needs| RB3["Job post-rollback-smoke-test\nreutiliza smoke-test.sh"]
-
-    RB2 -.PUT /api/stacks/id\nAPP_VERSION=sha-&lt;hash&gt;\npullImage=true.-> Portainer[("Portainer API\nBusiness Edition")]
-```
+Diagrama de flujo completo del pipeline movido a [`docs/technical/diagrams/cicd-pipeline.md`](diagrams/cicd-pipeline.md) (catálogo de diagramas de la issue #51 — única fuente de verdad, para no mantener dos copias que puedan divergir).
 
 Puntos clave del diagrama:
 

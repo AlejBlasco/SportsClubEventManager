@@ -30,9 +30,11 @@ flowchart TD
 
     MyRegs --> Cancel["Socio pulsa 'Cancelar'<br/>sobre una inscripción propia"]
     Cancel --> Delete["DELETE /api/v1/events/{id}/register<br/>o DELETE /api/v1/registrations/{id}"]
-    Delete --> CancelHandler["Se marca la Registration<br/>como Cancelled (no se borra)"]
+    Delete --> CancelHandler["Se elimina físicamente la Registration<br/>(hard delete, Registrations.Remove)"]
     CancelHandler --> CancelSuccess["204 No Content"]
 ```
+
+> Para la interacción completa componente-a-componente (incluida la variante de cancelación por administrador), ver el [sequence diagram de cancelación](../technical/diagrams/sequence-cancellation.md).
 
 ## Explicación del flujo
 
@@ -48,4 +50,4 @@ Si las tres se cumplen, se crea la `Registration` y se confirma con `SaveChanges
 
 Solo **después** de que `SaveChangesAsync` confirme la escritura se disparan los efectos secundarios: el contador Prometheus `sportsclubeventmanager_event_registrations_total{source="self-service"}` y la notificación por email vía el webhook de n8n `registration-confirmed` (ver la [sección 9 del documento de arquitectura](../architecture/architecture.md#9-flujo-end-to-end-inscribirse-a-un-evento) para el diagrama de secuencia completo, capa por capa).
 
-La cancelación (`DELETE /api/v1/events/{id}/register` desde la ficha del evento, o `DELETE /api/v1/registrations/{id}` desde "Mis inscripciones") no elimina el registro: `Registration.Cancel()` cambia su `Status` a `Cancelled`, conservando el histórico completo de altas y bajas de cada socio — visible en "Mis inscripciones" (`MyRegistrations.razor`) y en el panel de administración ([`administracion-inscripciones.md`](administracion-inscripciones.md)).
+La cancelación (`DELETE /api/v1/events/{id}/register` desde la ficha del evento, vía `CancelRegistrationCommandHandler`; o `DELETE /api/v1/registrations/{id}` desde "Mis inscripciones", vía `CancelRegistrationByIdCommandHandler`) **elimina físicamente** la fila (`Registrations.Remove(registration)` en ambos handlers, explícitamente comentado como "hard delete" en el código) — no hay histórico de bajas conservado en base de datos. El método `Registration.Cancel()` del dominio (que sí cambiaría `Status` a `Cancelled` sin borrar) existe pero no lo invoca ningún *handler* actual; es código muerto. La única traza que queda de una cancelación por parte de un socio es el contador Prometheus `sportsclubeventmanager_registration_cancellations_total{source="self-service"}` — a diferencia de la cancelación por administrador, que sí queda registrada en el panel de auditoría (ver [`administracion-inscripciones.md`](administracion-inscripciones.md)).

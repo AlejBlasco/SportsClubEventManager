@@ -37,6 +37,8 @@ flowchart TD
     DeleteOk --> Audit3["AuditLog: EventDeleted"]
 ```
 
+> Para la interacción completa componente-a-componente de las tres operaciones (Create/Update/Delete), ver el [sequence diagram de CRUD de eventos](../technical/diagrams/sequence-event-crud.md).
+
 ## Explicación del flujo
 
 `AdminEventsController` (`[Authorize(Roles = "Administrator")]`, ruta `api/admin/events`) es el CRUD completo de eventos. El listado (`GetEventsAdminQuery`) añade sobre la vista pública ([`calendario-eventos.md`](calendario-eventos.md)) paginación, filtro por rango de fechas y por si el evento es futuro o pasado (`isUpcoming`), y búsqueda de texto por título o ubicación — vistas que un socio no necesita pero un administrador sí, para gestionar decenas o cientos de eventos históricos.
