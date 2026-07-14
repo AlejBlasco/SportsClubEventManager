@@ -32,6 +32,11 @@ services:
       ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Production}
       Cors__AllowedOrigins__0: http://localhost:${WEB_PORT:-5123}
       Cors__AllowedOrigins__1: ${WEB_EXTERNAL_URL:-}
+      # Public URL of the `web` app, used to build post-login redirects (local login errors and
+      # the Google OAuth2 callback both redirect here). Reuses WEB_EXTERNAL_URL rather than a
+      # separate variable, since it's the same "public URL of the web frontend" value already
+      # used for CORS above.
+      WebAppBaseUrl: ${WEB_EXTERNAL_URL:-https://localhost:7123}
       # Plain environment variables, not Docker secrets - see DEPLOYMENT_RUNBOOK.md
       # "Known issue" note for why the file-based secrets approach was reverted.
       ConnectionStrings__DefaultConnection: ${CONNECTION_STRING}

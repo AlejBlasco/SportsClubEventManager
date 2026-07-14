@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.IdentityModel.Tokens;
 using Prometheus;
 using Serilog;
@@ -131,6 +132,21 @@ builder.Services.AddCors(options =>
 var app = builder.Build();
 
 await app.Services.MigrateDatabaseAsync();
+
+// Must run first: neither the homelab's Cloudflare Tunnel nor npm re-encrypt the hop to this
+// container, so Kestrel only ever sees a plain HTTP connection. Without this, Request.Scheme
+// stays "http" for every request (breaking the Google OAuth2 redirect_uri, which must match the
+// https:// URI registered in Google Cloud Console) and client IP logging (AuditService, etc.)
+// records the proxy's/docker network's IP instead of the real one. KnownNetworks/KnownProxies
+// are cleared because the proxy hop's address varies (tunnel vs. LAN/Tailscale access via npm)
+// and isn't a fixed, allow-listable address in this deployment.
+var forwardedHeadersOptions = new ForwardedHeadersOptions
+{
+    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+};
+forwardedHeadersOptions.KnownIPNetworks.Clear();
+forwardedHeadersOptions.KnownProxies.Clear();
+app.UseForwardedHeaders(forwardedHeadersOptions);
 
 // Configure the HTTP request pipeline
 if (app.Environment.IsDevelopment())
