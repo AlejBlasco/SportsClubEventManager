@@ -29,6 +29,7 @@ public sealed class WebConfigurationExtensionsTests
         if (baseUrl is not null)
         {
             settings["ApiSettings:BaseUrl"] = baseUrl;
+            settings["ApiSettings:PublicBaseUrl"] = baseUrl;
         }
 
         return new ConfigurationBuilder().AddInMemoryCollection(settings).Build();
