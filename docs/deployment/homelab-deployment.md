@@ -266,6 +266,12 @@ gh workflow run rollback.yml -f version=<hash-corto>  # sin el prefijo "sha-"
 
 **Solución:** el Service URL de cada entrada del túnel debe apuntar directo al puerto del contenedor correspondiente (`http://192.168.1.100:<puerto-del-servicio>`), nunca a npm.
 
+### Un cambio en `docker-compose.prod.yml` del repo no llega solo a Portainer, aunque se despliegue
+
+**Causa:** el webhook de Portainer que dispara `deploy` en `cd.yml` solo hace `pull` de la imagen nueva y recrea los contenedores — **nunca sincroniza el texto del `docker-compose.yml` que Portainer tiene guardado** con el `infrastructure/docker-compose/docker-compose.prod.yml` del repositorio. Son dos copias completamente independientes: el código de la imagen se actualiza solo con cada deploy, pero cualquier línea nueva de `environment:` (una variable de entorno nueva, por ejemplo) solo llega al contenedor en marcha si alguien la pega también a mano en Portainer (**Stacks → \<stack\> → Editor**). Asumir que "ya vendrá con el PR" deja el contenedor corriendo con el código nuevo pero sin la variable que ese código espera — mismo síntoma que si la variable no existiera, pero más difícil de detectar porque el deploy en sí sale verde.
+
+**Solución:** cuando un PR añade o renombra una variable de entorno consumida por `api`/`web`, la línea correspondiente del compose tiene que pegarse en Portainer **por separado**, en el mismo momento (antes o después, da igual) que se hace el deploy del código — nunca asumir que llega sola. Verificar siempre con `docker exec <contenedor> printenv` tras el deploy, no solo que el contenedor esté `healthy`.
+
 ## Referencias
 
 - [`infrastructure/deploy/DEPLOYMENT_RUNBOOK.md`](../../infrastructure/deploy/DEPLOYMENT_RUNBOOK.md) — procedimiento de referencia (camino feliz, rollback, fallbacks manuales).

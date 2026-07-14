@@ -89,6 +89,14 @@ builder.Services.AddAuthentication(options =>
     options.ClientSecret = googleAuth.ClientSecret;
     options.CallbackPath = googleAuth.CallbackPath;
     options.SaveTokens = true;
+    // Google is a RemoteAuthenticationHandler: after exchanging the code with Google it must
+    // persist the resulting ticket somewhere a *later* request (the redirect to
+    // AuthenticationController.GoogleCallback) can read it back from — there's no
+    // DefaultSignInScheme configured above (DefaultAuthenticateScheme/DefaultChallengeScheme are
+    // JwtBearer, which is stateless and can't receive a sign-in), so this must be explicit or
+    // the callback fails with "No authenticationScheme was specified, and there was no
+    // DefaultSignInScheme found."
+    options.SignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
 
     options.Events.OnCreatingTicket = async context =>
     {
