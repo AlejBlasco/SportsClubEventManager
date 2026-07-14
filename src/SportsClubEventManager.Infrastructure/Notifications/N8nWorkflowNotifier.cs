@@ -1,4 +1,5 @@
 using System.Net.Http.Json;
+using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SportsClubEventManager.Application.Common.Interfaces;
@@ -19,6 +20,16 @@ public sealed class N8nWorkflowNotifier(
     IApplicationMetrics metrics,
     ILogger<N8nWorkflowNotifier> logger) : IWorkflowNotifier
 {
+    /// <summary>
+    /// The n8n workflow expressions (e.g. <c>$json.body.UserEmail</c>) match the payload records'
+    /// PascalCase property names as exported from the n8n UI. <see cref="JsonContent.Create{T}(T, System.Net.Http.Headers.MediaTypeHeaderValue?, JsonSerializerOptions?)"/>
+    /// defaults to <see cref="JsonSerializerDefaults.Web"/> (camelCase) when no options are given,
+    /// which would silently break every field lookup in the workflows — so PascalCase is preserved
+    /// explicitly here instead.
+    /// </summary>
+    private static readonly JsonSerializerOptions PayloadSerializerOptions = new();
+
+
     /// <inheritdoc />
     public Task NotifyRegistrationConfirmedAsync(RegistrationConfirmedPayload payload, CancellationToken cancellationToken) =>
         PostAsync("registration-confirmed", options.Value.RegistrationConfirmedWebhookUrl, payload, cancellationToken);
@@ -60,7 +71,7 @@ public sealed class N8nWorkflowNotifier(
 
             using var request = new HttpRequestMessage(HttpMethod.Post, webhookUrl)
             {
-                Content = JsonContent.Create(payload)
+                Content = JsonContent.Create(payload, options: PayloadSerializerOptions)
             };
             request.Headers.Add("X-N8n-Webhook-Token", options.Value.WebhookToken);
 

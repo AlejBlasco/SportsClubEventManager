@@ -23,23 +23,9 @@
                 Manage registrations globally, apply filters, and perform manual registrations.
             </p>
             <div class="page-header-actions">
-                <div class="export-dropdown">
-                    <button class="btn btn-outline-light dropdown-toggle" type="button">
-                        <i class="bi bi-download"></i> Export
-                    </button>
-                    <ul class="dropdown-menu dropdown-menu-end">
-                        <li>
-                            <button class="dropdown-item" type="button" @onclick="ExportCsvAsync">
-                                <i class="bi bi-filetype-csv"></i> CSV
-                            </button>
-                        </li>
-                        <li>
-                            <button class="dropdown-item" type="button" @onclick="ExportPdfAsync">
-                                <i class="bi bi-file-earmark-pdf"></i> PDF
-                            </button>
-                        </li>
-                    </ul>
-                </div>
+                <button class="btn btn-outline-light" type="button" @onclick="ExportCsvAsync">
+                    <i class="bi bi-filetype-csv"></i> Export CSV
+                </button>
             </div>
         </div>
     </div>

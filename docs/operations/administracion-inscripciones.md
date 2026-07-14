@@ -1,6 +1,6 @@
 # Administración de inscripciones
 
-Exclusiva del rol `Administrator`: visión global de todas las inscripciones del club, inscripción manual de un socio y cancelación de cualquier inscripción, con exportación a CSV/PDF. Referenciado desde la sección [`g. Funcionalidades principales`](../../README.md#g-funcionalidades-principales) del README.
+Exclusiva del rol `Administrator`: visión global de todas las inscripciones del club, inscripción manual de un socio y cancelación de cualquier inscripción, con exportación a CSV. Referenciado desde la sección [`g. Funcionalidades principales`](../../README.md#g-funcionalidades-principales) del README.
 
 ## Flujo
 
@@ -22,11 +22,8 @@ flowchart TD
     DeleteReg --> CancelOk["204 No Content"]
     CancelOk --> Audit2["AuditLog: RegistrationCancelled"]
 
-    Action -->|Exportar| Export{"¿Formato?"}
-    Export -->|CSV| Csv["Genera CSV en el navegador<br/>a partir de la página actual cargada<br/>(sin nueva llamada a la Api)"]
-    Export -->|PDF| Pdf["Genera informe de texto<br/>con extensión .pdf, misma fuente de datos"]
+    Action -->|Exportar| Csv["Genera CSV en el navegador<br/>a partir de la página actual cargada<br/>(sin nueva llamada a la Api)"]
     Csv --> Download["Descarga vía JS interop<br/>(downloadFileFromText)"]
-    Pdf --> Download
 ```
 
 ## Explicación del flujo
@@ -37,4 +34,6 @@ flowchart TD
 
 **Cancelación** (`DELETE /api/admin/registrations/{id}`, `CancelRegistrationByIdCommand` con `IsAdministrator = true`) reutiliza el mismo comando que la cancelación de autoservicio (`RegistrationsController.CancelMyRegistration`), pero con el flag `IsAdministrator` que omite la comprobación de propiedad — el administrador puede cancelar la inscripción de cualquier socio, no solo la propia.
 
-**Exportación a CSV/PDF**: a diferencia del resto de operaciones descritas en este documento, la exportación **no llama a ningún endpoint nuevo de la Api**. `RegistrationManagement.razor.cs` construye el fichero directamente en el navegador (`ExportCsvAsync`/`ExportPdfAsync`) a partir de los datos **ya cargados en la página actual** (`_registrations.Items`) y lo descarga vía interoperabilidad JavaScript (`downloadFileFromText`). Esto implica que la exportación refleja exactamente lo que el administrador está viendo en pantalla — la página actual, con los filtros aplicados — y no un volcado completo de todas las inscripciones si hay más de una página de resultados; para exportar un conjunto distinto hay que ajustar antes los filtros o el tamaño de página.
+**Exportación a CSV**: a diferencia del resto de operaciones descritas en este documento, la exportación **no llama a ningún endpoint nuevo de la Api**. `RegistrationManagement.razor.cs` construye el fichero directamente en el navegador (`ExportCsvAsync`) a partir de los datos **ya cargados en la página actual** (`_registrations.Items`) y lo descarga vía interoperabilidad JavaScript (`downloadFileFromText`). Esto implica que la exportación refleja exactamente lo que el administrador está viendo en pantalla — la página actual, con los filtros aplicados — y no un volcado completo de todas las inscripciones si hay más de una página de resultados; para exportar un conjunto distinto hay que ajustar antes los filtros o el tamaño de página.
+
+> **Exportación a PDF eliminada**: existió una opción "Export PDF" que en realidad generaba texto plano con extensión `.pdf` (no un PDF real), por lo que ningún lector de PDF podía abrirlo. Se retiró en vez de arreglarse con una librería de generación de PDF real, para no añadir una dependencia nueva solo para este caso de uso.

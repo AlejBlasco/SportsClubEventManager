@@ -205,36 +205,6 @@ public partial class RegistrationManagement
             "text/csv;charset=utf-8");
     }
 
-    private async Task ExportPdfAsync()
-    {
-        if (_registrations is null || !_registrations.Items.Any())
-        {
-            _errorMessage = "No data available to export.";
-            return;
-        }
-
-        var builder = new StringBuilder();
-        builder.AppendLine("Registration Report");
-        builder.AppendLine($"Generated at: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC");
-        builder.AppendLine();
-
-        foreach (var item in _registrations.Items)
-        {
-            builder.AppendLine($"Registration: {item.RegistrationId}");
-            builder.AppendLine($"Event: {item.EventTitle} ({item.EventDate:yyyy-MM-dd HH:mm})");
-            builder.AppendLine($"User: {item.UserName} <{item.UserEmail}>");
-            builder.AppendLine($"Status: {item.Status}");
-            builder.AppendLine($"Registered On: {item.RegistrationDate:yyyy-MM-dd HH:mm}");
-            builder.AppendLine(new string('-', 60));
-        }
-
-        await JSRuntime.InvokeVoidAsync(
-            "downloadFileFromText",
-            $"registrations-{DateTime.UtcNow:yyyyMMddHHmmss}.pdf",
-            builder.ToString(),
-            "application/pdf");
-    }
-
     private static string EscapeCsv(string value)
     {
         var escaped = value.Replace("\"", "\"\"");
