@@ -13,12 +13,16 @@
         <div class="nav-menu" onclick="document.querySelector('.nav-toggler').click()">
             <NavLink class="nav-link" href="" Match="NavLinkMatch.All">Home</NavLink>
             <NavLink class="nav-link" href="events">Events</NavLink>
-            <NavLink class="nav-link" href="users">Members</NavLink>
             <NavLink class="nav-link" href="about">About</NavLink>
             <AuthorizeView>
                 <Authorized>
                     <NavLink class="nav-link" href="profile">My Profile</NavLink>
                     <NavLink class="nav-link" href="my-registrations">My Registrations</NavLink>
+                </Authorized>
+            </AuthorizeView>
+            <AuthorizeView Roles="Administrator">
+                <Authorized>
+                    <NavLink class="nav-link" href="users">Members</NavLink>
                 </Authorized>
             </AuthorizeView>
             <AuthorizeView Roles="Administrator">

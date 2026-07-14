@@ -86,7 +86,11 @@
                 <p>Browse the current event calendar and reserve your place today.</p>
                 <div class="about-actions">
                     <a class="btn-primary-about" href="/events">Browse Events</a>
-                    <a class="btn-secondary-about" href="/users">View Members</a>
+                    <AuthorizeView Roles="Administrator">
+                        <Authorized>
+                            <a class="btn-secondary-about" href="/users">View Members</a>
+                        </Authorized>
+                    </AuthorizeView>
                 </div>
             </section>
 
