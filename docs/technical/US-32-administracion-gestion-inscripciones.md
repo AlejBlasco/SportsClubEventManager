@@ -9,7 +9,7 @@
 
 ## Descripción General
 
-Este trabajo implementa un sistema completo de gestión de inscripciones a nivel de usuario y administrador. Los usuarios autenticados pueden ver sus inscripciones activas y cancelarlas (solo para eventos futuros). Los administradores tienen acceso completo: ver todas las inscripciones con filtros avanzados, crear inscripciones manuales para otros usuarios, cancelar cualquier inscripción, y exportar listados en CSV y PDF. Todas las acciones de administrador son registradas en la pista de auditoría.
+Este trabajo implementa un sistema completo de gestión de inscripciones a nivel de usuario y administrador. Los usuarios autenticados pueden ver sus inscripciones activas y cancelarlas (solo para eventos futuros). Los administradores tienen acceso completo: ver todas las inscripciones con filtros avanzados, crear inscripciones manuales para otros usuarios, cancelar cualquier inscripción, y exportar listados en CSV. Todas las acciones de administrador son registradas en la pista de auditoría.
 
 > **Corrección post-implementación (2026-07-08):** `MyRegistrations.razor` (usuario) y, previsiblemente,
 > `Admin/RegistrationManagement.razor` recibían 401 Unauthorized en todas sus llamadas porque el Web
@@ -72,7 +72,7 @@ Web Layer (UI Blazor)
 │
 └── Admin/RegistrationManagement.razor / Admin/RegistrationManagement.razor.cs
     ├── AdminRegistrationManagementService (cliente HTTP)
-    └── JS Interop: downloadFileFromText (exportar CSV/PDF)
+    └── JS Interop: downloadFileFromText (exportar CSV)
 
 Infraestructura
 ├── Auditoría: AuditAction (RegistrationCreated, RegistrationCancelled)
@@ -156,22 +156,19 @@ precondiciones que el handler exige en el paso 7 — por lo que los errores "usu
 10. Componente recarga lista
 
 #### Administrador — Exporta CSV
-1. Admin pasa el ratón sobre el botón "Export" en la cabecera de la página (`page-header-actions`,
-   mismo patrón que "Import CSV" en `/admin/events`) y elige "CSV" en el menú desplegable
-   (`RegistrationManagement.razor.css` activa el `dropdown-menu` de Bootstrap con `:hover`/
-   `:focus-within` en vez del comportamiento por clic por defecto)
+1. Admin pulsa el botón "Export CSV" en la cabecera de la página (`page-header-actions`,
+   mismo patrón que "Import CSV" en `/admin/events`)
 2. `ExportCsvAsync()` construye CSV en memoria
 3. Encabezado: RegistrationId, EventTitle, EventDate, UserName, UserEmail, RegistrationDate, Status
 4. Escapa valores CSV (comillas, comas)
 5. Invoca JS Interop: `downloadFileFromText(fileName, content, "text/csv;charset=utf-8")`
 6. JS crea Blob, descarga archivo: `registrations-20260707123456.csv`
 
-#### Administrador — Exporta PDF (Texto)
-1. Admin pasa el ratón sobre el mismo botón "Export" y elige "PDF" en el menú desplegable
-2. `ExportPdfAsync()` construye texto en memoria
-3. Encabezado de reporte + timestamp + detalles de cada registro
-4. Invoca JS Interop: `downloadFileFromText(fileName, content, "application/pdf")`
-5. JS descargar archivo: `registrations-20260707123456.pdf`
+> **Exportación a PDF eliminada.** Existió un botón "Export PDF"/`ExportPdfAsync()` que generaba
+> texto plano con extensión `.pdf` (no un PDF real, sin cabecera `%PDF-` ni estructura de objetos
+> PDF) — ningún lector de PDF podía abrirlo. Se retiró en vez de arreglarse con una librería de
+> generación de PDF real (p. ej. QuestPDF/iText), para no añadir una dependencia nueva solo para
+> este caso de uso. Solo queda la exportación a CSV.
 
 ### Decisiones de Diseño
 
@@ -181,7 +178,7 @@ precondiciones que el handler exige en el paso 7 — por lo que los errores "usu
 | **CanBeCancelledByUser en DTO** | Lógica de condición en componente | Fuente única de verdad (backend), coherencia con API GraphQL futura |
 | **Eliminar registro en lugar de soft-delete** | Marcar como Cancelled | Simplifica conteos de capacidad, mantiene auditoría (comando registra cambio) |
 | **Auditoría solo en acciones admin** | Auditar todas las acciones | Reduce ruido; usuarios ven sus propias acciones en UI |
-| **Exportar en componente (CSV/PDF manual)** | Generar en servidor | Respuesta más rápida, menos carga servidor, CSV es trivial; PDF es solo texto |
+| **Exportar en componente (CSV manual)** | Generar en servidor | Respuesta más rápida, menos carga servidor, CSV es trivial de construir en cliente |
 | **Paginación de 20 registros por defecto** | Sin paginación o infinita | Balance: rendimiento UI vs cantidad de llamadas de navegación |
 
 ---
@@ -442,7 +439,7 @@ No se creó migración nueva; se aprovecha estructura existente de Sprint 1.
   - Auditoría registra con IP/UserAgent
 
 #### Componentes Blazor (Web)
-- `RegistrationManagement`: filtros, paginación, creación manual, exporta CSV/PDF
+- `RegistrationManagement`: filtros, paginación, creación manual, exporta CSV
 - `MyRegistrations`: sin tests bUnit dedicados a la fecha; el flujo de cancelación con
   confirmación reutiliza `Shared/ConfirmationDialog.razor`, que sí cuenta con cobertura propia
   (`ConfirmationDialogTests.cs`)
@@ -453,17 +450,15 @@ No se creó migración nueva; se aprovecha estructura existente de Sprint 1.
 
 ## Limitaciones Conocidas
 
-1. **Exportación PDF es solo texto:** Los archivos PDF descargados desde `ExportPdfAsync()` son documentos de texto plano (simula PDF en cliente). Para PDF real con formato, se requeriría librería como iText o QuestPDF en servidor.
+1. **Cancela en tiempo real (no soft-delete):** Registros cancelados se eliminan de la BD. Si auditoría es requerida a nivel de registro cancellado, se necesitaría soft-delete con `DeletedAt` timestamp.
 
-2. **Cancela en tiempo real (no soft-delete):** Registros cancelados se eliminan de la BD. Si auditoría es requerida a nivel de registro cancellado, se necesitaría soft-delete con `DeletedAt` timestamp.
+2. **Sin filtro por rango de fechas de inscripción:** Solo se puede filtrar por rango de fecha del evento, no por cuándo se inscribió el usuario. Agregable en futura versión.
 
-3. **Sin filtro por rango de fechas de inscripción:** Solo se puede filtrar por rango de fecha del evento, no por cuándo se inscribió el usuario. Agregable en futura versión.
+3. **Búsqueda por texto no es full-text:** Búsqueda simple con `Contains()`. Para volúmenes altos, considerar Elasticsearch o Full-Text Search de SQL Server.
 
-4. **Búsqueda por texto no es full-text:** Búsqueda simple con `Contains()`. Para volúmenes altos, considerar Elasticsearch o Full-Text Search de SQL Server.
+4. **Sin confirmación de diálogo modal para cancelación admin:** en `Admin/RegistrationManagement.razor` el admin hace clic en botón "Cancel" y se cancela inmediatamente, sin diálogo. Distinto del flujo de usuario en `MyRegistrations.razor`, que desde 2026-07-08 sí muestra un `ConfirmationDialog` antes de cancelar. Se recomienda extender el mismo patrón a la vista de administrador en una futura versión.
 
-5. **Sin confirmación de diálogo modal para cancelación admin:** en `Admin/RegistrationManagement.razor` el admin hace clic en botón "Cancel" y se cancela inmediatamente, sin diálogo. Distinto del flujo de usuario en `MyRegistrations.razor`, que desde 2026-07-08 sí muestra un `ConfirmationDialog` antes de cancelar. Se recomienda extender el mismo patrón a la vista de administrador en una futura versión.
-
-6. **Exportación solo de página actual:** CSV/PDF exporta solo los registros visibles en página actual. Para exportar todos con filtros, se requeriría parámetro `pageSize=MaxInt`.
+5. **Exportación solo de página actual:** CSV exporta solo los registros visibles en página actual. Para exportar todos con filtros, se requeriría parámetro `pageSize=MaxInt`.
 
 ---
 

@@ -83,7 +83,7 @@ Cada funcionalidad está documentada en detalle en [`docs/operations/`](docs/ope
 
 - [Administración de usuarios](docs/operations/administracion-usuarios.md) — listado, edición, cambio de rol, activación/desactivación y borrado.
 - [Administración de eventos](docs/operations/administracion-eventos.md) — CRUD completo de eventos.
-- [Administración de inscripciones](docs/operations/administracion-inscripciones.md) — filtrado, inscripción manual, cancelación y exportación a CSV/PDF.
+- [Administración de inscripciones](docs/operations/administracion-inscripciones.md) — filtrado, inscripción manual, cancelación y exportación a CSV.
 - [Importación masiva de eventos por CSV](docs/operations/importacion-masiva-eventos.md) — con previsualización, detección de duplicados y confirmación todo o nada.
 
 ## h. Usuario y contraseña de prueba

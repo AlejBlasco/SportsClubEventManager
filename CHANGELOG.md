@@ -21,10 +21,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Manual registration in admin (`/admin/registrations`) now uses user/event dropdowns instead of free-text GUID inputs, only offering active users and upcoming events
-- CSV import: "Export CSV"/"Export PDF" merged into a single "Export" button with a hover dropdown, moved to the page header
+- Registration Management: "Export CSV"/"Export PDF" export button moved to the page header
 - CSV import: event description is no longer auto-composed from the Modality/Field/Category columns; left blank for the admin to fill in manually
-- Member directory (`/users`) restricted to the `Administrator` role
+- "View Members" now links to `/admin/users` (real user management) instead of the retired static `/users` page
 - README: added an Observability & Metrics section with Prometheus/Grafana badges and a link to the live dashboard
+
+### Removed
+
+- PDF export in Registration Management: it generated plain text with a `.pdf` extension, which no PDF reader could actually open; removed instead of adding a PDF-generation dependency for a single export option. CSV export remains
+- Static `/users` "Member Directory" placeholder page (`Users.razor`), superseded by the real `/admin/users` user management page, restricted to the `Administrator` role
 
 ### Fixed
 

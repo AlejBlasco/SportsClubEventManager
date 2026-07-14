@@ -176,8 +176,7 @@ Como administrador, puedes cancelar cualquier inscripción (incluso eventos ya o
 Para descargar un reporte de inscripciones en formato CSV (hojas de cálculo):
 
 1. Aplica los filtros que necesites (visto en Paso 3)
-2. En la cabecera de la página, pasa el ratón por encima del botón **"Export"** (junto al título)
-3. Elige **"CSV"** en el menú desplegable que aparece
+2. En la cabecera de la página, haz clic en el botón **"Export CSV"** (junto al título)
 
 **Resultado:**
 - Se descarga un archivo: `registrations-20260707123456.csv`
@@ -187,19 +186,6 @@ Para descargar un reporte de inscripciones en formato CSV (hojas de cálculo):
 **Nota:** Exporta solo la página actual. Para exportar todos los resultados con tus filtros:
 1. Cambia el filtro de paginación a una página con "todos" visible
 2. O exporta página por página
-
-#### Paso 7: Exporta Listado a PDF
-
-Para descargar un reporte de inscripciones en formato PDF:
-
-1. Aplica los filtros que necesites
-2. En la cabecera de la página, pasa el ratón por encima del botón **"Export"**
-3. Elige **"PDF"** en el menú desplegable que aparece
-
-**Resultado:**
-- Se descarga un archivo: `registrations-20260707123456.pdf`
-- Contiene un reporte con encabezado, timestamp, y detalles de cada inscripción
-- Abre el archivo en Adobe Reader, navegador, o lector PDF
 
 ---
 
@@ -214,7 +200,7 @@ Para descargar un reporte de inscripciones en formato PDF:
 ### Para Administradores:
 - ✅ Todas las acciones quedan registradas en auditoría con IP y hora
 - ✅ Puedes ver historial de cambios (si accedes a auditoría directamente)
-- ✅ Los reportes CSV/PDF se crean en cliente (privacidad, sin almacenar en servidor)
+- ✅ Los reportes CSV se crean en cliente (privacidad, sin almacenar en servidor)
 - ✅ Cambios se aplican inmediatamente a BD
 
 ---
@@ -228,7 +214,7 @@ Para descargar un reporte de inscripciones en formato PDF:
 - ❌ No puedes cancelar inscripciones a eventos que ya ocurrieron
 
 ### Administradores:
-- ❌ Exportar PDF es solo texto plano (no PDF con formato/tablas)
+- ❌ No hay exportación a PDF (existió, pero generaba texto plano con extensión `.pdf` que ningún lector podía abrir; se retiró en vez de arreglarse)
 - ❌ Exportar solo incluye la página actual de resultados
 - ❌ No hay búsqueda de texto completo (simple Contains)
 - ❌ No hay confirmación de diálogo antes de cancelar (se cancela al instante)
