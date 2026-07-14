@@ -883,6 +883,59 @@ CVSS: 3.3 (Bajo) — Mitigado por BCrypt lentitud + rate limiting (futuro)
    - Verificar logs de validación JWT fallida
    - Alertas en rotación de tokens fallida
 
+### Configuración real en el homelab (2026-07-14)
+
+El despliegue real no usa Azure Key Vault/App Service (ver arriba, sección genérica) sino Docker
+Compose + Portainer sobre el homelab — ver
+[`docs/deployment/homelab-deployment.md`](../deployment/homelab-deployment.md). Pasos realmente
+seguidos para activar el login con Google en producción:
+
+1. **Exponer la Api públicamente.** Hasta esta fecha solo `web` tenía un hostname público
+   (`sportsclub.ablasco.com`, vía nginx-proxy-manager + Cloudflare Tunnel); la Api solo era
+   alcanzable en la LAN (`192.168.1.100:5240`). El flujo de Google OAuth2 vive en la Api
+   (`AuthenticationController`), así que necesita su propio hostname público:
+   - Nuevo host `sportsclub-api.ablasco.com` en nginx-proxy-manager (puerto 5240, certificado
+     Let's Encrypt propio).
+   - Nueva entrada "Public Hostname" en el túnel de Cloudflare, con **Service URL apuntando
+     directo al contenedor** (`http://192.168.1.100:5240`), no a npm — ver el troubleshooting de
+     "Cloudflare Tunnel apuntando a npm" en `docs/deployment/homelab-deployment.md`.
+   - El hostname tuvo que ser de un solo nivel (`sportsclub-api.ablasco.com`, no
+     `api.sportsclub.ablasco.com`) — ver el troubleshooting de "subdominio de dos niveles" en el
+     mismo documento.
+
+2. **Google Cloud Console:**
+   - Proyecto `sportsclub-502119`, pantalla de consentimiento tipo "External", en modo "Testing"
+     inicialmente (solo cuentas añadidas como "Test users"; publicar más adelante no debería exigir
+     verificación formal ya que solo se piden los scopes básicos `openid profile email`).
+   - Authorized JavaScript origin: `https://sportsclub.ablasco.com`.
+   - **Authorized redirect URI: `https://sportsclub-api.ablasco.com/signin-google`** — nótese que
+     es el `CallbackPath` que gestiona el middleware de ASP.NET Core internamente
+     (`GoogleAuthOptions.CallbackPath`, por defecto `/signin-google`), **no**
+     `/api/authentication/google/callback` (esa ruta es solo el redirect final de la app tras el
+     intercambio, ver `AuthenticationController.GoogleCallback`).
+
+3. **Variables de entorno del stack en Portainer** (vía su UI, no editando ficheros — ver
+   troubleshooting "no es duradero" en `docs/deployment/homelab-deployment.md`):
+   ```
+   GOOGLE_CLIENT_ID=<Client ID real de Google Cloud Console>
+   GOOGLE_CLIENT_SECRET=<Client Secret real>
+   WEB_EXTERNAL_URL=https://sportsclub.ablasco.com
+   ```
+   Y en el compose del servicio `api`, la línea `WebAppBaseUrl: ${WEB_EXTERNAL_URL:-https://localhost:7123}`
+   (reutiliza `WEB_EXTERNAL_URL`, la misma variable que ya alimentaba `Cors__AllowedOrigins__1`, en
+   vez de introducir una variable nueva solo para esto).
+
+4. **Fix de código necesario — `UseForwardedHeaders` (`Program.cs`):** ni el túnel de Cloudflare
+   ni npm re-cifran el salto hasta el contenedor `api` — Kestrel solo ve conexiones HTTP planas
+   siempre. Sin `UseForwardedHeaders` confiando en `X-Forwarded-Proto`, `Request.Scheme` era
+   siempre `"http"`, así que el `redirect_uri` que la Api mandaba a Google
+   (`http://sportsclub-api.ablasco.com/signin-google`) nunca coincidía con el que Google tiene
+   registrado (`https://…`), y Google lo rechazaba. El mismo fix corrige de paso que el audit log
+   registrara la IP del túnel/red Docker en vez de la IP real del cliente
+   (`X-Forwarded-For`). `KnownNetworks`/`KnownProxies` se dejan vacíos porque el salto anterior
+   varía según la ruta de acceso (túnel vs. LAN/Tailscale vía npm) y no es una dirección fija que
+   se pueda dar de alta de forma segura.
+
 ---
 
 **Documento preparado por:** Documentation Agent  

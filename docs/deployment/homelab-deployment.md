@@ -248,6 +248,24 @@ gh workflow run rollback.yml -f version=<hash-corto>  # sin el prefijo "sha-"
 
 **Solución (workaround actual):** los 5 secretos se pasan como variables de entorno normales del stack, no como Docker secrets. El detalle completo de qué se probó está en el ["Known issue" de `DEPLOYMENT_RUNBOOK.md`](../../infrastructure/deploy/DEPLOYMENT_RUNBOOK.md#known-issue-docker-secrets-file-based-secrets-nombre-file--no-llegan-a-la-app-en-este-portainer). Pendiente de retomar — ver [`docs/technical/seguimiento-pendientes-cicd-homelab.md`](../technical/seguimiento-pendientes-cicd-homelab.md).
 
+### Editar `stack.env`/`docker-compose.yml` directamente en el volumen de Portainer no es duradero
+
+**Causa:** Portainer guarda la configuración real de un stack (incluidas sus variables de entorno) en su propia base de datos interna (`portainer.db`, BoltDB, dentro del volumen `adminlab_portainer_data`), no en los ficheros planos `docker-compose.yml`/`stack.env` que también deja en `/data/compose/<id>/v2/` dentro de ese mismo volumen. Esos ficheros son solo una proyección: **Portainer los regenera a partir de `portainer.db` cada vez que él mismo ejecuta un deploy** (incluido el redeploy disparado por el webhook que usa `deploy` en `cd.yml`). Editar `stack.env`/`docker-compose.yml` a mano (por ejemplo con un contenedor temporal montando el volumen, sin necesitar sudo en el host) aplica el cambio si además se ejecuta `docker compose up -d` manualmente contra esos ficheros — pero en cuanto Portainer vuelve a desplegar el stack por su cuenta, sobrescribe esos ficheros con el contenido de `portainer.db`, revirtiendo el cambio sin ningún aviso.
+
+**Solución:** cualquier cambio en las variables de entorno o en el compose de un stack de Portainer tiene que aplicarse a través del propio Portainer — UI (**Stacks → \<stack\> → Editor**, tanto el YAML como la pestaña de **Environment variables**) o su API (`PUT /api/stacks/{id}`) — nunca editando los ficheros del volumen directamente. Verificar que quedó aplicado de verdad comprobando la fecha de modificación de `portainer.db` (no solo la de `stack.env`).
+
+### Un subdominio de dos niveles (`api.sportsclub.ablasco.com`) da "TLS alert, unrecognized name" al exponerlo por Cloudflare Tunnel
+
+**Causa:** el certificado "Universal SSL" que Cloudflare emite automáticamente para una zona solo cubre el dominio raíz y un nivel de wildcard (`ablasco.com` + `*.ablasco.com`). Un hostname con dos niveles de subdominio (`api.sportsclub.ablasco.com`) no encaja en ese wildcard — Cloudflare necesita el add-on de pago **Advanced Certificate Manager** para cubrirlo, y sin él el borde de Cloudflare rechaza el handshake TLS del cliente antes incluso de llegar al origen (mismo síntoma, por cierto, que sufre Let's Encrypt/npm con un wildcard de un solo nivel si se intenta cubrir el mismo hostname ahí).
+
+**Solución:** usar un hostname de un solo nivel bajo el dominio raíz (p. ej. `sportsclub-api.ablasco.com` en vez de `api.sportsclub.ablasco.com`), igual que el patrón ya usado por `sportsclub.ablasco.com`.
+
+### Exponer un nuevo servicio por Cloudflare Tunnel apuntando a npm en vez de al contenedor da un bucle de redirección
+
+**Causa:** para los hostnames públicos de esta app, el **Service URL** del túnel de Cloudflare (Zero Trust → Networks → Tunnels → Public Hostname) apunta **directamente al puerto del contenedor** (p. ej. `http://192.168.1.100:5123` para `web`) — npm (nginx-proxy-manager) no está en ese camino. npm solo sirve para acceso por LAN/Tailscale a través de su propio puerto 443 con su propio certificado Let's Encrypt. Si el Service URL de una entrada nueva del túnel apunta en cambio al puerto 80 de npm, la petición sí llega a npm, pero por HTTP plano y sin las cabeceras que npm necesita para no forzar su propio redirect a HTTPS (`force-ssl.conf`) — el resultado es un `301` a la misma URL una y otra vez.
+
+**Solución:** el Service URL de cada entrada del túnel debe apuntar directo al puerto del contenedor correspondiente (`http://192.168.1.100:<puerto-del-servicio>`), nunca a npm.
+
 ## Referencias
 
 - [`infrastructure/deploy/DEPLOYMENT_RUNBOOK.md`](../../infrastructure/deploy/DEPLOYMENT_RUNBOOK.md) — procedimiento de referencia (camino feliz, rollback, fallbacks manuales).
