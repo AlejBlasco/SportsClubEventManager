@@ -314,6 +314,28 @@ public sealed class N8nWorkflowNotifierTests
             sentPayload.UserEmail.Should().Be(payload.UserEmail);
             sentPayload.UserName.Should().Be(payload.UserName);
         }
+
+        /// <summary>
+        /// Verifies that the raw JSON body uses PascalCase property names exactly as declared on
+        /// the payload record, matching the n8n workflows' expressions (e.g.
+        /// <c>$json.body.UserEmail</c>). JsonContent.Create defaults to camelCase
+        /// (JsonSerializerDefaults.Web) when no options are supplied, which would silently break
+        /// every field lookup in the imported workflows without failing any HTTP-level assertion.
+        /// </summary>
+        [Fact]
+        public async Task PostAsync_WhenCalled_UsesPascalCasePropertyNamesInRawJson()
+        {
+            // Arrange
+            var handler = new CapturingHandler(HttpStatusCode.OK);
+            var (notifier, _, _) = CreateSut(EnabledOptions(), handler);
+
+            // Act
+            await notifier.NotifyRegistrationConfirmedAsync(SamplePayload(), CancellationToken.None);
+
+            // Assert
+            handler.CapturedRequestBody.Should().Contain("\"UserEmail\"");
+            handler.CapturedRequestBody.Should().NotContain("\"userEmail\"");
+        }
     }
 
     /// <summary>
