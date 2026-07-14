@@ -1,6 +1,6 @@
 # Inscripción y cancelación de inscripción a eventos
 
-El caso de uso principal del proyecto: sustituye el WhatsApp manual al secretario del club por una inscripción con validación automática de aforo y duplicados. Referenciado desde la sección [`e. Funcionalidades principales`](../../README.md#e-funcionalidades-principales) del README.
+El caso de uso principal del proyecto: sustituye el WhatsApp manual al secretario del club por una inscripción con validación automática de aforo y duplicados. Referenciado desde la sección [`g. Funcionalidades principales`](../../README.md#g-funcionalidades-principales) del README.
 
 ## Flujo
 

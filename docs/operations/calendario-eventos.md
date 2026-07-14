@@ -1,6 +1,6 @@
 # Consulta del calendario de eventos
 
-Única funcionalidad de la aplicación accesible sin autenticación: cualquier visitante puede consultar los eventos publicados por el club. Referenciado desde la sección [`e. Funcionalidades principales`](../../README.md#e-funcionalidades-principales) del README.
+Única funcionalidad de la aplicación accesible sin autenticación: cualquier visitante puede consultar los eventos publicados por el club. Referenciado desde la sección [`g. Funcionalidades principales`](../../README.md#g-funcionalidades-principales) del README.
 
 ## Flujo
 

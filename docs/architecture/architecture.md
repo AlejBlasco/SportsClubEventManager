@@ -1,6 +1,6 @@
 # Arquitectura del sistema
 
-Documento de referencia para la sección [`d. Estructura del proyecto`](../../README.md#d-estructura-del-proyecto) del README. Describe la arquitectura de **SportsClubEventManager**, los patrones de diseño aplicados y por qué, con diagramas [Mermaid](https://mermaid.js.org/) que respaldan cada decisión sobre la base del código real del repositorio (no un diseño aspiracional).
+Documento de referencia para la sección [`f. Estructura del proyecto`](../../README.md#f-estructura-del-proyecto) del README. Describe la arquitectura de **SportsClubEventManager**, los patrones de diseño aplicados y por qué, con diagramas [Mermaid](https://mermaid.js.org/) que respaldan cada decisión sobre la base del código real del repositorio (no un diseño aspiracional).
 
 ## Índice
 

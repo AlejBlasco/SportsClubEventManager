@@ -57,7 +57,7 @@ flowchart TD
     H -- No --> I["Indica manualmente\nqué columna es cuál"]
     I --> G
     H -- Sí --> J["Revisa la tabla de vista previa:\nfilas válidas e inválidas marcadas"]
-    J --> K["Corrige capacidad máxima\npor evento si lo desea"]
+    J --> K["Corrige capacidad máxima\ny descripción por evento si lo desea"]
     K --> L["Deselecciona filas\ncon errores, si las hay"]
     L --> M["Clic en 'Confirm Import'"]
     M --> N{"¿Todas las filas\nseleccionadas son válidas?"}
@@ -79,8 +79,10 @@ de cálculo.
 
 El administrador selecciona su fichero CSV y pulsa **"Preview"**. El sistema no guarda nada
 todavía: solo lee el fichero y muestra, en una tabla, cómo quedaría cada evento si se importase —
-título, fecha y hora, ubicación, descripción y capacidad máxima — junto con los datos originales
-tal y como venían en el fichero, para poder comparar.
+título, fecha y hora, ubicación y capacidad máxima — junto con los datos originales (modalidad,
+campo y categoría, tal y como venían en el fichero) para poder comparar. La descripción del evento
+no se rellena automáticamente: queda en blanco y es el administrador quien decide si escribir algo,
+igual que al crear un evento manualmente.
 
 Si alguna columna del fichero no coincide exactamente con lo esperado (por ejemplo, si el
 administrador ha usado un nombre de columna ligeramente distinto), el sistema le deja indicar
@@ -97,6 +99,8 @@ En la propia tabla de vista previa, el administrador puede:
 
 - **Editar la capacidad máxima** de cada evento, ya que el fichero de origen no trae ese dato (se
   aplica un valor por defecto configurable, que se puede cambiar fila por fila).
+- **Escribir una descripción** para cada evento, si lo desea — el campo viene en blanco, ya que el
+  fichero de origen no aporta un texto descriptivo, solo modalidad/campo/categoría.
 - **Marcar o desmarcar** qué filas quiere incluir en la importación final. Las filas válidas
   vienen marcadas por defecto; las que tienen errores no.
 
@@ -136,9 +140,10 @@ Gestión de Eventos y en el calendario público, disponibles para que los socios
 - **Formato de fichero simple.** El sistema espera un fichero "plano", una fila por evento. No
   admite todavía formatos más complejos con secciones por mes o rangos de fechas dentro de una
   misma celda.
-- **Códigos de categoría sin traducir.** Si el fichero trae códigos abreviados de categoría (por
-  ejemplo "S1"), se guardan tal cual en la descripción del evento, sin convertirlos a un nombre
-  más descriptivo.
+- **Modalidad, campo y categoría no se incluyen automáticamente en la descripción.** El sistema los
+  muestra como columnas de referencia en la vista previa, pero no compone ningún texto a partir de
+  ellos; si el administrador quiere que consten en la descripción del evento, tiene que escribirlos
+  él mismo en ese campo.
 - **Tamaño y número de filas limitados.** El fichero no puede superar cierto tamaño (por defecto
   5 MB) ni cierto número de filas (por defecto 5.000), para proteger el rendimiento del sistema.
   Si se supera, se avisa con un mensaje claro antes de procesar nada.

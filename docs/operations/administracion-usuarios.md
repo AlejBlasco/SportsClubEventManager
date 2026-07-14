@@ -1,6 +1,6 @@
 # Administración de usuarios
 
-Exclusiva del rol `Administrator`: listado, edición, cambio de rol, activación/desactivación y borrado de cualquier socio del club. Referenciado desde la sección [`e. Funcionalidades principales`](../../README.md#e-funcionalidades-principales) del README.
+Exclusiva del rol `Administrator`: listado, edición, cambio de rol, activación/desactivación y borrado de cualquier socio del club. Referenciado desde la sección [`g. Funcionalidades principales`](../../README.md#g-funcionalidades-principales) del README.
 
 ## Flujo
 

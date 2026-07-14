@@ -20,8 +20,6 @@ La página de Eventos te permite explorar todos los eventos disponibles en el cl
 
 La primera vez que accedes, verás el **calendario** como vista por defecto. Se mostrará un indicador de carga mientras se obtienen los datos del servidor.
 
-![Paso 1: Acceso a la página de Eventos](./images/US-9-step1-access-events.png)
-
 ### Paso 2: Explorar la Vista de Calendario
 
 Una vez cargado, verás el calendario del mes actual con los eventos marcados en sus fechas correspondientes:
@@ -31,8 +29,6 @@ Una vez cargado, verás el calendario del mes actual con los eventos marcados en
 - **Eventos en el calendario**: Cada evento aparece en su fecha. Si el evento está completo, verá un badge rojo con la etiqueta **"Full"**
 
 Los eventos se muestran con su nombre completo (ejemplo: "Entrenamiento de Baloncesto"). Si el evento está completo, el nombre incluye automáticamente " - Full" para una identificación rápida.
-
-![Paso 2: Vista de Calendario](./images/US-9-step2-calendar-view.png)
 
 ### Paso 3: Ver Detalles de un Evento en el Calendario
 
@@ -52,8 +48,6 @@ Para ver todos los eventos en formato de lista:
 
 La vista de lista muestra cada evento en una tarjeta individual con toda la información disponible.
 
-![Paso 4: Cambiar a Vista de Lista](./images/US-9-step4-switch-list-view.png)
-
 ### Paso 5: Explorar la Vista de Lista
 
 En la vista de lista, cada evento se muestra en una tarjeta que contiene:
@@ -67,8 +61,6 @@ En la vista de lista, cada evento se muestra en una tarjeta que contiene:
 - **Badge "Full" (si corresponde)**: Un distintivo rojo que indica que el evento está completo
 
 Los eventos se ordenan cronológicamente desde la fecha más próxima a la más lejana.
-
-![Paso 5: Vista de Lista](./images/US-9-step5-list-view.png)
 
 ### Paso 6: Identificar Eventos Completos
 
@@ -93,8 +85,6 @@ El botón toggleador de vistas (Calendario/Lista) está siempre visible en la pa
 - Tu preferencia se guardará automáticamente durante tu sesión
 
 Cuando cierres la pestaña y la abras nuevamente, el sistema recordará qué vista usabas.
-
-![Paso 7: Toggleador de Vistas](./images/US-9-step7-view-toggle.png)
 
 ---
 

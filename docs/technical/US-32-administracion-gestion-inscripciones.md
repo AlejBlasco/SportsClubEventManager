@@ -125,9 +125,11 @@ clics (ver corrección post-implementación arriba).
 10. Componente renderiza tabla y controles de navegación
 
 #### Administrador — Crea Inscripción Manual
-1. Admin ingresa User GUID y Event GUID en formulario
-2. Hace clic en botón "Create"
-3. Valida que ambos sean GUIDs válidos en código-detrás
+1. Al montar la página, `LoadManualRegistrationOptionsAsync()` precarga dos desplegables:
+   `GetAllUsersAsync(isActiveFilter: true, ...)` y `GetAllEventsAsync(isUpcoming: true, ...)`
+   (hasta 100 elementos cada uno, el máximo que admite el validador de ambas queries)
+2. Admin selecciona un usuario (`_manualUserId`) y un evento (`_manualEventId`) en los `<select>`
+3. Hace clic en botón "Create"
 4. Invoca `AdminRegistrationManagementService.CreateRegistrationAsync(request)`
 5. HTTP POST `/api/admin/registrations` con `CreateAdminRegistrationRequest`
 6. Handler envía `CreateAdminRegistrationCommand` con `AdminUserId`, `UserId`, `EventId`
@@ -135,7 +137,11 @@ clics (ver corrección post-implementación arriba).
 8. Crea nueva entidad `Registration` con estado=Registered
 9. Registra en auditoría: `AuditAction.RegistrationCreated`, ipAddress, userAgent
 10. Devuelve 201 Created con ID registrado
-11. Componente limpia formulario y recarga lista
+11. Componente limpia la selección de ambos desplegables y recarga lista
+
+Los desplegables solo ofrecen usuarios activos y eventos futuros — exactamente las dos
+precondiciones que el handler exige en el paso 7 — por lo que los errores "usuario inactivo" o
+"evento pasado" ya no son alcanzables desde la UI, solo desde una llamada directa a la Api.
 
 #### Administrador — Cancela Inscripción
 1. Admin hace clic en botón "Cancel" en tabla
@@ -150,7 +156,10 @@ clics (ver corrección post-implementación arriba).
 10. Componente recarga lista
 
 #### Administrador — Exporta CSV
-1. Admin hace clic en "Export CSV"
+1. Admin pasa el ratón sobre el botón "Export" en la cabecera de la página (`page-header-actions`,
+   mismo patrón que "Import CSV" en `/admin/events`) y elige "CSV" en el menú desplegable
+   (`RegistrationManagement.razor.css` activa el `dropdown-menu` de Bootstrap con `:hover`/
+   `:focus-within` en vez del comportamiento por clic por defecto)
 2. `ExportCsvAsync()` construye CSV en memoria
 3. Encabezado: RegistrationId, EventTitle, EventDate, UserName, UserEmail, RegistrationDate, Status
 4. Escapa valores CSV (comillas, comas)
@@ -158,7 +167,7 @@ clics (ver corrección post-implementación arriba).
 6. JS crea Blob, descarga archivo: `registrations-20260707123456.csv`
 
 #### Administrador — Exporta PDF (Texto)
-1. Admin hace clic en "Export PDF"
+1. Admin pasa el ratón sobre el mismo botón "Export" y elige "PDF" en el menú desplegable
 2. `ExportPdfAsync()` construye texto en memoria
 3. Encabezado de reporte + timestamp + detalles de cada registro
 4. Invoca JS Interop: `downloadFileFromText(fileName, content, "application/pdf")`

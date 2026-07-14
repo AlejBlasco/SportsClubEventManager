@@ -165,8 +165,9 @@ public sealed class CsvEventImportParser : ICsvEventImportParser
     }
 
     /// <summary>
-    /// Builds one mapped row, combining "DÍA"/"HORA" into a single date/time and composing
-    /// the "MODAL."/"CAMPO"/"CAT" columns into the description.
+    /// Builds one mapped row, combining "DÍA"/"HORA" into a single date/time. "MODAL."/"CAMPO"/"CAT"
+    /// are kept only as source columns (<see cref="ImportRowParseResult.SourceModality"/> etc.) — the
+    /// admin fills in the description manually in the preview step, if desired.
     /// </summary>
     private static ImportRowParseResult BuildRow(
         CsvReader csv,
@@ -197,7 +198,7 @@ public sealed class CsvEventImportParser : ICsvEventImportParser
             RowNumber = rowNumber,
             Title = NullIfBlank(rawTitle),
             Date = combinedDate,
-            Description = EventDescriptionComposer.Compose(rawModality, rawField, rawCategory),
+            Description = null,
             Location = NullIfBlank(rawLocation),
             MaxCapacity = defaultMaxCapacity,
             SourceDay = rawDay,

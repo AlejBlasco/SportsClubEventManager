@@ -7,7 +7,15 @@
 apiVersion: 1
 
 datasources:
-  - name: Prometheus
+  # Name deliberately distinct from a plain "Prometheus" (issue #43 production incident,
+  # 2026-07-14): the homelab's shared "monitoring" Grafana already had a manually-created
+  # datasource literally named "Prometheus" (different, auto-generated uid). Provisioning-by-file
+  # matches existing datasources by NAME, and reconciling a same-named entry against our fixed
+  # "uid: prometheus" crashed Grafana at startup ("Datasource provisioning error: data source not
+  # found") — reproduced twice in an isolated container before this fix. Using a distinct name
+  # avoids touching the pre-existing datasource at all; the fixed uid is unaffected and still
+  # referenced from the alerting rules/dashboard JSON in this same folder.
+  - name: SportsClubEventManager - Prometheus
     # Fixed uid so it can be referenced deterministically from the alert rules provisioning file
     # (infrastructure/grafana/provisioning/alerting/rules.yaml) instead of relying on Grafana's
     # auto-generated uid. Not present in the design doc's sketch; added here for stability.

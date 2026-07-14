@@ -7,6 +7,8 @@
 ![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)
 ![SQL Server](https://img.shields.io/badge/SQL%20Server-2022-CC2927?logo=microsoftsqlserver&logoColor=white)
 ![OAuth2](https://img.shields.io/badge/Auth-OAuth2%20%2B%20JWT-4285F4?logo=google&logoColor=white)
+![Prometheus](https://img.shields.io/badge/Prometheus-metrics-E6522C?logo=prometheus&logoColor=white)
+[![Grafana](https://img.shields.io/badge/Grafana-Live%20Dashboard-F46800?logo=grafana&logoColor=white)](https://sportsclub-metrics.ablasco.com/public-dashboards/1e604bcde32b4e618c4541ca68864b5a)
 
 > Trabajo de Fin de Máster — Plataforma de gestión de eventos para un club deportivo de tiro.
 
@@ -18,10 +20,11 @@ El **origen de este proyecto** es completamente práctico: nace de una necesidad
 - [b. Stack tecnológico utilizado](#b-stack-tecnológico-utilizado)
 - [c. Instalación y ejecución](#c-instalación-y-ejecución)
 - [d. Despliegue](#d-despliegue)
-- [e. Estructura del proyecto](#e-estructura-del-proyecto)
-- [f. Funcionalidades principales](#f-funcionalidades-principales)
-- [g. Usuario y contraseña de prueba](#g-usuario-y-contraseña-de-prueba)
-- [h. Proyectos personales empleados en su construcción](#h-proyectos-personales-empleados-en-su-construcción)
+- [e. Observabilidad y métricas](#e-observabilidad-y-métricas)
+- [f. Estructura del proyecto](#f-estructura-del-proyecto)
+- [g. Funcionalidades principales](#g-funcionalidades-principales)
+- [h. Usuario y contraseña de prueba](#h-usuario-y-contraseña-de-prueba)
+- [i. Proyectos personales empleados en su construcción](#i-proyectos-personales-empleados-en-su-construcción)
 
 ## a. Descripción general del proyecto
 
@@ -51,11 +54,19 @@ La guía completa, paso a paso, para instalar y ejecutar la aplicación (vía Do
 
 La aplicación se despliega de forma continua a un homelab personal (Docker Compose + Portainer, accesible por Tailscale) mediante un pipeline de CI/CD que construye, valida, publica y despliega automáticamente en cada nueva versión, con smoke test y rollback automatizados. La guía completa, paso a paso — configuración inicial, cómo publicar una nueva versión y troubleshooting — está documentada en [`docs/deployment/homelab-deployment.md`](docs/deployment/homelab-deployment.md).
 
-## e. Estructura del proyecto
+## e. Observabilidad y métricas
+
+`api` y `web` exponen métricas en formato Prometheus (`/metrics`), que un Prometheus recolecta y una Grafana visualiza en un dashboard versionado como código ([`infrastructure/grafana/`](infrastructure/grafana/)). En producción, ambos servicios se reutilizan del stack de monitorización ya existente del homelab en vez de desplegar una copia propia — la guía completa (arquitectura, procedimiento paso a paso y un incidente real ya resuelto) está documentada en [`docs/observability/observability.md`](docs/observability/observability.md).
+
+El dashboard resultante es público y de solo lectura, sin necesidad de iniciar sesión:
+
+**[📊 Ver métricas en vivo](https://sportsclub-metrics.ablasco.com/public-dashboards/1e604bcde32b4e618c4541ca68864b5a)**
+
+## f. Estructura del proyecto
 
 La aplicación sigue una arquitectura en capas (Clean Architecture), con separación estricta entre dominio, aplicación, infraestructura y presentación (API + Blazor), CQRS con MediatR y los patrones de diseño derivados de ambos. El detalle completo — vistas de capas, grafo de dependencias entre proyectos, árbol de carpetas, modelo de dominio y flujos end-to-end, todo respaldado con diagramas Mermaid — está documentado en [`docs/architecture/architecture.md`](docs/architecture/architecture.md).
 
-## f. Funcionalidades principales
+## g. Funcionalidades principales
 
 Cada funcionalidad está documentada en detalle en [`docs/operations/`](docs/operations/), con un diagrama de flujo Mermaid y su explicación.
 
@@ -73,7 +84,7 @@ Cada funcionalidad está documentada en detalle en [`docs/operations/`](docs/ope
 - [Administración de inscripciones](docs/operations/administracion-inscripciones.md) — filtrado, inscripción manual, cancelación y exportación a CSV/PDF.
 - [Importación masiva de eventos por CSV](docs/operations/importacion-masiva-eventos.md) — con previsualización, detección de duplicados y confirmación todo o nada.
 
-## g. Usuario y contraseña de prueba
+## h. Usuario y contraseña de prueba
 
 Al ejecutar el entorno en modo `Development` (Docker con `ASPNETCORE_ENVIRONMENT=Development`, o tras aplicar las migraciones de datos de prueba en local — ver [`c. Instalación y ejecución`](#c-instalación-y-ejecución)) se dispone de los siguientes usuarios:
 
@@ -95,7 +106,7 @@ Al ejecutar el entorno en modo `Development` (Docker con `ASPNETCORE_ENVIRONMENT
 - **Cambiar la contraseña del administrador**: al no existir ninguna funcionalidad de "restablecer contraseña de otro usuario" (ni siquiera para administradores — ver [`administracion-usuarios.md`](docs/operations/administracion-usuarios.md), que solo permite editar datos, rol y estado, nunca la contraseña), la única vía es que el propio administrador inicie sesión y use el cambio de contraseña de autoservicio (`PUT /api/users/{id}/password`, ver [`perfil-usuario.md`](docs/operations/perfil-usuario.md)).
 - **Añadir o quitar administradores**: cualquier administrador puede ascender a un socio existente al rol `Administrator` (o degradarlo de vuelta a `User`) desde [Administración de usuarios](docs/operations/administracion-usuarios.md) (`PUT /api/users/admin/{id}/role`). El sistema impide quedarse sin ningún administrador: tanto este cambio de rol como el borrado de un usuario se rechazan si el afectado es el último administrador restante.
 
-## h. Proyectos personales empleados en su construcción
+## i. Proyectos personales empleados en su construcción
 
 Este TFM se ha apoyado en varias herramientas y proyectos personales desarrollados previamente por el autor:
 

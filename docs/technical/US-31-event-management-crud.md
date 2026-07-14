@@ -424,6 +424,7 @@ catch
            Title = e.Title,
            Date = e.Date,
            Location = e.Location,
+           Description = e.Description,  // Necesario para repoblar el modal de edición
            MaxCapacity = e.MaxCapacity,
            IsPastEvent = e.Date < DateTime.UtcNow,  // Admin entiende si es pasado
            RegistrationCount = e.Registrations.Count(r => r.Status != RegistrationStatus.Cancelled),

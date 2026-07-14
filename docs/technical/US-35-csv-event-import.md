@@ -17,10 +17,11 @@ datos, el administrador revisa/corrige el resultado en pantalla, y solo al confi
 los eventos en una única transacción "todo o nada".
 
 El fichero de entrada usa una cabecera estandarizada de 7 columnas en español
-(`DÍA,MODAL.,NOMBRE TIRADA,HORA,CAMPO,LUGAR,CAT`), que el parser combina/compone en los 5 campos
-editables de la entidad `Event` (`Title`, `Date`, `Description`, `Location`, `MaxCapacity`). No se
-ha añadido ninguna migración de base de datos: la funcionalidad reutiliza el esquema existente de
-`Event`.
+(`DÍA,MODAL.,NOMBRE TIRADA,HORA,CAMPO,LUGAR,CAT`), que el parser combina en 4 de los 5 campos
+editables de la entidad `Event` (`Title`, `Date`, `Location`, `MaxCapacity`); `MODAL.`/`CAMPO`/`CAT`
+se muestran solo como columnas de origen en la previsualización — el quinto campo, `Description`,
+se deja en blanco y es el administrador quien lo rellena manualmente si quiere. No se ha añadido
+ninguna migración de base de datos: la funcionalidad reutiliza el esquema existente de `Event`.
 
 Solo se soporta `.csv` en esta iteración; a pesar de que el nombre de la rama menciona Excel, no
 se implementó un parser de `.xlsx` (ver [Extension points](#extension-points-y-limitaciones)).
@@ -57,8 +58,6 @@ flowchart TD
 
     subgraph Infra["SportsClubEventManager.Infrastructure"]
         Parser["CsvEventImportParser\n(CsvHelper)"]
-        Composer["EventDescriptionComposer"]
-        Parser --> Composer
         AuditSvc["AuditService"]
         DbCtx["AppDbContext"]
     end
@@ -89,7 +88,6 @@ flowchart TD
 | Application | `BulkCreateEventsCommand/Handler/Validator` | Revalida cada fila (defensa en profundidad) e inserta todo en una transacción; escribe un único registro de auditoría |
 | Application | `EventFieldRules` / `ImportEventItemDtoValidator` | Reglas de campo compartidas entre preview y confirm (Title/Location/Description/Date/MaxCapacity) |
 | Infrastructure | `CsvEventImportParser` | Lee el stream CSV con `CsvHelper`, resuelve cabeceras, combina `DÍA`+`HORA`, aplica límites de tamaño/filas |
-| Infrastructure | `EventDescriptionComposer` | Compone `MODAL.`/`CAMPO`/`CAT` en el `Description` final |
 | Shared | DTOs de `Shared/DTOs/` | Contrato de API entre Web y Api (serializados por HTTP) |
 
 ---
@@ -126,7 +124,10 @@ Interfaz en `Application/Common/Interfaces/ICsvEventImportParser.cs`, implementa
 - Combinación de `DÍA` (formatos permitidos `dd/MM/yyyy` luego `yyyy-MM-dd`) + `HORA` (`HH:mm`,
   con fallback al valor configurado `ImportSettings:DefaultEventTime` cuando está en blanco) en un
   único `DateTime`.
-- Delegación en `EventDescriptionComposer` para construir el `Description` compuesto.
+- `MODAL.`/`CAMPO`/`CAT` se conservan solo como columnas de origen (`SourceModality`,
+  `SourceField`, `SourceCategory`) para mostrar en la tabla de previsualización — el `Description`
+  del evento se deja en blanco y es el administrador quien lo rellena manualmente, si quiere, en el
+  paso de previsualización.
 - Aplicación de los límites `ImportSettings:MaxRowCount` (corte duro con error estructural) y
   detección de fichero vacío / cabecera inválida.
 - Manejo de errores en dos niveles: cualquier excepción no controlada durante el parseo degrada a
@@ -176,20 +177,15 @@ válidas:
    convención ya establecida en el resto del código de auditoría.
 4. Hace `SaveChangesAsync` y `CommitAsync` (si aplica).
 
-### `EventDescriptionComposer`
-
-Clase interna y estática de Infrastructure que compone `MODAL.` / `CAMPO` / `CAT` en un único
-string, p. ej. `"Modality: Trap | Field: Campo 2 | Category: S1"`, omitiendo cualquier segmento en
-blanco y devolviendo `null` si los tres están vacíos.
-
 ### `ImportEvents.razor` / `ImportEvents.razor.cs`
 
 Página en `/admin/events/import`, restringida con `[Authorize(Roles = "Administrator")]`.
 Mantiene todo el estado del flujo **en el propio componente** (no hay estado en servidor entre
 preview y confirm): fichero seleccionado en memoria, resultado de preview, selección por fila
-(`_rowSelections`), overrides de capacidad por fila (`_rowCapacityOverrides`) y selecciones de
-remapeo de columnas (`_columnMappingSelections`). Al confirmar con éxito, limpia todo el estado
-local.
+(`_rowSelections`), overrides de capacidad por fila (`_rowCapacityOverrides`), overrides de
+descripción por fila (`_rowDescriptionOverrides` — el campo se muestra en blanco y es el
+administrador quien decide si rellenarlo) y selecciones de remapeo de columnas
+(`_columnMappingSelections`). Al confirmar con éxito, limpia todo el estado local.
 
 ---
 
@@ -235,7 +231,7 @@ sequenceDiagram
         Note over Svc,Api: Mismo flujo de preview anterior
     end
 
-    Admin->>Page: Edita MaxCapacity / deselecciona filas inválidas
+    Admin->>Page: Edita MaxCapacity / Description (opcional) / deselecciona filas inválidas
     Admin->>Page: Clic "Confirm Import"
     Page->>Svc: ConfirmImportAsync(filas seleccionadas y válidas)
     Svc->>Api: POST /api/admin/import/csv (JSON)

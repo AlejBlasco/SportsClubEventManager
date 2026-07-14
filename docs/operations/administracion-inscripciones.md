@@ -1,6 +1,6 @@
 # Administración de inscripciones
 
-Exclusiva del rol `Administrator`: visión global de todas las inscripciones del club, inscripción manual de un socio y cancelación de cualquier inscripción, con exportación a CSV/PDF. Referenciado desde la sección [`e. Funcionalidades principales`](../../README.md#e-funcionalidades-principales) del README.
+Exclusiva del rol `Administrator`: visión global de todas las inscripciones del club, inscripción manual de un socio y cancelación de cualquier inscripción, con exportación a CSV/PDF. Referenciado desde la sección [`g. Funcionalidades principales`](../../README.md#g-funcionalidades-principales) del README.
 
 ## Flujo
 
