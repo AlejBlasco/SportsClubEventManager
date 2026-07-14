@@ -5,6 +5,8 @@
 @using SportsClubEventManager.Shared.DTOs
 @using SportsClubEventManager.Web.Services
 @inject IAdminRegistrationManagementService AdminRegistrationManagementService
+@inject IUserManagementService UserManagementService
+@inject IEventManagementService EventManagementService
 @inject IJSRuntime JSRuntime
 @attribute [Authorize(Roles = "Administrator")]
 
@@ -106,12 +108,24 @@
                 </select>
             </div>
             <div class="col-md-3">
-                <label class="form-label">Manual Registration - User ID</label>
-                <input type="text" class="form-control" placeholder="GUID" @bind="_manualUserId" />
+                <label class="form-label">Manual Registration - User</label>
+                <select class="form-select" @bind="_manualUserId">
+                    <option value="">Select a user...</option>
+                    @foreach (var user in _activeUsers)
+                    {
+                        <option value="@user.Id">@user.Name (@user.Email)</option>
+                    }
+                </select>
             </div>
             <div class="col-md-3">
-                <label class="form-label">Manual Registration - Event ID</label>
-                <input type="text" class="form-control" placeholder="GUID" @bind="_manualEventId" />
+                <label class="form-label">Manual Registration - Event</label>
+                <select class="form-select" @bind="_manualEventId">
+                    <option value="">Select an event...</option>
+                    @foreach (var evt in _upcomingEvents)
+                    {
+                        <option value="@evt.Id">@evt.Title (@evt.Date.ToString("yyyy-MM-dd HH:mm"))</option>
+                    }
+                </select>
             </div>
             <div class="col-md-2 d-flex align-items-end">
                 <button class="btn btn-success w-100" @onclick="CreateManualRegistrationAsync" disabled="@_creatingRegistration">

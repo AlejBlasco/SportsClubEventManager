@@ -28,8 +28,6 @@ La Gestión de Inscripciones permite a los usuarios ver y cancelar sus propias i
 
 **Resultado esperado:** Ves una tabla con todos tus eventos próximos en los que estás inscrito.
 
-![Paso 1: Accede a Mis Inscripciones](./images/32-usuario-paso1.png)
-
 #### Paso 2: Revisa tu Lista de Inscripciones
 
 En la tabla verás las siguientes columnas:
@@ -68,8 +66,6 @@ En la tabla verás las siguientes columnas:
 - ❌ No puedes cancelar inscripciones de otros usuarios
 - ❌ Si no hay eventos futuros, verás el mensaje: "You do not have active registrations"
 
-![Paso 3: Cancela Inscripción](./images/32-usuario-paso3.png)
-
 ---
 
 ### Parte 2: Administradores — Gestionar Todas las Inscripciones
@@ -81,8 +77,6 @@ En la tabla verás las siguientes columnas:
 3. Haz clic para ir a la página
 
 **Resultado esperado:** Ves un panel completo con filtros, tabla de registros, y opciones de exportación.
-
-![Paso 1: Accede a Gestión de Inscripciones](./images/32-admin-paso1.png)
 
 #### Paso 2: Visualiza Todas las Inscripciones
 
@@ -134,37 +128,31 @@ Para encontrar inscripciones específicas, usa la sección **Filtros** en la par
 3. La tabla se actualiza automáticamente
 4. El contador en la parte inferior muestra cuántas inscripciones coinciden
 
-![Paso 3: Usa Filtros](./images/32-admin-paso3.png)
-
 #### Paso 4: Crea una Inscripción Manual
 
 A veces necesitas inscribir a un usuario manualmente (ej: inscripción por teléfono).
 
 1. Busca la sección **"Manual Registration"** en la página (debajo de Sort/Order)
-2. Ingresa dos valores:
-   - **User ID**: El GUID único del usuario (ej: `550e8400-e29b-41d4-a716-446655440100`)
-   - **Event ID**: El GUID único del evento (ej: `550e8400-e29b-41d4-a716-446655440010`)
+2. Elige dos valores en los desplegables:
+   - **User**: selecciona al socio por nombre y email (solo aparecen usuarios activos)
+   - **Event**: selecciona el evento por título y fecha (solo aparecen eventos futuros)
 3. Haz clic en el botón verde **"Create"**
 
 **Resultado:** Si es exitosa:
 - Mensaje verde: "Registration created successfully."
-- Los campos se limpian
+- Los desplegables vuelven a su estado sin selección
 - La tabla se actualiza y ves la nueva inscripción
 - Se registra en auditoría quién y cuándo la creó
 
 **Errores posibles:**
-- ❌ "Manual registration requires a valid user GUID" — El User ID no es un GUID válido
+- ❌ "Select both a user and an event for the manual registration" — Falta elegir uno de los dos desplegables
 - ❌ "User is already registered for this event" — El usuario ya está inscrito
 - ❌ "Event has reached maximum capacity" — No hay lugar disponible
 - ❌ "Cannot register users for events that have already occurred" — El evento ya pasó
-- ❌ "User not found" — El User ID no existe en el sistema
-- ❌ "Event not found" — El Event ID no existe en el sistema
 
-**Dónde encontrar GUIDs:**
-- User ID: En página de gestión de usuarios, o contacta a soporte
-- Event ID: En página de gestión de eventos
-
-![Paso 4: Crea Inscripción Manual](./images/32-admin-paso4.png)
+**Nota:** Como los desplegables solo listan usuarios activos y eventos futuros, ya no es posible
+seleccionar por error un usuario inactivo o un evento pasado — ambos casos, antes frecuentes al
+escribir el GUID a mano, quedan descartados de raíz.
 
 #### Paso 5: Cancela una Inscripción
 
@@ -183,15 +171,13 @@ Como administrador, puedes cancelar cualquier inscripción (incluso eventos ya o
 - ✅ Puedes cancelar eventos que ya ocurrieron
 - ✅ Se registra cada cancelación en auditoría
 
-![Paso 5: Cancela Inscripción Admin](./images/32-admin-paso5.png)
-
 #### Paso 6: Exporta Listado a CSV
 
 Para descargar un reporte de inscripciones en formato CSV (hojas de cálculo):
 
 1. Aplica los filtros que necesites (visto en Paso 3)
-2. Busca la sección **Exportación** en la parte inferior derecha
-3. Haz clic en botón **"Export CSV"** (con icono de CSV)
+2. En la cabecera de la página, pasa el ratón por encima del botón **"Export"** (junto al título)
+3. Elige **"CSV"** en el menú desplegable que aparece
 
 **Resultado:**
 - Se descarga un archivo: `registrations-20260707123456.csv`
@@ -207,15 +193,13 @@ Para descargar un reporte de inscripciones en formato CSV (hojas de cálculo):
 Para descargar un reporte de inscripciones en formato PDF:
 
 1. Aplica los filtros que necesites
-2. Busca la sección **Exportación** en la parte inferior derecha
-3. Haz clic en botón **"Export PDF"** (con icono de PDF)
+2. En la cabecera de la página, pasa el ratón por encima del botón **"Export"**
+3. Elige **"PDF"** en el menú desplegable que aparece
 
 **Resultado:**
 - Se descarga un archivo: `registrations-20260707123456.pdf`
 - Contiene un reporte con encabezado, timestamp, y detalles de cada inscripción
 - Abre el archivo en Adobe Reader, navegador, o lector PDF
-
-![Paso 7: Exporta](./images/32-admin-paso7.png)
 
 ---
 
@@ -273,9 +257,6 @@ No. Solo se registra cuando un administrador cancela. Tus cancellaciones las ves
 
 **¿Puedo exportar TODAS las inscripciones, no solo la página actual?**  
 Actualmente no. Puedes cambiar el tamaño de página antes de exportar, o exportar página por página.
-
-**¿Dónde encuentro el GUID de un usuario o evento?**  
-En las páginas de gestión de usuarios y eventos respectivamente. Si usas la UI, normalmente verás un botón "Copy ID" o similar.
 
 **¿Qué significa el color de la insignia de estado?**  
 - Verde = Registered (inscripción activa)
