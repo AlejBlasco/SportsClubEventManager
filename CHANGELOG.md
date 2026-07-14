@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-07-14
+
+### Added
+
+- Grafana dashboard for `api`/`web` metrics, provisioned on the homelab's shared Prometheus/Grafana stack and published as a public, read-only, path-restricted dashboard (#43)
+- Link to the live Grafana dashboard in the admin menu
+- System diagrams (C4 Context, C4 Container, ER diagram, sequence diagrams for registration/cancellation/admin event CRUD, CI/CD pipeline flow), cataloged in `docs/technical/diagrams/` (#51)
+- Observability documentation (`docs/observability/observability.md`) covering the production setup end-to-end, including a resolved Grafana provisioning incident
+- Homelab deployment guide (`docs/deployment/homelab-deployment.md`)
+- n8n workflows for member notifications (#37)
+
+### Changed
+
+- Manual registration in admin (`/admin/registrations`) now uses user/event dropdowns instead of free-text GUID inputs, only offering active users and upcoming events
+- CSV import: "Export CSV"/"Export PDF" merged into a single "Export" button with a hover dropdown, moved to the page header
+- CSV import: event description is no longer auto-composed from the Modality/Field/Category columns; left blank for the admin to fill in manually
+- Member directory (`/users`) restricted to the `Administrator` role
+- README: added an Observability & Metrics section with Prometheus/Grafana badges and a link to the live dashboard
+
+### Fixed
+
+- Login redirect now forces a full page reload, fixing unauthenticated users landing on the wrong page (URL changed but content didn't) after clicking a protected link from a static page
+- Event description not shown when reopening the edit modal after saving (admin event management)
+- Missing label on the role-edit button in the admin user details modal
+- Grafana datasource name collision with a pre-existing manually-created datasource, which crashed the shared homelab Grafana on startup
+
 ## [0.3.0] - 2026-07-13
 
 ### Added
