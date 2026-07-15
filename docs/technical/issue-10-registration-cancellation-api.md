@@ -12,6 +12,19 @@ Se ha implementado un nuevo endpoint DELETE en la API de eventos para permitir q
 
 La implementación utiliza una estrategia de eliminación dura (hard delete), removiendo completamente el registro de la base de datos. El diseño sigue patrones limpios de arquitectura y replica exactamente los mecanismos de manejo de concurrencia y validación del endpoint de registro existente.
 
+> **Nota de vigencia (2026-07-15):** El diseño original de esta página (`userId` recibido en el
+> cuerpo de la solicitud y validado con FluentValidation) quedó obsoleto tras US-28 (autorización
+> basada en roles, 2026-07-06): `EventsController.CancelRegistration` ya no acepta ningún cuerpo de
+> solicitud — el `UserId` se extrae exclusivamente del claim de identidad del JWT autenticado. La
+> cancelación de la inscripción de otro usuario (capacidad de administrador) se realiza ahora
+> mediante `DELETE /api/admin/registrations/{id}` (`AdminRegistrationsController`), documentado en
+> [issue-32](issue-32-administracion-gestion-inscripciones.md). Como consecuencia, un `EventId` con
+> formato de GUID inválido en la ruta ya no produce 400 Bad Request: la restricción de ruta
+> `{id:guid}` hace que el endpoint ni siquiera coincida, devolviendo 404 Not Found. Esta página se
+> conserva como registro histórico del diseño original de US-8; el comportamiento vigente está en
+> [issue-32](issue-32-administracion-gestion-inscripciones.md) y
+> [docs/operations/administracion-inscripciones.md](../operations/administracion-inscripciones.md).
+
 ---
 
 ## Arquitectura

@@ -2,6 +2,14 @@
 **Versión:** 2026-06-25  
 **Se aplica a:** Sports Club Event Manager — API REST
 
+> **Nota de vigencia (2026-07-15):** El "Paso 1" de esta guía (enviar tu `userId` en el cuerpo de
+> la solicitud) quedó obsoleto tras añadirse autorización basada en JWT (US-28, 2026-07-06): el
+> `userId` ya no se lee del cuerpo de la solicitud, se obtiene automáticamente del token de sesión
+> de quien esté autenticado — solo puedes cancelar tu propia inscripción por esta vía. Si necesitas
+> cancelar la inscripción de otro usuario (solo administradores), consulta
+> [docs/operations/administracion-inscripciones.md](../operations/administracion-inscripciones.md)
+> para el comportamiento vigente.
+
 ---
 
 ## ¿Qué es esta característica?
