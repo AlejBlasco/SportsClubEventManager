@@ -58,6 +58,12 @@ services:
       # from here: they now arrive as file-based secrets (see "secrets:" below).
       Cors__AllowedOrigins__0: http://localhost:${WEB_PORT:-5123}
       Cors__AllowedOrigins__1: ${WEB_EXTERNAL_URL:-}
+      # Base URL Web is reachable at from the browser — used to build the OAuth2 redirect back to
+      # /oauth-callback (see AuthenticationController.GetWebAppBaseUrl). Without this, it falls
+      # back to appsettings' "https://localhost:7123" (Kestrel/Visual Studio's dev port), which
+      # isn't reachable through docker compose. Same pattern as WEB_EXTERNAL_URL in
+      # docker-compose.prod.yml.
+      WebAppBaseUrl: http://localhost:${WEB_PORT:-5123}
       # n8n workflow notifications (issue #37) — Notifications__N8n__WebhookToken arrives via the
       # "secrets:" block below (n8n__webhooktoken), not as an environment variable here, same
       # pattern already used for the rest of api's credentials. Stays disabled by default; only

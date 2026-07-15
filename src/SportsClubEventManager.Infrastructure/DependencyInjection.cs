@@ -67,6 +67,12 @@ public static class DependencyInjection
         services.AddScoped<IAuditService, AuditService>();
         services.AddScoped<ICsvEventImportParser, CsvEventImportParser>();
 
+        // Hands off Google OAuth2 tokens from the Api's callback to Web (issue #125). Singleton
+        // because it wraps IMemoryCache, itself a process-wide singleton, and holds no per-request
+        // state of its own.
+        services.AddMemoryCache();
+        services.AddSingleton<IOAuthExchangeCodeStore, OAuthExchangeCodeStore>();
+
         // Binds and validates the "Metrics" configuration section (issue #42), consumed by
         // ActiveEventsGaugeUpdater below to make its refresh interval configurable instead of
         // hardcoded, following the same ValidateOnStart() pattern as the Api/Web host options.
