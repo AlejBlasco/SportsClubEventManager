@@ -139,12 +139,6 @@ Error response from daemon: path / is mounted on / but it is not a shared or sla
 
 **Causa:** `node-exporter` monta `/:/host:ro,rslave` — la propagación `rslave` exige explícitamente que el mount de origen ya sea `shared`/`slave` en el host, y WSL2 monta `/` como privada por defecto. No es un problema del stack, sino del entorno WSL2. `cadvisor` monta `/:/rootfs:ro` sin flag de propagación, por lo que **no** se ve afectado por este mismo error; si en algún momento sí lo estuviera, la solución es idéntica.
 
-Si solo se necesita la aplicación en sí (sin `prometheus`/`grafana`/`node-exporter`/`cadvisor`), se puede evitar el problema arrancando únicamente los servicios necesarios:
-
-```bash
-docker compose up -d sqlserver api web
-```
-
 **Solución**, dentro de una terminal WSL2 (no PowerShell):
 
 ```bash
@@ -159,6 +153,12 @@ command = "mount --make-rshared /"
 ```
 
 y reiniciar WSL2 desde PowerShell con `wsl --shutdown`.
+
+**Alternativa**, si no se necesita tocar la configuración de WSL2: arrancar solo los servicios imprescindibles de la aplicación (sin `prometheus`/`grafana`/`node-exporter`/`cadvisor`):
+
+```bash
+docker compose up -d sqlserver api web
+```
 
 ### El contenedor `api` o `web` no arranca y el log muestra una excepción de configuración
 

@@ -386,6 +386,41 @@ concilia por nombre primero.
 
 ---
 
+## Incidente 2: `isDefault: true` cambió silenciosamente el datasource por defecto de la Grafana compartida (descubierto 2026-07-15)
+
+Al revisar este documento se detectó que
+[`infrastructure/grafana/provisioning/datasources/datasources.yaml`](../../infrastructure/grafana/provisioning/datasources/datasources.yaml)
+provisionaba `SportsClubEventManager - Prometheus` con `isDefault: true`, pese a que ni el dashboard
+de este proyecto ni sus reglas de alerta lo necesitan — ambos referencian el datasource por su
+`uid: prometheus` fijo, nunca por "el que sea el default".
+
+**Verificado contra la Grafana real** (mismo método de solo-lectura que el Incidente 1 — volumen
+`monitoring_grafana_data` montado `:ro` en un contenedor Alpine desechable, `sqlite3` instalado ahí,
+sin tocar el contenedor `grafana` en marcha):
+
+```
+id | uid            | name                                 | is_default
+1  | bfmqzj39p924gd  | Prometheus                          | 0
+2  | prometheus      | SportsClubEventManager - Prometheus | 1
+```
+
+Confirmado: provisionar con `isDefault: true` desmarcó automáticamente el datasource `Prometheus`
+preexistente (compartido con otras apps del homelab, antes `is_default=1`). Un efecto colateral real
+sobre infraestructura que no es solo de este proyecto — cualquier consulta ad-hoc en **Explore**, o
+cualquier panel de otra app que dependa del datasource por defecto sin fijar un `uid` explícito, pasó
+a apuntar a nuestro datasource sin que nadie lo pidiera.
+
+**Solución aplicada (en código):** `isDefault: false` en `datasources.yaml`.
+
+**Pendiente (no aplicado todavía, deliberadamente):** el cambio de código anterior evita que esto
+vuelva a pasar en el **próximo** redeploy del *provisioning*, pero **no revierte** el estado actual
+de la Grafana real — el datasource `Prometheus` preexistente sigue con `is_default=0` ahora mismo.
+Restaurarlo a `is_default=1` requiere una acción manual (UI: **Connections → Data sources →
+Prometheus → Default**, o volver a aplicar el *provisioning* corregido) — pendiente de coordinar con
+el propietario del homelab antes de tocar la instancia compartida real.
+
+---
+
 ## Troubleshooting
 
 ### `/public-dashboards/<uid>` da 404 tras configurar la ruta de Cloudflare

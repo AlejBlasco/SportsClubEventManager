@@ -28,5 +28,12 @@ datasources:
     # "Apéndice A"), this "url" must be adjusted to wherever that stack exposes its own
     # Prometheus — "prometheus:9090" only resolves inside this project's dev-only network.
     url: http://prometheus:9090
-    isDefault: true
+    # MUST stay false (2026-07-15 incident): this dashboard/the alert rules in this same folder
+    # already reference the datasource by its fixed "uid: prometheus" above, never by "whichever
+    # one is default" — isDefault is not needed here. Setting it to true silently flipped the
+    # homelab's shared "monitoring" Grafana pre-existing "Prometheus" datasource (uid
+    # bfmqzj39p924gd) from is_default=1 to 0 in production, verified via a disposable read-only
+    # container against grafana.db — a real side effect on infrastructure shared with other
+    # homelab apps, not just this project's. See docs/observability/observability.md.
+    isDefault: false
     editable: false
