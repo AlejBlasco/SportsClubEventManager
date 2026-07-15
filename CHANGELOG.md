@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- `cd.yml`'s `tag-release-version` job pushed the `vX.Y.Z` tag using the default `GITHUB_TOKEN`, which does **not** trigger other workflows' `push: tags:` listeners (GitHub deliberately doesn't cascade workflow runs from `GITHUB_TOKEN`-authored events, to prevent infinite loops) — confirmed in production: the `v0.4.1` tag was created and pushed correctly, but `release.yml` never ran, and no `Release` run had occurred since the last manually-pushed tag (`v0.3.0`). Added `workflow_dispatch` to `release.yml` and a new step in `tag-release-version` that explicitly dispatches it (`gh workflow run release.yml --ref vX.Y.Z`) right after pushing the tag — a direct API dispatch, not a push event, so it isn't subject to the same restriction. `v0.4.1`'s missing GitHub Release was created manually in the meantime with the same notes `release.yml` would have generated
+
 ## [0.4.1] - 2026-07-15
 
 ### Added

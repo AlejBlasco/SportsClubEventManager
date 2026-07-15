@@ -4,6 +4,14 @@ on:
   push:
     tags:
       - 'v[0-9]+.[0-9]+.[0-9]+'
+  # Lets cd.yml's tag-release-version job (which pushes the vX.Y.Z tag using the default
+  # GITHUB_TOKEN) trigger this workflow explicitly via "gh workflow run --ref vX.Y.Z". A tag
+  # pushed with GITHUB_TOKEN does NOT fire the "push: tags:" trigger above - GitHub deliberately
+  # doesn't cascade workflow runs from actions taken by GITHUB_TOKEN, to avoid infinite loops.
+  # Confirmed missing in production for v0.4.1: the tag was created and pushed correctly, but no
+  # "Release" run ever appeared, and no run had occurred since v0.3.0 (manually tagged by a human,
+  # whose push - unlike GITHUB_TOKEN's - does trigger this workflow normally).
+  workflow_dispatch:
 
 jobs:
   create-release:
