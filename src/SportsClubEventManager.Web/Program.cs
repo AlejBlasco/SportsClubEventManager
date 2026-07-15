@@ -146,6 +146,14 @@ builder.Services.AddHttpClient<IImportManagementService, ImportManagementService
     .AddHttpMessageHandler<CorrelationIdHandler>()
     .AddHttpMessageHandler<ApiCallLoggingHandler>();
 
+builder.Services.AddHttpClient<IAccountLogoutService, AccountLogoutService>(client =>
+{
+    client.BaseAddress = new Uri(apiBaseUrl);
+    client.Timeout = TimeSpan.FromSeconds(30);
+}).AddHttpMessageHandler<AuthTokenHandler>()
+    .AddHttpMessageHandler<CorrelationIdHandler>()
+    .AddHttpMessageHandler<ApiCallLoggingHandler>();
+
 // Dedicated HttpClient for the ApiAvailabilityHealthCheck below (issue #41): short timeout so a
 // slow Api does not block Web's own health check pipeline, and deliberately no AuthTokenHandler
 // since the Api's /health/live probe is anonymous.
@@ -194,8 +202,21 @@ app.UseAuthorization();
 
 app.UseAntiforgery();
 
-app.MapGet("/account/logout", async (HttpContext context) =>
+app.MapGet("/account/logout", async (HttpContext context, IAccountLogoutService accountLogoutService) =>
 {
+    try
+    {
+        // Revokes the refresh_token in the Api's database, identified from the Bearer access_token
+        // AuthTokenHandler attaches automatically. Best-effort: if the access_token has already
+        // expired (Web never auto-refreshes it, see "Sin Refresco Automático de Token desde el Web"
+        // in US-27's known limitations) or the Api is unreachable, Web's own session still needs to
+        // end regardless.
+        await accountLogoutService.LogoutAsync(context.RequestAborted);
+    }
+    catch (HttpRequestException)
+    {
+    }
+
     await context.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
     return Results.Redirect("/login");
 });

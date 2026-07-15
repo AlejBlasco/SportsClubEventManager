@@ -7,6 +7,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using SportsClubEventManager.Application.Common.Interfaces;
 using SportsClubEventManager.Infrastructure;
+using SportsClubEventManager.Infrastructure.Authentication.OAuth2;
 using SportsClubEventManager.Infrastructure.Configuration;
 using SportsClubEventManager.Infrastructure.Notifications;
 using SportsClubEventManager.Infrastructure.Persistence;
@@ -542,6 +543,61 @@ public sealed class DependencyInjectionTests
             // Assert
             var act = () => httpClientFactory.CreateClient("N8n");
             act.Should().NotThrow();
+        }
+    }
+
+    /// <summary>
+    /// Tests verifying the OAuth2 exchange-code hand-off registration added by AddInfrastructure
+    /// (issue #125): IOAuthExchangeCodeStore backed by IMemoryCache.
+    /// </summary>
+    public sealed class WhenRegisteringOAuthExchangeCodeStore
+    {
+        private IConfiguration CreateValidConfiguration() =>
+            new ConfigurationBuilder()
+                .AddInMemoryCollection(new Dictionary<string, string?>
+                {
+                    { "ConnectionStrings:DefaultConnection", "Data Source=:memory:" }
+                })
+                .Build();
+
+        /// <summary>
+        /// Verifies that IOAuthExchangeCodeStore resolves to an OAuthExchangeCodeStore instance.
+        /// </summary>
+        [Fact]
+        public void AddInfrastructure_RegistersOAuthExchangeCodeStore()
+        {
+            // Arrange
+            var services = new ServiceCollection();
+            var configuration = CreateValidConfiguration();
+
+            // Act
+            services.AddInfrastructure(configuration);
+            var serviceProvider = services.BuildServiceProvider();
+            var store = serviceProvider.GetService<IOAuthExchangeCodeStore>();
+
+            // Assert
+            store.Should().BeOfType<OAuthExchangeCodeStore>();
+        }
+
+        /// <summary>
+        /// Verifies that IOAuthExchangeCodeStore is registered as a Singleton, since it wraps
+        /// IMemoryCache (itself process-wide) and must share pending codes across every request, not
+        /// just within one scope.
+        /// </summary>
+        [Fact]
+        public void AddInfrastructure_RegistersOAuthExchangeCodeStoreAsSingleton()
+        {
+            // Arrange
+            var services = new ServiceCollection();
+            var configuration = CreateValidConfiguration();
+
+            // Act
+            services.AddInfrastructure(configuration);
+
+            // Assert
+            var descriptor = services.FirstOrDefault(sd => sd.ServiceType == typeof(IOAuthExchangeCodeStore));
+            descriptor.Should().NotBeNull();
+            descriptor!.Lifetime.Should().Be(ServiceLifetime.Singleton);
         }
     }
 }

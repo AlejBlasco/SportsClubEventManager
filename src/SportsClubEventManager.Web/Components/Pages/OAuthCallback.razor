@@ -1,0 +1,60 @@
+@page "/oauth-callback"
+@attribute [AllowAnonymous]
+@using SportsClubEventManager.Shared.DTOs
+@using Microsoft.AspNetCore.Authentication
+@using Microsoft.AspNetCore.Authentication.Cookies
+@using Microsoft.AspNetCore.Authorization
+@inject IConfiguration Configuration
+@inject HttpClient HttpClient
+@inject NavigationManager Navigation
+
+<PageTitle>Signing in... - Sports Club Event Manager</PageTitle>
+
+<div class="login-container">
+    <p>Signing you in...</p>
+</div>
+
+@code {
+    [CascadingParameter]
+    private HttpContext HttpContext { get; set; } = default!;
+
+    [SupplyParameterFromQuery(Name = "code")]
+    private string? Code { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (string.IsNullOrEmpty(Code))
+        {
+            Navigation.NavigateTo("/login?error=oauth_failed", forceLoad: true);
+            return;
+        }
+
+        var signedIn = false;
+
+        try
+        {
+            var apiBaseUrl = Configuration["ApiSettings:BaseUrl"] ?? "http://localhost:5240";
+            var response = await HttpClient.PostAsJsonAsync(
+                $"{apiBaseUrl}/api/authentication/oauth-exchange",
+                new OAuthExchangeRequest { Code = Code });
+
+            if (response.IsSuccessStatusCode)
+            {
+                var loginResult = await response.Content.ReadFromJsonAsync<LoginResponse>();
+
+                if (loginResult is not null)
+                {
+                    var principal = AuthenticationClaimsFactory.Create(loginResult);
+                    await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal);
+                    signedIn = true;
+                }
+            }
+        }
+        catch (HttpRequestException)
+        {
+            signedIn = false;
+        }
+
+        Navigation.NavigateTo(signedIn ? "/" : "/login?error=oauth_failed", forceLoad: true);
+    }
+}

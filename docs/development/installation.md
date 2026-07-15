@@ -131,13 +131,19 @@ No requiere Docker en marcha para los tests unitarios; los tests de integración
 
 ## Troubleshooting
 
-### `docker compose up --build` falla al arrancar `cadvisor` en Windows con WSL2
+### `docker compose up --build` falla al arrancar `node-exporter` en Windows con WSL2
 
 ```
 Error response from daemon: path / is mounted on / but it is not a shared or slave mount
 ```
 
-**Causa:** `cadvisor` necesita montar `/:/rootfs:ro` para poder inspeccionar los contenedores del host. Docker requiere que la raíz `/` tenga *mount propagation* `shared` o `slave`, pero WSL2 monta `/` como privada por defecto. No es un problema del stack, sino del entorno WSL2.
+**Causa:** `node-exporter` monta `/:/host:ro,rslave` — la propagación `rslave` exige explícitamente que el mount de origen ya sea `shared`/`slave` en el host, y WSL2 monta `/` como privada por defecto. No es un problema del stack, sino del entorno WSL2. `cadvisor` monta `/:/rootfs:ro` sin flag de propagación, por lo que **no** se ve afectado por este mismo error; si en algún momento sí lo estuviera, la solución es idéntica.
+
+Si solo se necesita la aplicación en sí (sin `prometheus`/`grafana`/`node-exporter`/`cadvisor`), se puede evitar el problema arrancando únicamente los servicios necesarios:
+
+```bash
+docker compose up -d sqlserver api web
+```
 
 **Solución**, dentro de una terminal WSL2 (no PowerShell):
 
@@ -169,3 +175,19 @@ SQL Server exige una contraseña compleja (mínimo 8 caracteres, con mayúscula,
 ### Login con Google no funciona
 
 El acceso mediante Google OAuth2 requiere registrar credenciales reales en [Google Cloud Console](https://console.cloud.google.com/apis/credentials) y rellenar `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` — no existe ningún proveedor simulado para este flujo. Si no se necesita probar este login, usar el login local con email/contraseña (ver [`h. Usuario y contraseña de prueba`](../../README.md#h-usuario-y-contraseña-de-prueba)).
+
+Si sí se necesita probarlo, **crear un OAuth Client dedicado solo para desarrollo local** — nunca reutilizar el de producción, y nunca registrar `localhost` como redirect URI autorizado del cliente de producción:
+
+1. En [Google Cloud Console → Credentials](https://console.cloud.google.com/apis/credentials), en el mismo proyecto que ya use el club (o uno propio), **Create Credentials → OAuth client ID → Web application**.
+2. **Authorized JavaScript origins:** `http://localhost:5240` y `http://localhost:5123`.
+3. **Authorized redirect URIs:** `http://localhost:5240/signin-google` (el `CallbackPath` que gestiona internamente el middleware de Google, no una ruta propia de la aplicación).
+4. Si la pantalla de consentimiento OAuth está en modo "Testing", añadir la cuenta de Google que se vaya a usar como "Test user", o Google rechazará el login igualmente.
+5. Copiar el `Client ID`/`Client Secret` resultantes a `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` en `.env`, y recrear el contenedor `api`: `docker compose up -d --force-recreate api`.
+
+Errores esperados según el estado de la configuración:
+
+| Síntoma | Causa |
+|---|---|
+| `Error 401: invalid_client — The OAuth client was not found` | `GOOGLE_CLIENT_ID` sigue siendo el placeholder de `.env.example`, o no corresponde a ningún cliente OAuth real |
+| `redirect_uri_mismatch` | El `client_id` usado es válido pero no tiene `http://localhost:5240/signin-google` en sus "Authorized redirect URIs" (típicamente por reutilizar el cliente de producción, cuyos redirect URIs solo cubren el dominio público) |
+| Tras el login, `https://localhost:7123/oauth-callback?...` → "No se pudo acceder a este sitio web" | Falta `WebAppBaseUrl` en el servicio `api` del compose — debe apuntar a `http://localhost:${WEB_PORT:-5123}` (ya corregido en `infrastructure/docker-compose/docker-compose.yml`; ver detalle en [`docs/technical/US-27-oauth2-authentication.md`](../technical/US-27-oauth2-authentication.md#configuración-real-en-docker-compose-local-2026-07-15)) |

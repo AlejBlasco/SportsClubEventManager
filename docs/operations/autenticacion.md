@@ -21,34 +21,40 @@ flowchart TD
     GoogleRedirect --> GoogleConsent["Usuario autentica y autoriza en Google"]
     GoogleConsent --> GoogleCallback["GET /api/authentication/google/callback"]
     GoogleCallback --> GoogleCheck{"¿Autenticación de Google correcta?"}
-    GoogleCheck -->|No| GoogleError["Redirección a /login?error=..."]
+    GoogleCheck -->|No| GoogleError["Redirección a /login?error=...<br/>(mensaje visible en el formulario)"]
     GoogleError --> Login
-    GoogleCheck -->|Sí| Cookies
+    GoogleCheck -->|Sí| ExchangeCode["Se emite un código de intercambio<br/>de un solo uso (IOAuthExchangeCodeStore)<br/>y redirige a Web: /oauth-callback?code=..."]
+    ExchangeCode --> OAuthCallbackPage["OAuthCallback.razor (Web)<br/>POST /api/authentication/oauth-exchange<br/>servidor-a-servidor, con el código"]
+    OAuthCallbackPage --> ExchangeCheck{"¿Código válido y no caducado?"}
+    ExchangeCheck -->|No| GoogleError
+    ExchangeCheck -->|Sí| Cookies
 
-    Cookies["Se emiten access_token (JWT, 30 min)<br/>y refresh_token (7 días)<br/>como cookies HttpOnly + Secure + SameSite=Strict"]
+    Cookies["Web construye su propio ClaimsPrincipal<br/>(AuthenticationClaimsFactory) y lo persiste<br/>como cookie de sesión propia vía HttpContext.SignInAsync"]
     Cookies --> Home["Redirección a la aplicación<br/>(rol User o Administrator determina el menú visible)"]
 
-    Home --> Expired{"¿access_token expirado<br/>en una petición posterior?"}
-    Expired -->|Sí| Refresh["POST /api/authentication/refresh<br/>(RefreshTokenCommand)"]
-    Refresh --> RefreshCheck{"¿refresh_token válido?"}
-    RefreshCheck -->|Sí| Cookies
-    RefreshCheck -->|No| Login
+    Home --> Expired{"¿access_token (30 min) expirado<br/>en una petición posterior a la Api?"}
+    Expired -->|Sí| Fail401["401 en /profile, /my-registrations, etc.<br/>Web NO llama a /api/authentication/refresh<br/>(limitación conocida)"]
+    Fail401 --> Login
 
     Home --> LogoutAction["Usuario pulsa 'Cerrar sesión'"]
-    LogoutAction --> LogoutCmd["POST /api/authentication/logout<br/>(LogoutCommand)"]
-    LogoutCmd --> Revoke["Se revoca el refresh_token en base de datos<br/>y se eliminan las cookies"]
-    Revoke --> Login
+    LogoutAction --> WebLogout["GET /account/logout (Web)<br/>IAccountLogoutService llama a<br/>POST /api/authentication/logout (best-effort)"]
+    WebLogout --> RevokeCheck{"¿Api respondió 204?"}
+    RevokeCheck -->|Sí| RevokeOk["refresh_token revocado en base de datos<br/>(LogoutCommand)"]
+    RevokeCheck -->|No, p. ej. access_token ya caducado| RevokeSkip["Se ignora el fallo:<br/>revocar en la Api es best-effort"]
+    RevokeOk --> WebSignOut["Se limpia la cookie de sesión propia de Web"]
+    RevokeSkip --> WebSignOut
+    WebSignOut --> Login
 ```
 
 ## Explicación del flujo
 
 La aplicación admite dos métodos de acceso, gestionados ambos por `AuthenticationController` (`SportsClubEventManager.Api`):
 
-- **Login local (email + contraseña)**: el formulario envía las credenciales a `POST /api/authentication/login`, que despacha un `LoginCommand` vía MediatR. El handler compara el hash de la contraseña (`BCrypt.Net-Next`, factor de coste 12) y, si es válido, emite un JWT de acceso y un refresh token.
-- **Login federado con Google OAuth2**: el botón "Iniciar sesión con Google" invoca `GET /api/authentication/google`, que lanza un `Challenge` contra el esquema de Google (`Microsoft.AspNetCore.Authentication.Google`). Tras el consentimiento del usuario en Google, este redirige a `GET /api/authentication/google/callback`, donde la Api recupera el `access_token`/`refresh_token` emitidos y continúa por el mismo camino que el login local.
+- **Login local (email + contraseña)**: el formulario envía las credenciales a `POST /api/authentication/login`, que despacha un `LoginCommand` vía MediatR. El handler compara el hash de la contraseña (`BCrypt.Net-Next`, factor de coste 12) y, si es válido, emite un JWT de acceso y un refresh token en la respuesta.
+- **Login federado con Google OAuth2**: el botón "Iniciar sesión con Google" invoca `GET /api/authentication/google`, que lanza un `Challenge` contra el esquema de Google (`Microsoft.AspNetCore.Authentication.Google`). Tras el consentimiento del usuario en Google, este redirige a `GET /api/authentication/google/callback`, donde la Api recupera el `access_token`/`refresh_token` emitidos. **Como el navegador está hablando con el origen de la Api en este punto, no con el de Web**, la Api no puede establecer directamente la sesión de Web: en su lugar emite un código de intercambio de un solo uso (`IOAuthExchangeCodeStore`, en memoria) y redirige a `Web`'s `/oauth-callback?code=...`. Esa página (`OAuthCallback.razor`) canjea el código llamando servidor-a-servidor a `POST /api/authentication/oauth-exchange`, obteniendo los mismos datos que devolvería el login local (issue #125 — antes de este fix, la Api establecía cookies en su propio origen y redirigía a la raíz de Web, dejando al usuario aparentemente autenticado pero sin sesión real en Web).
 
-En ambos casos, el resultado se materializa en dos **cookies `HttpOnly`, `Secure` y `SameSite=Strict`**: `access_token` (JWT, expira a los 30 minutos) y `refresh_token` (expira a los 7 días). El uso de cookies `HttpOnly` — en vez de almacenar el token en `localStorage` — evita que un script malicioso inyectado (XSS) pueda robar la sesión.
+En ambos flujos, el resultado (`LoginResponse` con el JWT de acceso, el refresh token y los datos del usuario) llega a **Web**, que construye su propio `ClaimsPrincipal` (`AuthenticationClaimsFactory`, compartido por ambos flujos) — incluyendo el JWT de acceso como claim propio, usado luego por `AuthTokenHandler` para autenticar las llamadas servidor-a-servidor a la Api — y lo persiste mediante su propio esquema de cookie de autenticación (`HttpOnly`, `Secure` fuera de `Development`, expira a los 30 minutos con expiración deslizante). El uso de una cookie `HttpOnly` — en vez de almacenar el token en `localStorage` — evita que un script malicioso inyectado (XSS) pueda robar la sesión.
 
-Cuando el `access_token` caduca durante el uso normal de la aplicación, `POST /api/authentication/refresh` (`RefreshTokenCommand`) emite un nuevo par de tokens sin que el usuario tenga que volver a introducir sus credenciales, siempre que el `refresh_token` siga siendo válido. Si también ha expirado o ha sido revocado, el usuario es redirigido de nuevo a la pantalla de login.
+> **Limitación conocida — sin refresco automático:** aunque `POST /api/authentication/refresh` (`RefreshTokenCommand`) existe y funciona, **Web nunca lo invoca**. El `AccessToken` que `AuthTokenHandler` adjunta a las llamadas servidor-a-servidor hacia la Api caduca a los 30 minutos desde el login y no se renueva, aunque la cookie de sesión del propio Web siga viva más tiempo (`SlidingExpiration`). Pasado ese plazo, páginas como `/profile` o `/my-registrations` vuelven a fallar con 401 hasta que el usuario cierra sesión y vuelve a iniciarla. Ver el detalle en [`docs/technical/US-27-oauth2-authentication.md`](../technical/US-27-oauth2-authentication.md#sin-refresco-automático-de-token-desde-el-web).
 
-`POST /api/authentication/logout` (`LogoutCommand`, requiere estar autenticado) revoca el `refresh_token` almacenado en base de datos y limpia ambas cookies — un token robado después de un logout ya no puede usarse para obtener una nueva sesión, aunque el `access_token` JWT original técnicamente siga siendo válido hasta su expiración natural (máximo 30 minutos).
+`GET /account/logout` en Web (`LoginDisplay.razor`) ya no se limita a limpiar la cookie de sesión propia de Web: primero llama a `POST /api/authentication/logout` a través de `IAccountLogoutService` (usando el `access_token` que `AuthTokenHandler` ya adjunta), que ejecuta `LogoutCommand` y revoca el `refresh_token` en base de datos — un `refresh_token` usado después del logout es rechazado con `401` inmediatamente, en vez de seguir siendo válido hasta su expiración natural (7 días). La llamada es *best-effort*: si falla (Api caída, o el `access_token` ya caducado — ver la limitación de "sin refresco automático" justo arriba), la sesión de Web se cierra igualmente; revocar en la Api nunca debe bloquear que el usuario pueda cerrar su sesión local. Ver el detalle de la corrección en [`docs/technical/US-27-oauth2-authentication.md`](../technical/US-27-oauth2-authentication.md#corrección-logout-del-web-ahora-revoca-el-refresh-token-en-el-servidor-2026-07-15).

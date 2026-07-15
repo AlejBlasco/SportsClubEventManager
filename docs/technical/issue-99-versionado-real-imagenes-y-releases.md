@@ -2,7 +2,9 @@
 
 ## Overview
 
-Esta funcionalidad (issue [#99](https://github.com/AlejBlasco/SportsClubEventManager/issues/99)) sustituye el valor estático `<Version>1.0.0</Version>` de `Directory.Build.props` — que nunca correspondió a una release real y nunca se incrementaba — por un proceso de versionado manual, ligero y dirigido por el desarrollador, integrado en la convención de PR `release: vX.Y.Z` que el repositorio ya usaba. Añade además un workflow nuevo, `.github/workflows/release.yml`, disparado por el `push` del tag de Git `vX.Y.Z` que el desarrollador ya crea manualmente hoy, que valida la consistencia entre el tag y `Directory.Build.props`, comprueba que `CHANGELOG.md` documenta contenido real para esa versión, y publica automáticamente la GitHub Release usando ese contenido como notas.
+Esta funcionalidad (issue [#99](https://github.com/AlejBlasco/SportsClubEventManager/issues/99)) sustituye el valor estático `<Version>1.0.0</Version>` de `Directory.Build.props` — que nunca correspondió a una release real y nunca se incrementaba — por un proceso de versionado manual, ligero y dirigido por el desarrollador, integrado en la convención de PR `release: vX.Y.Z` que el repositorio ya usaba. Añade además un workflow nuevo, `.github/workflows/release.yml`, disparado por el `push` del tag de Git `vX.Y.Z`, que valida la consistencia entre el tag y `Directory.Build.props`, comprueba que `CHANGELOG.md` documenta contenido real para esa versión, y publica automáticamente la GitHub Release usando ese contenido como notas.
+
+> **Actualización (2026-07-15):** el tag `vX.Y.Z` que dispara `release.yml`, descrito como paso manual del desarrollador en el resto de este documento, ahora se crea **automáticamente** en el caso normal — ver [`## Automatización del tag vX.Y.Z (2026-07-15)`](#automatización-del-tag-vxyz-2026-07-15) al final de este documento. El resto del documento se deja tal cual para conservar el razonamiento original de diseño (por qué versionado manual, por qué workflow separado); esa sección final documenta solo lo que cambió y por qué.
 
 Es un seguimiento explícito de la issue [#44](../technical/issue-44-validacion-imagenes-docker-pipeline-cd.md) (validación de imágenes Docker en `cd.yml`): esa issue ya dejó `build-and-push` etiquetando las imágenes con `latest`, `sha-<sha>` y `<version>` (leído de `Directory.Build.props`), pero `<version>` seguía siendo el valor estático `1.0.0`. Esta issue no toca la mecánica de tageo de imágenes (ya correcta) ni la validación de smoke-test/vulnerabilidades — solo hace que `<Version>` deje de ser un valor muerto y que la creación de la GitHub Release deje de ser 100% manual.
 
@@ -220,3 +222,44 @@ Flujo de extremo a extremo (requiere push/tag reales, no ejecutado por el agente
 - **Upgrade path a GitVersion/semantic-release**: documentado (sin implementar) como opción futura si se normalizan antes los Conventional Commits del repositorio (linting de PR title, plantillas de squash message). Ver `## Por qué versionado manual y no GitVersion/semantic-release`.
 - **Gate de CI para el orden bump-antes-que-tag**: descartado deliberadamente por ahora (ver `## Orden de operaciones recomendado`); si el proyecto creciera a varios mantenedores, sería el primer candidato a reconsiderar.
 - **Lint de `CHANGELOG.md` como status check sobre la propia PR de release**: evaluado y descartado en el diseño — se prefirió mantener la verificación en `release.yml` (disparado por el tag) en vez de añadir un status check nuevo sobre la PR, que además habría requerido tocar `branch-protection.yml`.
+
+## Automatización del tag `vX.Y.Z` (2026-07-15)
+
+El resto de este documento describe el tag `vX.Y.Z` como un paso manual del desarrollador (`## Orden de operaciones recomendado`, punto 3), decisión tomada explícitamente para no tocar `cd.yml` (`## Qué no se ha construido`, último punto). Esta sección documenta por qué y cómo cambió eso.
+
+### Motivación
+
+Surgió al comparar con el mecanismo ya existente `tag-deployed-version` (issue #45): ese job de `cd.yml` ya crea automáticamente el tag `deployed/homelab/<sha-corto>` tras cada despliegue exitoso, puramente para trazabilidad/rollback. El tag `vX.Y.Z`, en cambio, seguía siendo 100% manual (Paso 6 de `docs/deployment/homelab-deployment.md`) pese a que toda la información necesaria para crearlo automáticamente ya existe en el propio pipeline: `Directory.Build.props` (la versión) y `CHANGELOG.md` (si esa versión está documentada) — las mismas dos fuentes que `release.yml` ya valida tras el hecho.
+
+### Diseño
+
+Nuevo job `tag-release-version` en `cd.yml`, con `needs: tag-deployed-version` (corre justo después, mismo `permissions: contents: write`):
+
+```mermaid
+flowchart TD
+    A["tag-deployed-version\n(ya existente, sin cambios)"] --> B["tag-release-version"]
+    B --> C["Extract version from\nDirectory.Build.props"]
+    C --> D{"git rev-parse vX.Y.Z\n¿ya existe?"}
+    D -->|Sí| E["No hace nada\n(deploy sin bump de versión,\ncaso más común)"]
+    D -->|No| F["extract-changelog-section.sh X.Y.Z CHANGELOG.md\n(reutilizado, no reimplementado)"]
+    F -->|"exit 0\n(sección con contenido)"| G["git tag vX.Y.Z\ngit push origin vX.Y.Z"]
+    F -->|"exit 1 o 2\n(sección ausente o vacía)"| H["::warning::\nno crea el tag, no falla el job"]
+    G --> I["push del tag dispara\nrelease.yml de forma independiente\n(sin cambios en release.yml)"]
+```
+
+Puntos de diseño verificados/decididos durante la implementación:
+
+- **Reutiliza `extract-changelog-section.sh` tal cual**, sin duplicar su lógica de parseo — el mismo script que ya usa `release.yml` para lo mismo, invocado en modo verificación (stdout descartado, solo interesa el código de salida), igual que el step "Verify CHANGELOG documents this release" de `release.yml`.
+- **`git rev-parse "vX.Y.Z"` como comprobación de idempotencia**, sobre un checkout con `fetch-depth: 0` (necesario para que los tags existentes sean visibles localmente; el resto de jobs de `cd.yml` usan el checkout superficial por defecto, que no trae tags). Sin este chequeo, cada deploy sin bump de versión (la mayoría) intentaría recrear un tag ya existente y fallaría con "tag already exists".
+- **Un `CHANGELOG.md` incompleto emite `::warning::` y omite el tag, sin hacer fallar el job.** Decisión explícita, distinta de cómo `release.yml` sí falla (`exit 1`) ante el mismo problema: en `release.yml` fallar es correcto porque el tag ya existe y algo va mal con él; aquí, en cambio, `tag-deployed-version` (el job anterior) ya confirmó que el despliegue al homelab tuvo éxito — poner en rojo `tag-release-version` dejaría la falsa impresión de que el propio despliegue falló. El coste de este trade-off es que un CHANGELOG mal cerrado se descubre por un aviso amarillo en el resumen del run, no por un job rojo — mitigado porque el Paso 2 del runbook de release ya hace el cierre del CHANGELOG en el mismo commit que el bump de versión, así que este camino de aviso debería ser la excepción, no la norma.
+- **No se ha tocado `release.yml`.** El tag `vX.Y.Z`, se cree a mano o automáticamente, sigue siendo el único disparador de `release.yml`, que conserva sus propias validaciones (versión vs. tag, CHANGELOG) intactas como defensa en profundidad — si `tag-release-version` tuviera algún fallo lógico y creara un tag inconsistente, `release.yml` seguiría rechazándolo.
+- **No afecta a `rollback.yml`.** Ese workflow vive fuera de `cd.yml` y no se dispara por pushes a `master`, así que un rollback (que no cambia `Directory.Build.props`) nunca provoca la creación de un tag `vX.Y.Z` nuevo.
+
+### Impacto en el runbook de release
+
+`docs/deployment/homelab-deployment.md`, Paso 6, pasa de instrucciones manuales obligatorias a "automático en el caso normal, con fallback manual documentado para cuando `tag-release-version` avisa". El Paso 2 (bump de versión + cierre de CHANGELOG en la misma PR de release) no cambia — sigue siendo la práctica que hace que el camino automático funcione siempre.
+
+### Verificación
+
+- `actionlint` sobre `cd.yml` tras el cambio: sin errores.
+- No verificado end-to-end contra un despliegue real en el momento de escribir esto (requiere un push a `master` con bump de versión real) — pendiente de confirmar en el próximo release real que `tag-release-version` crea el tag y que `release.yml` se dispara solo, sin intervención manual.

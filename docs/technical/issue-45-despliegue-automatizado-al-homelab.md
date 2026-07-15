@@ -42,11 +42,13 @@ Un fallo en cualquiera de los dos aquí significa que el despliegue está genuin
 
 ## Espacio de nombres de tags: `deployed/homelab/<sha>` vs. `vX.Y.Z`
 
-`tag-deployed-version` crea tags ligeros con el formato `deployed/homelab/<sha-corto>` (p. ej. `deployed/homelab/abc1234`), **deliberadamente separados** del proceso de release manual ya existente en el repositorio (tags `v0.1.0`, `v0.2.0`, creados por el desarrollador en PRs `release: vX.Y.Z`, ver `CHANGELOG.md`):
+`tag-deployed-version` crea tags ligeros con el formato `deployed/homelab/<sha-corto>` (p. ej. `deployed/homelab/abc1234`), **deliberadamente separados** del proceso de release SemVer ya existente en el repositorio (tags `v0.1.0`, `v0.2.0`, creados en PRs `release: vX.Y.Z`, ver `CHANGELOG.md`):
 
 - Los despliegues al homelab ocurren en cada `push` a `master`, con una cadencia potencialmente muy distinta a la de una release SemVer formal.
 - `deployed/homelab/<sha>` es la **fuente de verdad de "qué se ha desplegado con éxito y cuándo"** — es lo que `rollback.yml` valida como input `version` válido. No implica ni sustituye ninguna decisión de versionado de producto.
 - El propio workflow crea y empuja el tag con el `GITHUB_TOKEN` de la ejecución de Actions — nunca es una acción manual del desarrollador ni de ningún agente del pipeline.
+
+> **Actualización (2026-07-15, issue #99):** el tag `vX.Y.Z` ya **no** es puramente manual — el job `tag-release-version` (justo después de `tag-deployed-version`, mismo `needs`/`permissions`) lo crea automáticamente en el caso normal, si `Directory.Build.props` trae una versión sin tag todavía y `CHANGELOG.md` ya la documenta. Sigue siendo un espacio de nombres separado y con propósito distinto de `deployed/homelab/<sha>` — la separación conceptual de este apartado no cambia, solo quién ejecuta materialmente el `git tag`/`git push` del lado `vX.Y.Z`. Detalle completo en [`docs/technical/issue-99-versionado-real-imagenes-y-releases.md`](issue-99-versionado-real-imagenes-y-releases.md#automatización-del-tag-vxyz-2026-07-15).
 
 ## Rollback: workflow, scripts y prerrequisitos
 

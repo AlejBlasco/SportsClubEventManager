@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `cd.yml`: new `tag-release-version` job automatically creates and pushes the `vX.Y.Z` git tag after a successful homelab deploy, when `Directory.Build.props`'s version isn't tagged yet and `CHANGELOG.md` documents it — triggering `release.yml` (GitHub Release creation) with no manual step, for the normal release flow. Falls back to a `::warning::` (never fails the job) if `CHANGELOG.md` isn't ready yet, since the deploy itself already succeeded by that point
+
+### Fixed
+
+- Google OAuth2 login no longer desyncs Web's and the Api's sessions: `GoogleCallback` used to set the `access_token`/`refresh_token` cookies on the Api's own origin and redirect the browser to Web's root, but those cookies were never visible to Web (different origin/port), leaving the user seemingly logged in with no actual session. Replaced with a one-time exchange code hand-off — the Api redirects to Web's new `/oauth-callback` page (`OAuthCallback.razor`) with a short-lived code minted by the new `IOAuthExchangeCodeStore`, which Web redeems server-to-server (`POST /api/authentication/oauth-exchange`) to build its own session, the same way local email/password login already does (#125)
+- Login page silently swallowed `?error=oauth_failed`/`?error=token_missing` redirects from the Api; now shown to the user as a visible error message
+- Local Docker Compose dev environment: `WebAppBaseUrl` was never set on the `api` service in `docker-compose.yml` (only in `docker-compose.prod.yml`), so the post-login redirect fell back to `https://localhost:7123` — a port not exposed by any container — instead of the actual Web container port
+- `GET /account/logout` only cleared Web's own session cookie and never called `POST /api/authentication/logout`, so a user's `refresh_token` stayed valid in the database for its full 7-day lifetime after "logging out". Added `IAccountLogoutService`/`AccountLogoutService` (same typed-`HttpClient` pattern as the app's other Api services) so logout now revokes the `refresh_token` server-side too, best-effort (a failed revoke — e.g. an already-expired `access_token` — never blocks the local sign-out)
+
+### Changed
+
+- Extracted the `ClaimsPrincipal`-building logic (used after both local login and the new OAuth exchange) out of `Login.razor` into a shared `AuthenticationClaimsFactory`
+- `docs/development/installation.md`: expanded the "Login con Google no funciona" troubleshooting with step-by-step instructions for creating a dev-only Google OAuth Client, and a table of the `invalid_client`/`redirect_uri_mismatch`/unreachable-callback symptoms and their causes
+- `docs/development/installation.md`: corrected the WSL2 mount-propagation troubleshooting entry — the container that actually fails is `node-exporter` (explicit `rslave` propagation), not `cadvisor` (plain `ro` mount, unaffected)
+
 ## [0.4.0] - 2026-07-14
 
 ### Added

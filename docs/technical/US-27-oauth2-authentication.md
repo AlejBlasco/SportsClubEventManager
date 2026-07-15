@@ -177,9 +177,17 @@ La arquitectura sigue principios de **Arquitectura Limpia**, manteniendo separac
    - Asigna tokens al Usuario
    - Actualiza `LastLoginAt`
    - Persiste cambios en base de datos (SEGUNDA SAVE)
-10. Establece cookies seguras (iguales a flujo local)
-11. Redirige a página de inicio
-12. Usuario autenticado en aplicación
+10. `AuthenticationController.GoogleCallback()` recibe el resultado de Google (email, nombre, rol,
+    `access_token`/`refresh_token` de aplicación, como claims del ticket temporal de Google) y genera
+    un **código de intercambio de un solo uso** (GUID), guardándolo unos segundos (`IOAuthExchangeCodeStore`,
+    ver [Corrección: hand-off Api → Web para Google](#corrección-hand-off-api--web-para-google-issue-125)).
+11. Redirige el navegador a `{WebAppBaseUrl}/oauth-callback?code=<código>` — **nunca** con los tokens
+    reales en la URL ni en cookies de la Api.
+12. La página `/oauth-callback` de `Web` canjea ese código llamando servidor-a-servidor a
+    `POST /api/authentication/oauth-exchange`, construye su propia `ClaimsIdentity` (idéntica a la del
+    flujo local, vía `AuthenticationClaimsFactory`) y llama `HttpContext.SignInAsync` sobre su propio
+    `HttpContext` — estableciendo la cookie `.SportsClubEventManager.Auth` exactamente igual que el
+    login local. Usuario autenticado en `Web`.
 
 #### Flujo de Refresco de Token
 
@@ -471,12 +479,37 @@ error=<error_code> — si usuario rechazó (opcional)
 ```
 
 **Response 302 (Redirect):**
-- Si éxito: Redirige a `/` (página de inicio)
-- Si error: Redirige a `/login?error=provider_error` (página de login con mensaje de error)
+- Si éxito: Redirige a `{WebAppBaseUrl}/oauth-callback?code=<código de intercambio de un solo uso>`
+- Si error: Redirige a `{WebAppBaseUrl}/login?error=oauth_failed` o `?error=token_missing`
 
-**Cookies establecidas (si éxito):**
-- `access_token`: JWT de aplicación
-- `refresh_token`: Token refresco de aplicación
+> Desde la corrección del issue #125, este endpoint ya **no** establece cookies `access_token`/
+> `refresh_token` en la respuesta de la Api ni redirige nunca con los tokens reales en la URL — ver
+> [Corrección: hand-off Api → Web para Google](#corrección-hand-off-api--web-para-google-issue-125).
+
+---
+
+### POST /api/authentication/oauth-exchange
+
+**Descripción:** Canjea el código de intercambio de un solo uso emitido por `GET /signin-google` por
+los tokens reales. Lo llama `Web` (página `/oauth-callback`) servidor-a-servidor, igual que
+`HandleLocalLogin` llama a `POST /api/authentication/login`.
+
+**Autenticación:** No requerida (endpoint público; el código de un solo uso es el propio secreto)  
+**Autorización:** N/A
+
+**Request:**
+```json
+{
+  "code": "string — código de intercambio recibido en la query string de /oauth-callback"
+}
+```
+
+**Response 200 (OK):** Mismo shape que `POST /api/authentication/login` (`LoginResponse`).
+
+**Respuestas de Error:**
+| Status | Causa |
+|--------|-------|
+| 401 | Código desconocido, ya canjeado, o expirado (TTL de 30 segundos) |
 
 ---
 
@@ -532,11 +565,61 @@ builder.Services.AddHttpClient<IUserProfileService, UserProfileService>(client =
   `SlidingExpiration` y siga viva más tiempo. Pasado ese plazo, las llamadas a la Api volverán a
   devolver 401 hasta que el usuario cierre sesión y vuelva a iniciarla. Implementar el flujo de
   refresh desde el Web queda pendiente como mejora futura.
-- **Login con Google no cubierto:** el callback de OAuth2 de Google se resuelve enteramente en
-  la Api (otro origen/puerto); no existe en el Web un endpoint que reciba ese callback y
-  establezca la cookie `.SportsClubEventManager.Auth` con `access_token`/`role`. Un usuario que
-  inicie sesión con Google seguirá sin poder llamar a los endpoints `[Authorize]` de la Api desde
-  el Web hasta que se implemente esa integración.
+- ~~**Login con Google no cubierto**~~ — **Resuelto** (issue #125, ver
+  [Corrección: hand-off Api → Web para Google](#corrección-hand-off-api--web-para-google-issue-125)).
+
+---
+
+## Corrección: Hand-off Api → Web para Google (issue #125)
+
+**Añadido:** 2026-07-14 (corrección post-implementación)
+
+### Problema
+
+`Web` y `Api` mantienen esquemas de sesión completamente independientes. El login local funciona
+porque `Web` llama a la Api servidor-a-servidor y es el propio proceso de `Web` quien construye el
+`ClaimsPrincipal` y llama a `HttpContext.SignInAsync` sobre su propio `HttpContext`. El login con
+Google es distinto por necesidad: el navegador habla directamente con la Api (para ir y volver de la
+pantalla de consentimiento de Google), así que `GoogleCallback()` establecía las cookies
+`access_token`/`refresh_token` en la respuesta de la propia Api (otro origen) y redirigía el navegador
+a `Web` — pero nada en ese flujo llegaba a ejecutar `SignInAsync` sobre el `HttpContext` de `Web`. El
+usuario completaba el consentimiento de Google sin error visible, pero volvía a la home sin quedar
+autenticado en `Web`.
+
+### Solución
+
+Se reutiliza el propio patrón "authorization code" de OAuth2 para el hand-off entre Api y Web, sin
+poner nunca los tokens reales en la URL ni en una cookie de otro origen:
+
+1. **`IOAuthExchangeCodeStore`** (`Application.Common.Interfaces`, implementado en
+   `Infrastructure.Authentication.OAuth2.OAuthExchangeCodeStore` sobre `IMemoryCache`, registrado como
+   singleton) — genera un código opaco de un solo uso (GUID) asociado a un `AuthenticationResult`, con
+   TTL de 30 segundos, y lo borra al consumirlo (single-use: un código reproducido, p. ej. con el botón
+   atrás del navegador, ya no funciona). Válido porque la Api se despliega con una única réplica; un
+   despliegue con varias réplicas necesitaría un almacén compartido (p. ej. una tabla).
+2. **`AuthenticationController.GoogleCallback()`** ahora construye un `AuthenticationResult` completo
+   (userId, email, nombre, rol, tokens, `expiresIn`) a partir de los claims del ticket temporal de
+   Google, crea un código con `IOAuthExchangeCodeStore.CreateCode()`, y redirige a
+   `{WebAppBaseUrl}/oauth-callback?code=...` — ya no establece cookies `access_token`/`refresh_token`
+   en la respuesta de la Api para este flujo.
+3. **`POST /api/authentication/oauth-exchange`** (nuevo endpoint) — canjea el código por el
+   `AuthenticationResult` original (`IOAuthExchangeCodeStore.ConsumeCode()`) y lo devuelve como
+   `LoginResponse`, el mismo shape que `POST /api/authentication/login`.
+4. **`/oauth-callback`** (`SportsClubEventManager.Web/Components/Pages/OAuthCallback.razor`, página
+   nueva) — recibe `?code=`, llama servidor-a-servidor a `oauth-exchange`, y construye el
+   `ClaimsPrincipal`/`SignInAsync` exactamente igual que `HandleLocalLogin`.
+5. **`AuthenticationClaimsFactory`** (`SportsClubEventManager.Web/Services`, nueva clase estática) —
+   extrae a un único punto la construcción de la `ClaimsIdentity` de Web (`NameIdentifier`, `Name`,
+   `Email`, `Role`, `access_token`), usada ahora por `Login.razor` y por `OAuthCallback.razor`. Antes
+   esa lógica solo existía inline en `Login.razor`; centralizarla evita que una futura tercera vía de
+   login (p. ej. Microsoft OAuth2, diferido desde US-27) repita el mismo bug de origen — olvidar
+   replicar un claim en un segundo sitio ya causó el fix de `AuthTokenHandler` del 2026-07-08 anterior.
+6. `Login.razor` ahora también muestra un mensaje de error genérico si llega con
+   `?error=oauth_failed` o `?error=token_missing` (antes esos parámetros, ya redirigidos por
+   `GoogleCallback()` en caso de fallo, no se leían ni se mostraban).
+
+La autenticación local no se modifica: sigue llamando a `POST /api/authentication/login` exactamente
+igual que antes.
 
 ---
 
@@ -767,6 +850,38 @@ Solo Google está implementado en US-27. Microsoft OAuth2 seguirá el mismo patr
 
 El sistema registra `LastLoginAt` pero no centraliza eventos de seguridad (intentos fallidos, logouts forzados, etc). Se recomienda agregar auditoría centralizada para monitoring en producción.
 
+### Corrección: Logout del Web Ahora Revoca el Refresh Token en el Servidor (2026-07-15)
+
+**Detectado:** `GET /account/logout` (`Program.cs`, invocado desde `LoginDisplay.razor`) solo hacía
+`HttpContext.SignOutAsync` sobre la cookie de sesión propia de Web — **nunca llamaba** a
+`POST /api/authentication/logout` (`LogoutCommand`), el único punto que revoca el `refresh_token`
+en base de datos. Consecuencia: tras un "logout" visible en la UI, el `refresh_token` emitido en su
+día seguía siendo válido contra `POST /api/authentication/refresh` hasta su expiración natural (7
+días) — el logout solo cerraba la sesión de Web, sin invalidar las credenciales subyacentes de la
+Api. Detectado auditando el flujo de logout mientras se documentaba la corrección del hand-off
+Google↔Web (issue #125); no formaba parte de esa corrección.
+
+**Solución:** a diferencia de lo planteado inicialmente, **no hizo falta** añadir el `refresh_token`
+como claim en la cookie de Web — `POST /api/authentication/logout` está protegido con `[Authorize]`
+y obtiene el `UserId` del propio `access_token` (Bearer) del caller vía `ClaimTypes.NameIdentifier`,
+y Web ya adjunta ese `access_token` automáticamente a través de `AuthTokenHandler`. Se añadió:
+
+1. **`IAccountLogoutService`/`AccountLogoutService`** (`SportsClubEventManager.Web/Services/`) —
+   nuevo servicio tipado, mismo patrón que los 7 servicios existentes (`EventService`,
+   `UserProfileService`, etc.), que llama a `POST /api/authentication/logout` sin cuerpo.
+2. **`Program.cs`** — nuevo `HttpClient` tipado registrado con la misma cadena de handlers
+   (`AuthTokenHandler` → `CorrelationIdHandler` → `ApiCallLoggingHandler`) que el resto. El endpoint
+   `/account/logout` ahora llama a `IAccountLogoutService.LogoutAsync()` en un `try/catch` antes de
+   `SignOutAsync`: si la llamada falla (Api caída, o el `access_token` ya caducado — ver
+   "Sin Refresco Automático de Token desde el Web" más abajo, que sigue siendo una limitación
+   independiente), la sesión de Web se cierra igualmente — la revocación en la Api es best-effort,
+   nunca debe bloquear que el usuario pueda cerrar su sesión local.
+
+Verificado de punta a punta: login (Google) → clic en "Cerrar sesión" → `GET /account/logout` →
+`POST /api/authentication/logout` → `204` → `refresh_token` revocado en base de datos (confirmado
+también a nivel Api de forma aislada: un `refresh_token` usado contra
+`POST /api/authentication/refresh` tras el logout devuelve `401`).
+
 ---
 
 ## Consideraciones de Seguridad
@@ -967,6 +1082,63 @@ seguidos para activar el login con Google en producción:
    (`SetAuthCookies`), no esta. Este bug llevaba presente desde la implementación original de esta
    historia — nunca se había probado el flujo de punta a punta contra un Google real hasta que la
    Api tuvo una URL pública (punto 1).
+
+### Configuración real en Docker Compose local (2026-07-15)
+
+Al levantar el stack en local (`docker compose up -d`, ver
+[`docs/development/installation.md`](../development/installation.md)) con las credenciales de
+`.env.example` sin rellenar, el botón "Sign in with Google" reproduce dos fallos distintos, en
+este orden, antes de llegar a un login funcional:
+
+1. **`.env` con placeholders (`GOOGLE_CLIENT_ID=local-dev-placeholder-client-id`):** Google
+   devuelve `Error 401: invalid_client — The OAuth client was not found.` — comportamiento
+   esperado, no es un bug de la aplicación: la Api construye correctamente el `redirect_uri` y lo
+   envía a Google, pero el `client_id` no corresponde a ningún cliente OAuth real.
+
+2. **Reutilizar el `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` de producción en local:** Google
+   responde con `redirect_uri_mismatch` en vez de `invalid_client` — el cliente existe, pero sus
+   "Authorized redirect URIs" en Google Cloud Console solo incluyen el dominio de producción
+   (`https://sportsclub-api.ablasco.com/signin-google`, ver sección anterior), no
+   `http://localhost:5240/signin-google`. **No se debe registrar `localhost` como redirect URI
+   autorizado del cliente de producción** solo para poder probar en local.
+
+   **Solución adoptada:** crear un **OAuth Client independiente, solo para desarrollo**, en el
+   mismo proyecto de Google Cloud (`sportsclub-502119`):
+   - **Application type:** Web application
+   - **Name:** `SportsClubEventManager - Local Dev`
+   - **Authorized JavaScript origins:** `http://localhost:5240`, `http://localhost:5123`
+   - **Authorized redirect URIs:** `http://localhost:5240/signin-google`
+   - Si la pantalla de consentimiento sigue en modo "Testing", la cuenta de Google usada para
+     probar debe estar dada de alta como "Test user".
+
+   El `Client ID`/`Client Secret` resultantes se pegan en `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET`
+   del `.env` local — nunca los de producción, que no deben salir de Portainer.
+
+3. **Fix de configuración necesario — `WebAppBaseUrl` ausente en el compose de dev:** con un
+   cliente OAuth ya correctamente configurado, el navegador llegaba tras el login a
+   `https://localhost:7123/oauth-callback?code=...` → "No se pudo acceder a este sitio web".
+   Causa: exactamente el mismo patrón de bug que el punto 3 de la sección anterior
+   (`WebAppBaseUrl`), pero sin corregir en `infrastructure/docker-compose/docker-compose.yml` (el
+   fix con `WEB_EXTERNAL_URL` solo se había aplicado en `docker-compose.prod.yml`). Al no
+   sobreescribirse, `AuthenticationController.GetWebAppBaseUrl()` caía al valor por defecto de
+   `appsettings.Development.json` (`https://localhost:7123`, el puerto HTTPS de Kestrel/Visual
+   Studio), que no está expuesto por ningún contenedor. Fix aplicado — nueva línea en el servicio
+   `api` de `docker-compose.yml`, mismo patrón que ya usa `Cors__AllowedOrigins__0`:
+   ```yaml
+   WebAppBaseUrl: http://localhost:${WEB_PORT:-5123}
+   ```
+   Con los tres puntos anteriores resueltos, el flujo completo (consentimiento de Google →
+   `/oauth-callback` → intercambio de código → cookies de sesión → acceso a rutas protegidas)
+   funciona de punta a punta en local.
+
+4. **Corrección al troubleshooting de `docs/development/installation.md`:** el contenedor que
+   realmente falla en Docker Desktop/WSL2 con `path / is mounted on / but it is not a shared or
+   slave mount` es **`node-exporter`**, no `cadvisor`. `node-exporter` monta `/:/host:ro,rslave`
+   — la propagación `rslave` exige explícitamente que el mount de origen ya sea `shared`/`slave` en
+   el host, algo que WSL2 no cumple por defecto. `cadvisor` monta `/:/rootfs:ro` **sin** flag de
+   propagación, por lo que arranca sin problemas en el mismo entorno. La solución
+   (`sudo mount --make-rshared /` en WSL2) es la misma para ambos si en algún momento `cadvisor`
+   también llegara a necesitarla.
 
 ---
 

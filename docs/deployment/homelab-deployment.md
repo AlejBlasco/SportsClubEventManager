@@ -134,6 +134,7 @@ El `push` a `master` dispara `cd.yml` completo, sin intervención manual:
 3. **`deploy`** — llama al webhook de Portainer, que vuelve a hacer `pull` y recrea los contenedores.
 4. **`post-deploy-smoke-test`** — comprueba `GET /health/live` y `GET /health/ready` contra la URL real del homelab.
 5. **`tag-deployed-version`** — crea el tag `deployed/homelab/<sha-corto>`, fuente de verdad de qué versión está desplegada.
+6. **`tag-release-version`** — si `Directory.Build.props` tiene una versión que todavía no tiene su tag `vX.Y.Z` (el caso normal tras seguir el Paso 2), crea y empuja ese tag automáticamente, lo que dispara `release.yml` sin ninguna acción manual — ver [Paso 6](#paso-6-automático—el-tag-semver-y-la-github-release) más abajo.
 
 Sigue el progreso con:
 
@@ -143,21 +144,23 @@ gh run watch --exit-status
 
 Si `post-deploy-smoke-test` falla, el propio job deja en el resumen del run el comando exacto de rollback (ver [Rollback](#rollback)).
 
-### Paso 6 — Crear el tag SemVer y publicar la GitHub Release
+### Paso 6 (automático) — el tag SemVer y la GitHub Release
 
-Solo después de confirmar que el Paso 5 terminó en verde:
+Con el Paso 2 ya hecho (bump de `<Version>` + cierre de `## [Unreleased]` a `## [X.Y.Z] - fecha` en `CHANGELOG.md`, dentro de la propia PR de release), el job `tag-release-version` del Paso 5 crea y empuja el tag `vX.Y.Z` automáticamente en cuanto el despliegue al homelab termina con éxito — no hace falta ningún comando manual en el caso normal.
+
+Eso dispara `release.yml`, que valida que `Directory.Build.props` coincide con el tag, extrae la sección `## [X.Y.Z]` de `CHANGELOG.md` y publica la GitHub Release con esas notas — no reconstruye ni redespliega nada (ya se hizo en el Paso 5).
+
+```powershell
+gh release view vX.Y.Z
+```
+
+**Solo hace falta un tag manual** si `tag-release-version` avisó (`::warning::` en el resumen del run, sin hacer fallar el job — el despliegue en sí ya tuvo éxito) de que `CHANGELOG.md` todavía no documenta la versión — por ejemplo, si `<Version>` se subió a `master` en una PR distinta a la del cierre del CHANGELOG. En ese caso, completa `CHANGELOG.md` y crea el tag a mano:
 
 ```powershell
 git checkout master
 git pull
 git tag vX.Y.Z
 git push origin vX.Y.Z
-```
-
-Esto dispara `release.yml`, que valida que `Directory.Build.props` coincide con el tag, extrae la sección `## [X.Y.Z]` de `CHANGELOG.md` y publica la GitHub Release con esas notas — no reconstruye ni redespliega nada (ya se hizo en el Paso 5).
-
-```powershell
-gh release view vX.Y.Z
 ```
 
 ### Paso 7 — Sincronizar `develop` con `master`
@@ -211,6 +214,12 @@ gh workflow run rollback.yml -f version=<hash-corto>  # sin el prefijo "sha-"
 **Causa:** el job `validate` usa `strategy.matrix.include` con tres claves (`service`, `dockerfile`, `image`). Sin un `name:` explícito en el job, GitHub Actions nombra el check con **todas** las claves del matrix, no solo `service` — el check real se reporta como `validate (api, docker/Dockerfile.api, ghcr.io/...)`, que nunca coincide con el string exacto `validate (api)` que exige `branch-protection.yml` (comprobable con `gh api repos/<owner>/<repo>/branches/master/protection/required_status_checks`). El check requerido queda pendiente indefinidamente aunque el job real termine en verde.
 
 **Solución:** añadir `name: validate (${{ matrix.service }})` al job en `cd.yml`, forzando el nombre del check a depender solo de `matrix.service`.
+
+### `tag-release-version` no crea el tag `vX.Y.Z` y solo deja un `::warning::`
+
+**Causa:** `<Version>` en `Directory.Build.props` cambió (respecto al último tag `vX.Y.Z` existente), pero `CHANGELOG.md` todavía no tiene una sección `## [X.Y.Z]` con contenido real — típicamente porque el bump de versión llegó a `master` en una PR distinta a la que cierra `## [Unreleased]`, rompiendo el orden esperado del Paso 2. El job no falla (el despliegue al homelab ya tuvo éxito y no debe verse como roto), solo omite la creación del tag.
+
+**Solución:** completar `CHANGELOG.md` (mover `## [Unreleased]` a `## [X.Y.Z] - fecha` con contenido real) y crear el tag manualmente — ver el bloque de comandos al final del [Paso 6](#paso-6-automático—el-tag-semver-y-la-github-release).
 
 ### `release.yml` falla con "Section '## [X.Y.Z]' ... has no real content (empty section)"
 
