@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using FluentAssertions;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -8,6 +9,7 @@ using SportsClubEventManager.Api.Models;
 using SportsClubEventManager.Domain.Entities;
 using SportsClubEventManager.Domain.Enums;
 using SportsClubEventManager.Infrastructure.Persistence;
+using SportsClubEventManager.Shared.DTOs;
 
 namespace SportsClubEventManager.IntegrationTests.Events;
 
@@ -96,6 +98,7 @@ public class EventCancellationIntegrationTests : IClassFixture<DatabaseFixture>,
             var eventId = await SeedEventAsync("Basketball Tournament", "Annual tournament", 100);
             var userId = await SeedUserAsync("John Doe", "john@test.com");
             await SeedRegistrationAsync(eventId, userId, RegistrationStatus.Registered);
+            await AuthenticateAsAsync("john@test.com");
 
             var request = new CancelRegistrationRequest { UserId = userId };
 
@@ -121,6 +124,7 @@ public class EventCancellationIntegrationTests : IClassFixture<DatabaseFixture>,
             var eventId = await SeedEventAsync("Volleyball Match", "Spring match", 50);
             var userId = await SeedUserAsync("Jane Smith", "jane@test.com");
             var registrationId = await SeedRegistrationAsync(eventId, userId, RegistrationStatus.Registered);
+            await AuthenticateAsAsync("jane@test.com");
 
             var request = new CancelRegistrationRequest { UserId = userId };
 
@@ -156,6 +160,7 @@ public class EventCancellationIntegrationTests : IClassFixture<DatabaseFixture>,
             var userId2 = await SeedUserAsync("Bob Wilson", "bob@test.com");
             await SeedRegistrationAsync(eventId, userId1, RegistrationStatus.Registered);
             var registration2Id = await SeedRegistrationAsync(eventId, userId2, RegistrationStatus.Registered);
+            await AuthenticateAsAsync("alice@test.com");
 
             var request = new CancelRegistrationRequest { UserId = userId1 };
 
@@ -203,6 +208,7 @@ public class EventCancellationIntegrationTests : IClassFixture<DatabaseFixture>,
             // Arrange
             var nonExistentEventId = Guid.NewGuid();
             var userId = await SeedUserAsync("David Lee", "david@test.com");
+            await AuthenticateAsAsync("david@test.com");
 
             var request = new CancelRegistrationRequest { UserId = userId };
 
@@ -230,6 +236,7 @@ public class EventCancellationIntegrationTests : IClassFixture<DatabaseFixture>,
             // Arrange
             var eventId = await SeedEventAsync("Tennis Tournament", "Summer tennis", 40);
             var userId = await SeedUserAsync("Carol Davis", "carol@test.com");
+            await AuthenticateAsAsync("carol@test.com");
 
             var request = new CancelRegistrationRequest { UserId = userId };
 
@@ -257,6 +264,7 @@ public class EventCancellationIntegrationTests : IClassFixture<DatabaseFixture>,
             var eventId = await SeedEventAsync("Swimming Lesson", "Beginner swimming", 15);
             var userId = await SeedUserAsync("Emily White", "emily@test.com");
             await SeedRegistrationAsync(eventId, userId, RegistrationStatus.Cancelled);
+            await AuthenticateAsAsync("emily@test.com");
 
             var request = new CancelRegistrationRequest { UserId = userId };
 
@@ -289,32 +297,13 @@ public class EventCancellationIntegrationTests : IClassFixture<DatabaseFixture>,
         }
 
         /// <summary>
-        /// Verifies that empty UserId returns 400 Bad Request.
+        /// Verifies that an invalid event ID format returns 404 Not Found, since the route's
+        /// {id:guid} constraint means a non-GUID segment simply doesn't match this endpoint
+        /// at all - routing falls through to the generic "no endpoint matched" 404 before any
+        /// action code (that could return 400) ever runs.
         /// </summary>
         [Fact]
-        public async Task CancelRegistration_WhenUserIdIsEmpty_Returns400()
-        {
-            // Arrange
-            var eventId = await SeedEventAsync("Running Event", "Marathon prep", 30);
-            var request = new CancelRegistrationRequest { UserId = Guid.Empty };
-
-            // Act
-            var response = await _client.SendAsync(new HttpRequestMessage
-            {
-                Method = HttpMethod.Delete,
-                RequestUri = new Uri($"/api/v1/events/{eventId}/register", UriKind.Relative),
-                Content = JsonContent.Create(request)
-            });
-
-            // Assert
-            response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-        }
-
-        /// <summary>
-        /// Verifies that invalid event ID format returns 400 Bad Request.
-        /// </summary>
-        [Fact]
-        public async Task CancelRegistration_WhenEventIdIsNotValidGuid_Returns400()
+        public async Task CancelRegistration_WhenEventIdIsNotValidGuid_Returns404()
         {
             // Arrange
             var userId = await SeedUserAsync("Frank Miller", "frank@test.com");
@@ -329,7 +318,7 @@ public class EventCancellationIntegrationTests : IClassFixture<DatabaseFixture>,
             });
 
             // Assert
-            response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+            response.StatusCode.Should().Be(HttpStatusCode.NotFound);
         }
 
         /// <summary>
@@ -342,6 +331,7 @@ public class EventCancellationIntegrationTests : IClassFixture<DatabaseFixture>,
             var eventId = await SeedPastEventAsync("Past Event", "This already happened", 50);
             var userId = await SeedUserAsync("George Taylor", "george@test.com");
             await SeedRegistrationAsync(eventId, userId, RegistrationStatus.Registered);
+            await AuthenticateAsAsync("george@test.com");
 
             var request = new CancelRegistrationRequest { UserId = userId };
 
@@ -383,6 +373,7 @@ public class EventCancellationIntegrationTests : IClassFixture<DatabaseFixture>,
             var eventId = await SeedEventAsync("Cycling Event", "Weekend ride", 25);
             var userId = await SeedUserAsync("Helen Martinez", "helen@test.com");
             await SeedRegistrationAsync(eventId, userId, RegistrationStatus.Registered);
+            await AuthenticateAsAsync("helen@test.com");
 
             var cancelRequest = new CancelRegistrationRequest { UserId = userId };
 
@@ -462,7 +453,15 @@ public class EventCancellationIntegrationTests : IClassFixture<DatabaseFixture>,
     }
 
     /// <summary>
-    /// Seeds a user into the test database.
+    /// Password shared by every user this class seeds - registration/cancellation endpoints are
+    /// [Authorize]-protected and derive the acting UserId from the caller's JWT, not from the
+    /// request body, so every test needs a real, authenticatable user (see AuthenticateAsAsync).
+    /// </summary>
+    private const string TestPassword = "TestPass123!";
+
+    /// <summary>
+    /// Seeds a user into the test database, with a hashed password so it can log in via
+    /// AuthenticateAsAsync.
     /// </summary>
     /// <param name="name">The user name.</param>
     /// <param name="email">The user email.</param>
@@ -476,13 +475,30 @@ public class EventCancellationIntegrationTests : IClassFixture<DatabaseFixture>,
         {
             Name = name,
             Email = email,
-            Gender = Gender.Male
+            Gender = Gender.Male,
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword(TestPassword),
+            ProviderName = "Local"
         };
 
         context.Users.Add(user);
         await context.SaveChangesAsync();
 
         return user.Id;
+    }
+
+    /// <summary>
+    /// Logs in as the given user and attaches the resulting JWT to <see cref="_client"/> as a
+    /// Bearer token, so subsequent requests are authenticated as that user.
+    /// </summary>
+    /// <param name="email">The email of a user previously seeded via <see cref="SeedUserAsync"/>.</param>
+    private async Task AuthenticateAsAsync(string email)
+    {
+        var loginRequest = new LoginRequest { Email = email, Password = TestPassword };
+        var response = await _client.PostAsJsonAsync("/api/authentication/login", loginRequest);
+        response.StatusCode.Should().Be(HttpStatusCode.OK, "test setup requires a valid login");
+
+        var loginResponse = await response.Content.ReadFromJsonAsync<LoginResponse>();
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", loginResponse!.AccessToken);
     }
 
     /// <summary>

@@ -1,4 +1,5 @@
 using FluentAssertions;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using SportsClubEventManager.Domain.Entities;
 using SportsClubEventManager.Domain.Enums;
@@ -62,7 +63,7 @@ public sealed class AppDbContextIntegrationTests : IClassFixture<DatabaseFixture
 
         // Act
         var canConnect = await context.Database.CanConnectAsync();
-        var tableExists = await context.Database.ExecuteSqlRawAsync("SELECT TOP 1 * FROM Events WHERE 1=0") == 0;
+        var tableExists = await TableExistsAsync("Events");
 
         // Assert
         canConnect.Should().BeTrue();
@@ -80,7 +81,7 @@ public sealed class AppDbContextIntegrationTests : IClassFixture<DatabaseFixture
 
         // Act
         var canConnect = await context.Database.CanConnectAsync();
-        var tableExists = await context.Database.ExecuteSqlRawAsync("SELECT TOP 1 * FROM Users WHERE 1=0") == 0;
+        var tableExists = await TableExistsAsync("Users");
 
         // Assert
         canConnect.Should().BeTrue();
@@ -98,7 +99,7 @@ public sealed class AppDbContextIntegrationTests : IClassFixture<DatabaseFixture
 
         // Act
         var canConnect = await context.Database.CanConnectAsync();
-        var tableExists = await context.Database.ExecuteSqlRawAsync("SELECT TOP 1 * FROM Registrations WHERE 1=0") == 0;
+        var tableExists = await TableExistsAsync("Registrations");
 
         // Assert
         canConnect.Should().BeTrue();
@@ -377,17 +378,24 @@ public sealed class AppDbContextIntegrationTests : IClassFixture<DatabaseFixture
     }
 
     /// <summary>
-    /// Verifies that deleting a user with registrations is restricted by SQL Server.
+    /// Verifies that deleting a user with registrations cascades to their registrations, mirroring
+    /// DeleteUserCommandHandler (which explicitly removes a user's registrations before removing
+    /// the user - see docs/operations/administracion-usuarios.md, "DeleteUser es un borrado
+    /// físico... elimina el usuario y, en cascada, todas sus Registration asociadas"). This test
+    /// used to assert the opposite - that this would throw a DbUpdateException from a restrictive
+    /// FK - which contradicted that documented, intentional behavior and, in practice, never even
+    /// reached the database: EF Core's own change tracker threw an InvalidOperationException
+    /// client-side first, for the still-tracked, now-severed required relationship.
     /// </summary>
     [Fact]
-    public async Task User_DeleteWithRegistrations_IsRestrictedBySqlServer()
+    public async Task User_DeleteWithRegistrations_CascadesRegistrationDeletion()
     {
         // Arrange
         await using var context = _fixture.CreateContext();
         var eventEntity = new Event
         {
             Title = "Test Event",
-            Description = "For FK test",
+            Description = "For cascade-delete test",
             Location = "Test Location",
             Date = DateTime.UtcNow.AddDays(7),
             MaxCapacity = 50
@@ -395,7 +403,7 @@ public sealed class AppDbContextIntegrationTests : IClassFixture<DatabaseFixture
         var user = new User
         {
             Name = "John Doe",
-            Email = "john.fk@example.com",
+            Email = "john.cascade@example.com",
             Gender = Gender.Male
         };
 
@@ -412,12 +420,18 @@ public sealed class AppDbContextIntegrationTests : IClassFixture<DatabaseFixture
         context.Registrations.Add(registration);
         await context.SaveChangesAsync();
 
-        // Act
+        // Act - same order as DeleteUserCommandHandler: remove the user's registrations first,
+        // then the user, in one SaveChangesAsync
+        context.Registrations.RemoveRange(context.Registrations.Where(r => r.UserId == user.Id));
         context.Users.Remove(user);
-        var act = async () => await context.SaveChangesAsync();
+        await context.SaveChangesAsync();
 
         // Assert
-        await act.Should().ThrowAsync<DbUpdateException>("deleting a user with registrations should violate FK constraint");
+        var remainingRegistration = await context.Registrations.FirstOrDefaultAsync(r => r.Id == registration.Id);
+        var remainingUser = await context.Users.FirstOrDefaultAsync(u => u.Id == user.Id);
+
+        remainingRegistration.Should().BeNull("the user's registration should have been deleted along with the user");
+        remainingUser.Should().BeNull("the user should have been deleted");
     }
 
     /// <summary>
@@ -496,15 +510,9 @@ public sealed class AppDbContextIntegrationTests : IClassFixture<DatabaseFixture
     [Fact]
     public async Task EventDateIndex_ShouldExist()
     {
-        // Arrange
-        await using var context = _fixture.CreateContext();
-
-        // Act
-        var indexExists = await context.Database.ExecuteSqlRawAsync(@"
-            SELECT 1
-            FROM sys.indexes
-            WHERE name = 'IX_Events_Date' AND object_id = OBJECT_ID('Events')
-        ") >= 0;
+        // Arrange & Act
+        var indexExists = await IndexExistsAsync(
+            "SELECT 1 FROM sys.indexes WHERE name = 'IX_Events_Date' AND object_id = OBJECT_ID('Events')");
 
         // Assert
         indexExists.Should().BeTrue("IX_Events_Date should exist on Events table");
@@ -516,15 +524,9 @@ public sealed class AppDbContextIntegrationTests : IClassFixture<DatabaseFixture
     [Fact]
     public async Task UserEmailUniqueIndex_ShouldExist()
     {
-        // Arrange
-        await using var context = _fixture.CreateContext();
-
-        // Act
-        var indexExists = await context.Database.ExecuteSqlRawAsync(@"
-            SELECT 1
-            FROM sys.indexes
-            WHERE name = 'IX_Users_Email' AND object_id = OBJECT_ID('Users') AND is_unique = 1
-        ") >= 0;
+        // Arrange & Act
+        var indexExists = await IndexExistsAsync(
+            "SELECT 1 FROM sys.indexes WHERE name = 'IX_Users_Email' AND object_id = OBJECT_ID('Users') AND is_unique = 1");
 
         // Assert
         indexExists.Should().BeTrue("IX_Users_Email unique index should exist on Users table");
@@ -606,6 +608,51 @@ public sealed class AppDbContextIntegrationTests : IClassFixture<DatabaseFixture
 
         // Assert
         canConnect.Should().BeTrue();
+    }
+
+    #endregion
+
+    #region Helper Methods
+
+    /// <summary>
+    /// Checks whether a table exists in the database schema. Deliberately uses a scalar query
+    /// (ExecuteScalarAsync) rather than context.Database.ExecuteSqlRawAsync(...) - the latter
+    /// executes with ExecuteNonQuery semantics, which for a SELECT statement always returns -1
+    /// (rows-affected doesn't apply to SELECT) regardless of whether the table exists, making any
+    /// "== 0" or ">= 0" comparison against it permanently false/true and the check meaningless.
+    /// </summary>
+    /// <param name="tableName">The table name to check for.</param>
+    /// <returns><see langword="true"/> if the table exists.</returns>
+    private async Task<bool> TableExistsAsync(string tableName)
+    {
+        await using var connection = new SqlConnection(_fixture.ConnectionString);
+        await connection.OpenAsync();
+
+        using var command = connection.CreateCommand();
+        command.CommandText = "SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = @tableName";
+        command.Parameters.AddWithValue("@tableName", tableName);
+
+        var count = (int)(await command.ExecuteScalarAsync())!;
+        return count > 0;
+    }
+
+    /// <summary>
+    /// Checks whether a query (e.g. against sys.indexes) returns at least one row. Same rationale
+    /// as <see cref="TableExistsAsync"/> for using ExecuteScalarAsync instead of
+    /// ExecuteSqlRawAsync.
+    /// </summary>
+    /// <param name="existsQuery">A SELECT statement returning at least one row when the checked object exists.</param>
+    /// <returns><see langword="true"/> if the query returned a row.</returns>
+    private async Task<bool> IndexExistsAsync(string existsQuery)
+    {
+        await using var connection = new SqlConnection(_fixture.ConnectionString);
+        await connection.OpenAsync();
+
+        using var command = connection.CreateCommand();
+        command.CommandText = existsQuery;
+
+        var result = await command.ExecuteScalarAsync();
+        return result is not null;
     }
 
     #endregion

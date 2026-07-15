@@ -257,16 +257,19 @@ public class GetEventByIdEndpointTests : IClassFixture<DatabaseFixture>, IAsyncL
         }
 
         /// <summary>
-        /// Verifies that invalid GUID format returns 400 Bad Request.
+        /// Verifies that an invalid GUID format returns 404 Not Found, since the route's
+        /// {id:guid} constraint means a non-GUID segment simply doesn't match this endpoint
+        /// at all - routing falls through to the generic "no endpoint matched" 404 before any
+        /// action code (that could return 400) ever runs.
         /// </summary>
         [Fact]
-        public async Task GetEventById_WhenEventIdIsNotValidGuid_Returns400()
+        public async Task GetEventById_WhenEventIdIsNotValidGuid_Returns404()
         {
             // Arrange & Act
             var response = await _client.GetAsync("/api/v1/events/not-a-guid");
 
             // Assert
-            response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+            response.StatusCode.Should().Be(HttpStatusCode.NotFound);
         }
 
         /// <summary>

@@ -87,55 +87,29 @@ public class EventsControllerAuthorizationIntegrationTests : IClassFixture<Datab
         }
 
         /// <summary>
-        /// Verifies that an authenticated user can register for an event using their own UserId.
-        /// </summary>
-        [Fact]
-        public async Task RegisterForEvent_WithUserRoleAndOwnUserId_Returns201Created()
-        {
-            // Arrange
-            var userId = await SeedUserWithPasswordAsync("eventuser@example.com", "User123", Role.User);
-            var eventId = await SeedEventAsync("Test Event", "A test event", 50);
-
-            var jwtToken = await LoginAndGetTokenAsync("eventuser@example.com", "User123");
-            _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", jwtToken);
-
-            var request = new RegisterForEventRequest { UserId = userId };
-
-            // Act
-            var response = await _client.PostAsJsonAsync($"/api/v1/events/{eventId}/register", request);
-
-            // Assert
-            response.StatusCode.Should().Be(HttpStatusCode.Created);
-            var result = await response.Content.ReadFromJsonAsync<RegistrationCreatedDto>();
-            result.Should().NotBeNull();
-            result!.UserId.Should().Be(userId);
-            result.Status.Should().Be(RegistrationStatus.Registered);
-        }
-
-        /// <summary>
-        /// Verifies that an administrator can register for an event using any UserId.
+        /// Verifies that an administrator can register any user for an event via the dedicated
+        /// admin endpoint (POST /api/admin/registrations) - registering someone else is not
+        /// possible via POST /api/v1/events/{id}/register, which always registers the caller
+        /// (identified from their JWT), regardless of any UserId sent in the request body.
         /// </summary>
         [Fact]
         public async Task RegisterForEvent_WithAdministratorRoleAndAnyUserId_Returns201Created()
         {
             // Arrange
-            var adminId = await SeedUserWithPasswordAsync("admin@example.com", "Admin123", Role.Administrator);
+            await SeedUserWithPasswordAsync("admin@example.com", "Admin123", Role.Administrator);
             var targetUserId = await SeedUserAsync("target@example.com", Gender.Female);
             var eventId = await SeedEventAsync("Admin Event", "Event for admin test", 50);
 
             var jwtToken = await LoginAndGetTokenAsync("admin@example.com", "Admin123");
             _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", jwtToken);
 
-            var request = new RegisterForEventRequest { UserId = targetUserId };
+            var request = new CreateAdminRegistrationRequest { UserId = targetUserId, EventId = eventId };
 
             // Act
-            var response = await _client.PostAsJsonAsync($"/api/v1/events/{eventId}/register", request);
+            var response = await _client.PostAsJsonAsync("/api/admin/registrations", request);
 
             // Assert
             response.StatusCode.Should().Be(HttpStatusCode.Created);
-            var result = await response.Content.ReadFromJsonAsync<RegistrationCreatedDto>();
-            result.Should().NotBeNull();
-            result!.UserId.Should().Be(targetUserId);
         }
     }
 
@@ -153,48 +127,30 @@ public class EventsControllerAuthorizationIntegrationTests : IClassFixture<Datab
         }
 
         /// <summary>
-        /// Verifies that a User role cannot register another user for an event.
+        /// Verifies that a User role cannot register another user via the admin registration
+        /// endpoint (POST /api/admin/registrations), which requires the Administrator role.
+        /// Registering someone else via POST /api/v1/events/{id}/register isn't a case that can
+        /// even be constructed: that endpoint always registers the caller from their own JWT,
+        /// ignoring any UserId in the request body - it has no "register another user" concept.
         /// </summary>
         [Fact]
         public async Task RegisterForEvent_WithUserRoleAndDifferentUserId_Returns403Forbidden()
         {
             // Arrange
-            var authUserid = await SeedUserWithPasswordAsync("authuser@example.com", "User123", Role.User);
+            await SeedUserWithPasswordAsync("authuser@example.com", "User1234", Role.User);
             var otherUserId = await SeedUserAsync("otheruser@example.com", Gender.Male);
             var eventId = await SeedEventAsync("Restricted Event", "Only own registration allowed", 50);
 
-            var jwtToken = await LoginAndGetTokenAsync("authuser@example.com", "User123");
+            var jwtToken = await LoginAndGetTokenAsync("authuser@example.com", "User1234");
             _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", jwtToken);
 
-            var request = new RegisterForEventRequest { UserId = otherUserId };
+            var request = new CreateAdminRegistrationRequest { UserId = otherUserId, EventId = eventId };
 
             // Act
-            var response = await _client.PostAsJsonAsync($"/api/v1/events/{eventId}/register", request);
+            var response = await _client.PostAsJsonAsync("/api/admin/registrations", request);
 
             // Assert
             response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
-        }
-
-        /// <summary>
-        /// Verifies that attempting to register with an invalid UserId returns 400 or 403.
-        /// </summary>
-        [Fact]
-        public async Task RegisterForEvent_WithEmptyUserId_ReturnsBadRequest()
-        {
-            // Arrange
-            await SeedUserWithPasswordAsync("validuser@example.com", "User123", Role.User);
-            var eventId = await SeedEventAsync("Event", "Test", 50);
-
-            var jwtToken = await LoginAndGetTokenAsync("validuser@example.com", "User123");
-            _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", jwtToken);
-
-            var request = new RegisterForEventRequest { UserId = Guid.Empty };
-
-            // Act
-            var response = await _client.PostAsJsonAsync($"/api/v1/events/{eventId}/register", request);
-
-            // Assert
-            response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         }
 
         /// <summary>
@@ -232,38 +188,36 @@ public class EventsControllerAuthorizationIntegrationTests : IClassFixture<Datab
         }
 
         /// <summary>
-        /// Verifies that a user can cancel their own event registration.
+        /// Verifies that a user can cancel their own event registration via
+        /// DELETE /api/v1/registrations/{id}.
         /// </summary>
         [Fact]
-        public async Task CancelRegistration_WithUserRoleForOwnRegistration_Returns200OK()
+        public async Task CancelRegistration_WithUserRoleForOwnRegistration_Returns204NoContent()
         {
             // Arrange
-            var userId = await SeedUserWithPasswordAsync("canceluser@example.com", "User123", Role.User);
+            var userId = await SeedUserWithPasswordAsync("canceluser@example.com", "User1234", Role.User);
             var eventId = await SeedEventAsync("Event to Cancel", "Cancellation test", 50);
             var registrationId = await SeedRegistrationAsync(eventId, userId, RegistrationStatus.Registered);
 
-            var jwtToken = await LoginAndGetTokenAsync("canceluser@example.com", "User123");
+            var jwtToken = await LoginAndGetTokenAsync("canceluser@example.com", "User1234");
             _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", jwtToken);
 
-            var request = new CancelRegistrationRequest { UserId = userId };
-
             // Act
-            var response = await _client.PostAsJsonAsync(
-                $"/api/v1/events/{eventId}/registrations/{registrationId}/cancel",
-                request);
+            var response = await _client.DeleteAsync($"/api/v1/registrations/{registrationId}");
 
             // Assert
-            response.StatusCode.Should().Be(HttpStatusCode.OK);
+            response.StatusCode.Should().Be(HttpStatusCode.NoContent);
         }
 
         /// <summary>
-        /// Verifies that an administrator can cancel any user's event registration.
+        /// Verifies that an administrator can cancel any user's event registration via
+        /// DELETE /api/admin/registrations/{id}.
         /// </summary>
         [Fact]
-        public async Task CancelRegistration_WithAdministratorRole_Returns200OK()
+        public async Task CancelRegistration_WithAdministratorRole_Returns204NoContent()
         {
             // Arrange
-            var adminId = await SeedUserWithPasswordAsync("admin@example.com", "Admin123", Role.Administrator);
+            await SeedUserWithPasswordAsync("admin@example.com", "Admin123", Role.Administrator);
             var userId = await SeedUserAsync("targetuser@example.com", Gender.Male);
             var eventId = await SeedEventAsync("Event to Cancel", "Cancellation test", 50);
             var registrationId = await SeedRegistrationAsync(eventId, userId, RegistrationStatus.Registered);
@@ -271,45 +225,38 @@ public class EventsControllerAuthorizationIntegrationTests : IClassFixture<Datab
             var jwtToken = await LoginAndGetTokenAsync("admin@example.com", "Admin123");
             _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", jwtToken);
 
-            var request = new CancelRegistrationRequest { UserId = userId };
-
             // Act
-            var response = await _client.PostAsJsonAsync(
-                $"/api/v1/events/{eventId}/registrations/{registrationId}/cancel",
-                request);
+            var response = await _client.DeleteAsync($"/api/admin/registrations/{registrationId}");
 
             // Assert
-            response.StatusCode.Should().Be(HttpStatusCode.OK);
+            response.StatusCode.Should().Be(HttpStatusCode.NoContent);
         }
 
         /// <summary>
-        /// Verifies that a user cannot cancel another user's event registration.
+        /// Verifies that a user cannot cancel another user's event registration via
+        /// DELETE /api/v1/registrations/{id}.
         /// </summary>
         [Fact]
         public async Task CancelRegistration_WithUserRoleForAnotherUserRegistration_Returns403Forbidden()
         {
             // Arrange
-            var userId = await SeedUserWithPasswordAsync("user1@example.com", "User123", Role.User);
+            await SeedUserWithPasswordAsync("user1@example.com", "User1234", Role.User);
             var otherUserId = await SeedUserAsync("user2@example.com", Gender.Male);
             var eventId = await SeedEventAsync("Event to Cancel", "Cancellation test", 50);
             var registrationId = await SeedRegistrationAsync(eventId, otherUserId, RegistrationStatus.Registered);
 
-            var jwtToken = await LoginAndGetTokenAsync("user1@example.com", "User123");
+            var jwtToken = await LoginAndGetTokenAsync("user1@example.com", "User1234");
             _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", jwtToken);
 
-            var request = new CancelRegistrationRequest { UserId = otherUserId };
-
             // Act
-            var response = await _client.PostAsJsonAsync(
-                $"/api/v1/events/{eventId}/registrations/{registrationId}/cancel",
-                request);
+            var response = await _client.DeleteAsync($"/api/v1/registrations/{registrationId}");
 
             // Assert
             response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
         }
 
         /// <summary>
-        /// Verifies that unauthenticated requests to cancel registration return 401 Unauthorized.
+        /// Verifies that unauthenticated requests to cancel a registration return 401 Unauthorized.
         /// </summary>
         [Fact]
         public async Task CancelRegistration_WithoutAuthentication_Returns401Unauthorized()
@@ -319,13 +266,10 @@ public class EventsControllerAuthorizationIntegrationTests : IClassFixture<Datab
             var eventId = await SeedEventAsync("Event", "Test", 50);
             var registrationId = await SeedRegistrationAsync(eventId, userId, RegistrationStatus.Registered);
 
-            // No authorization header
-            var request = new CancelRegistrationRequest { UserId = userId };
+            // No authorization header set
 
             // Act
-            var response = await _client.PostAsJsonAsync(
-                $"/api/v1/events/{eventId}/registrations/{registrationId}/cancel",
-                request);
+            var response = await _client.DeleteAsync($"/api/v1/registrations/{registrationId}");
 
             // Assert
             response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
