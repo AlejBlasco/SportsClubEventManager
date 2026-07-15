@@ -55,15 +55,15 @@ Levantar el stack de desarrollo completo (equivalente a ejecutar el fichero incl
 docker compose up --build
 ```
 
-## Limitación conocida — `cadvisor` en WSL2 (desarrollo local)
+## Limitación conocida — `node-exporter` en WSL2 (desarrollo local)
 
-Al ejecutar `docker compose up --build` en un host **Windows con Docker corriendo sobre WSL2**, el servicio `cadvisor` (issue #43) puede fallar al arrancar con:
+Al ejecutar `docker compose up --build` en un host **Windows con Docker corriendo sobre WSL2**, el servicio `node-exporter` (issue #43) puede fallar al arrancar con:
 
 ```
 Error response from daemon: path / is mounted on / but it is not a shared or slave mount
 ```
 
-**Causa:** `cadvisor` monta `/:/rootfs:ro` (ver `volumes:` del servicio en [`docker-compose.yml`](docker-compose.yml), el único fichero de este repositorio que lo declara — no existe en `docker-compose.prod.yml`) para poder inspeccionar los contenedores del host. Docker necesita que la raíz `/` tenga *mount propagation* `shared` o `slave` para permitir ese bind-mount, pero la distro WSL2 monta `/` como privada por defecto — no es un problema del stack en sí, sino del entorno WSL2.
+**Causa:** `node-exporter` monta `/:/host:ro,rslave` (ver `volumes:` del servicio en [`docker-compose.yml`](docker-compose.yml), el único fichero de este repositorio que lo declara — no existe en `docker-compose.prod.yml`) para poder inspeccionar el host. La propagación `rslave` exige explícitamente que el mount de origen ya sea `shared`/`slave` en el host, y WSL2 monta `/` como privada por defecto — no es un problema del stack en sí, sino del entorno WSL2. `cadvisor` monta `/:/rootfs:ro` en el mismo fichero, **sin** flag de propagación, por lo que no se ve afectado por este mismo error.
 
 Al ser un problema del **host de desarrollo**, no del homelab de producción (servidor Linux real detrás de Portainer), no se corrige en ningún fichero de este repositorio. Se soluciona en la propia distro WSL2:
 
@@ -81,8 +81,6 @@ command = "mount --make-rshared /"
 
 y reiniciar WSL2 desde PowerShell con `wsl --shutdown`.
 
-## Paso manual pendiente — actualizar la ruta del stack en Portainer
+## Histórico — migración de ruta del stack en Portainer (issue #46, resuelto)
 
-`docker-compose.prod.yml` se ha movido en esta issue desde `docker/docker-compose.prod.yml` a `infrastructure/docker-compose/docker-compose.prod.yml`. Este cambio de ruta **no se aplica solo** en Portainer: el propietario del homelab debe actualizar manualmente, en la configuración del stack de producción, la ruta del fichero Compose a la nueva ubicación, antes o inmediatamente después de fusionar esta PR.
-
-Si no se actualiza antes del siguiente redeploy (manual o vía el webhook GitOps ya existente de `cd.yml`), Portainer dejará de encontrar el fichero en la ruta antigua y el redeploy fallará. Este paso es puramente operativo y no puede ejecutarse desde este repositorio ni desde un agente de desarrollo — ver `## Riesgos y Decisiones Abiertas`, punto 4, del [diseño de esta issue](../../.claude/docs/sdlc/design/issue-46-infraestructura-como-codigo.md).
+`docker-compose.prod.yml` se movió, en su día, de `docker/docker-compose.prod.yml` a `infrastructure/docker-compose/docker-compose.prod.yml`. Ese cambio de ruta no se aplicaba solo en Portainer — requería que el propietario del homelab actualizara manualmente, en la configuración del stack de producción, la ruta del fichero Compose a la nueva ubicación. **Ya se aplicó**: los despliegues automáticos vía `cd.yml` llevan funcionando con éxito desde entonces (9 tags `deployed/homelab/*` confirmados), lo que no sería posible si Portainer siguiera apuntando a la ruta antigua.
