@@ -8,7 +8,7 @@ Antes de esta issue, `deploy` llamaba al webhook de GitOps de Portainer y el pip
 
 ## Architecture
 
-Diagrama de flujo completo del pipeline movido a [`docs/technical/diagrams/cicd-pipeline.md`](diagrams/cicd-pipeline.md) (catálogo de diagramas de la issue #51 — única fuente de verdad, para no mantener dos copias que puedan divergir).
+Diagrama de flujo completo del pipeline movido a [`docs/architecture/diagrams/cicd-pipeline.md`](../architecture/diagrams/cicd-pipeline.md) (catálogo de diagramas de la issue #51 — única fuente de verdad, para no mantener dos copias que puedan divergir).
 
 Puntos clave del diagrama:
 

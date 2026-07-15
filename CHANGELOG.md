@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Extracted the `ClaimsPrincipal`-building logic (used after both local login and the new OAuth exchange) out of `Login.razor` into a shared `AuthenticationClaimsFactory`
 - `docs/development/installation.md`: expanded the "Login con Google no funciona" troubleshooting with step-by-step instructions for creating a dev-only Google OAuth Client, and a table of the `invalid_client`/`redirect_uri_mismatch`/unreachable-callback symptoms and their causes
 - `docs/development/installation.md`: corrected the WSL2 mount-propagation troubleshooting entry — the container that actually fails is `node-exporter` (explicit `rslave` propagation), not `cadvisor` (plain `ro` mount, unaffected)
+- Moved `docs/technical/diagrams/` to `docs/architecture/diagrams/` — it's curated, living content (like `architecture.md`, which it already cross-references), not part of `docs/technical/`'s per-story design-doc history. Updated every cross-reference (`README.md`, `architecture.md`, two `docs/operations/*.md`, `issue-45-despliegue-automatizado-al-homelab.md`) and simplified the diagrams' own links to `architecture.md` now that they're siblings
 
 ## [0.4.0] - 2026-07-14
 
