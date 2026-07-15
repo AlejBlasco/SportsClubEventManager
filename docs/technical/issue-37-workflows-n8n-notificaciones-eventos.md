@@ -16,8 +16,10 @@ después** de que la operación de negocio haya tenido éxito, nunca antes ni de
 pueda revertirla.
 
 La integración está **deshabilitada por defecto** (`Notifications:N8n:Enabled = false`) en todos
-los entornos salvo producción, y solo se activa tras un *runbook* manual documentado en
-`infrastructure/n8n/README.md` y en el Apéndice A del diseño.
+los entornos salvo producción, y solo se activa tras un *runbook* manual — checklist ejecutada y
+cerrada (ver `## Key Components` más abajo), documentada originalmente en
+`infrastructure/n8n/README.md` (retirado el 2026-07-15, checklist ya completada — ver el Apéndice A
+del diseño de esta issue para el detalle de los pasos).
 
 ## Architecture
 
@@ -105,7 +107,7 @@ Prometheus (issue #42).
 | Migración `20260713130034_AddEventReminderNotifications` | `Infrastructure/Migrations/` | Crea la tabla `EventReminderNotifications` con el índice único y la FK descritos arriba. |
 | `IApplicationMetrics.RecordWorkflowNotificationSent` | `Application/Common/Interfaces/IApplicationMetrics.cs` (extendido), `Infrastructure/Metrics/ApplicationMetrics.cs` (implementado) | Nuevo `Counter` Prometheus `sportsclubeventmanager_workflow_notifications_total`, etiquetas `workflow` (`registration-confirmed` \| `event-updated` \| `event-cancelled` \| `event-reminder`) y `result` (`success` \| `failure`). Reutiliza la infraestructura de observabilidad ya establecida por la issue #42, sin introducir un mecanismo de métricas paralelo. |
 | `infrastructure/n8n/workflows/*.json` | `registration-confirmed.json`, `event-updated.json`, `event-cancelled.json`, `event-reminder.json` | Exportaciones reales de los 4 flujos de n8n (descargadas desde la UI, no escritas a mano), versionadas como artefactos de código para cumplir el AC "store n8n workflow definitions as code". Se **importan manualmente** en la instancia n8n compartida — este repositorio no automatiza su despliegue. |
-| `infrastructure/n8n/README.md` | Runbook para el propietario del homelab: credencial *Header Auth*, importación/etiquetado de los 4 flujos, verificación DNS del subdominio de envío en Brevo (`notifications.ablasco.com`), credencial SMTP de Brevo en n8n, copia de las URLs reales de *webhook* a producción, y verificación funcional/de errores (AC 5/AC 6). | |
+| `infrastructure/n8n/README.md` *(histórico — retirado el 2026-07-15)* | Era el runbook/checklist para el propietario del homelab: credencial *Header Auth*, importación/etiquetado de los 4 flujos, verificación DNS del subdominio de envío en Brevo (`notifications.ablasco.com`), credencial SMTP de Brevo en n8n, copia de las URLs reales de *webhook* a producción, y verificación funcional/de errores (AC 5/AC 6). Retirado por ser solo una checklist puntual sin valor como documentación viva, una vez completados todos sus pasos en producción. | |
 
 ### `DependencyInjection.cs` (Infrastructure) — registro
 
@@ -293,8 +295,10 @@ real del homelab). **No se añade ningún servicio `n8n` a ninguno de los dos fi
   índices únicos).
 - **No se ha verificado la versión/funcionalidades exactas de la instancia n8n real** en cuanto a
   soporte de *tags*/*Header Auth* al momento del diseño — riesgo bajo, ya resuelto en la práctica:
-  el runbook (`infrastructure/n8n/README.md`) confirma que los 4 flujos están construidos,
-  etiquetados, activados y probados de extremo a extremo contra envíos reales de Brevo.
+  el runbook (`infrastructure/n8n/README.md`, retirado el 2026-07-15 tras completarse) confirmó que
+  los 4 flujos están construidos, etiquetados, activados y probados manualmente contra envíos reales
+  de Brevo — la verificación end-to-end disparada por la propia aplicación en producción solo se
+  confirmó después para `registration-confirmed`, ver CHANGELOG.
 - **No se ha modificado el *dashboard* de Grafana** (`infrastructure/grafana/dashboards/sportsclubeventmanager-overview.json`)
   para incorporar el nuevo contador `sportsclubeventmanager_workflow_notifications_total` —
   explícitamente fuera de alcance de esta issue.
