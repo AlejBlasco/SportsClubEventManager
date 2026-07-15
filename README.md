@@ -25,6 +25,7 @@ El **origen de este proyecto** es completamente práctico: nace de una necesidad
 - [g. Funcionalidades principales](#g-funcionalidades-principales)
 - [h. Usuario y contraseña de prueba](#h-usuario-y-contraseña-de-prueba)
 - [i. Proyectos personales empleados en su construcción](#i-proyectos-personales-empleados-en-su-construcción)
+- [Enlaces de interés](#enlaces-de-interés)
 
 ## a. Descripción general del proyecto
 
@@ -115,3 +116,8 @@ Este TFM se ha apoyado en varias herramientas y proyectos personales desarrollad
 - 🏠 **Homelab casero** — infraestructura propia (Docker, Portainer) usada para el despliegue continuo de la aplicación.
 - ⚙️ [**claude-sdlc-kit**](https://github.com/AlejBlasco/claude-sdlc-kit) — kit de agentes de IA que automatiza el ciclo de vida completo de desarrollo de software (análisis, diseño, implementación, testing, documentación y revisión), utilizado durante todo el proyecto (ver carpeta `.claude/`).
 - 🔨 [**BlitzSliceForge**](https://github.com/AlejBlasco/BlitzSliceForge) — plantilla de generación de soluciones .NET en Clean Architecture, empleada como punto de partida de este repositorio.
+
+## Enlaces de interés
+
+- 🌐 [**Aplicación en producción**](https://sportsclub.ablasco.com) — instancia real desplegada en el homelab. El calendario de eventos es visible sin necesidad de iniciar sesión; para probar el resto de funcionalidades, inicia sesión con tu propia cuenta de Google (los usuarios de prueba de la sección [h](#h-usuario-y-contraseña-de-prueba) solo existen en local/desarrollo, no en esta instancia).
+- 📊 [**Presentación del TFM**](docs/presentation/SportsClubEventManager-TFM.pptx) — diapositivas del proyecto.
