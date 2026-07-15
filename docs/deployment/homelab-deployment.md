@@ -99,7 +99,7 @@ En [`CHANGELOG.md`](../../CHANGELOG.md), mueve el contenido de `## [Unreleased]`
 - ...
 ```
 
-> `release.yml` (Paso 5) fallará si esta sección no existe o está vacía — ver [Troubleshooting](#releaseyml-falla-con-section--xyz--was-found-but-has-no-real-content).
+> `release.yml` (Paso 5) fallará si esta sección no existe o está vacía — ver [Troubleshooting](#releaseyml-falla-con-section--xyz--has-no-real-content-empty-section).
 
 ### Paso 3 — Commit, push y abrir la PR contra `master`
 
@@ -134,7 +134,7 @@ El `push` a `master` dispara `cd.yml` completo, sin intervención manual:
 3. **`deploy`** — llama al **webhook de GitOps de Portainer** (`secrets.PORTAINER_WEBHOOK_URL`), que hace que Portainer vuelva a hacer `pull` de las imágenes (`pull_policy: always`) y recree los contenedores `api`/`web`.
 4. **`post-deploy-smoke-test`** — espera a que el despliegue esté realmente sano contra la URL pública real (`secrets.HOMELAB_WEB_URL`, entorno `homelab-production`): `GET /health/live` y `GET /health/ready` (bloqueantes, hasta 6 intentos cada 15s, ~90s máx. cada uno — `/health/ready` valida `Api` de forma transitiva, ver `ApiAvailabilityHealthCheck`, issue #41). Si cualquiera de los dos falla, el job ejecuta `find-last-good-tag.sh`, escribe el tag `sha-*` correcto anterior y las instrucciones de rollback en el resumen del job (`$GITHUB_STEP_SUMMARY`) con `::error::`, y falla — lo que marca el `Deployment` de `homelab-production` como `failure`, visible en la pestaña **Environments** del repositorio.
 5. **`tag-deployed-version`** — si el smoke test pasa, crea y empuja el tag ligero `deployed/homelab/<sha-corto>` sobre el commit desplegado, usando el `GITHUB_TOKEN` de la propia ejecución. Este tag es la fuente de verdad de "qué se ha desplegado con éxito y cuándo", y es lo que consume el rollback automático como valores válidos de `version`.
-6. **`tag-release-version`** — si `Directory.Build.props` tiene una versión que todavía no tiene su tag `vX.Y.Z` (el caso normal tras seguir el Paso 2), crea y empuja ese tag automáticamente, lo que dispara `release.yml` sin ninguna acción manual — ver [Paso 6](#paso-6-automático—el-tag-semver-y-la-github-release) más abajo.
+6. **`tag-release-version`** — si `Directory.Build.props` tiene una versión que todavía no tiene su tag `vX.Y.Z` (el caso normal tras seguir el Paso 2), crea y empuja ese tag automáticamente, lo que dispara `release.yml` sin ninguna acción manual — ver [Paso 6](#paso-6-automático--el-tag-semver-y-la-github-release) más abajo.
 
 En ningún punto de este flujo se necesita abrir la UI de Portainer ni ejecutar nada a mano — es el comportamiento esperado una vez cargados los secretos/variables del [Paso 1](#paso-1--crear-el-github-environment-homelab-production).
 
@@ -253,7 +253,7 @@ Si la **API** de Portainer no está disponible (p. ej. porque no es alcanzable d
 
 **Causa:** `<Version>` en `Directory.Build.props` cambió (respecto al último tag `vX.Y.Z` existente), pero `CHANGELOG.md` todavía no tiene una sección `## [X.Y.Z]` con contenido real — típicamente porque el bump de versión llegó a `master` en una PR distinta a la que cierra `## [Unreleased]`, rompiendo el orden esperado del Paso 2. El job no falla (el despliegue al homelab ya tuvo éxito y no debe verse como roto), solo omite la creación del tag.
 
-**Solución:** completar `CHANGELOG.md` (mover `## [Unreleased]` a `## [X.Y.Z] - fecha` con contenido real) y crear el tag manualmente — ver el bloque de comandos al final del [Paso 6](#paso-6-automático—el-tag-semver-y-la-github-release).
+**Solución:** completar `CHANGELOG.md` (mover `## [Unreleased]` a `## [X.Y.Z] - fecha` con contenido real) y crear el tag manualmente — ver el bloque de comandos al final del [Paso 6](#paso-6-automático--el-tag-semver-y-la-github-release).
 
 ### `release.yml` falla con "Section '## [X.Y.Z]' ... has no real content (empty section)"
 

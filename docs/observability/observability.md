@@ -70,7 +70,7 @@ Puntos clave del diagrama:
 - `api`/`web` no saben nada de Grafana ni de Cloudflare — solo exponen `/metrics`, issue #42, sin
   cambios para esta guía.
 - El datasource de Grafana se llama **`SportsClubEventManager - Prometheus`**, no `Prometheus` a
-  secas — motivo explicado en la sección [Incidente](#incidente-grafana-en-bucle-de-reinicio-datasource-provisioning-error).
+  secas — motivo explicado en la sección [Incidente](#incidente-grafana-en-bucle-de-reinicio-datasource-provisioning-error-data-source-not-found).
 - La ruta pública de Cloudflare no expone toda la Grafana compartida, solo las 3 rutas necesarias
   para renderizar el dashboard público — ver [Paso 5](#paso-5--ruta-pública-en-cloudflare-tunnel-con-restricción-por-path).
 
@@ -194,7 +194,7 @@ aplicaciones/funciones del homelab y no deben tocarse):
 solo el contenedor `grafana`).
 
 > ⚠️ **Antes de aplicar esto en un homelab distinto o en un `grafana_data` con historial**, lee
-> primero la sección [Incidente](#incidente-grafana-en-bucle-de-reinicio-datasource-provisioning-error)
+> primero la sección [Incidente](#incidente-grafana-en-bucle-de-reinicio-datasource-provisioning-error-data-source-not-found)
 > — este paso, tal cual, causó una caída completa de la Grafana compartida la primera vez que se
 > ejecutó.
 
@@ -444,7 +444,7 @@ editar `prometheus.yml` a mano.
 
 ### Grafana no arranca tras tocar el *provisioning* (bucle de reinicio)
 
-Ver la sección completa [Incidente](#incidente-grafana-en-bucle-de-reinicio-datasource-provisioning-error)
+Ver la sección completa [Incidente](#incidente-grafana-en-bucle-de-reinicio-datasource-provisioning-error-data-source-not-found)
 de este mismo documento. Resumen de la acción inmediata: **revertir primero** (quitar los volúmenes
 nuevos en Portainer y redeploy) para restaurar el servicio compartido, y solo después diagnosticar
 con calma en un contenedor Grafana aislado — nunca depurar en caliente sobre la instancia
