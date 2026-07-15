@@ -735,7 +735,7 @@ id (Guid)  - ID del usuario a eliminar
 > `.Designer.cs`, por lo que EF Core no la reconocía como migración de `AppDbContext` y nunca
 > se llegó a aplicar (la Api/Web reportaban "database is already up to date" con la tabla
 > `AuditLogs` inexistente). Ver la nota equivalente en
-> `docs/technical/US-28-autorizacion-basada-en-roles.md` para el detalle completo de la causa
+> `docs/technical/issue-28-autorizacion-basada-en-roles.md` para el detalle completo de la causa
 > raíz y el fix (se generó el `.Designer.cs` faltante y se quitó el atributo `[Migration]`
 > duplicado de la clase principal).
 

@@ -163,7 +163,7 @@ El sistema maneja esto automáticamente:
 
 ## Funcionalidades relacionadas
 
-- [Listar Eventos](./US-5-event-listing-api.md) — Ver todos los eventos disponibles
+- [Listar Eventos](./issue-7-consulta-eventos.md) — Ver todos los eventos disponibles
 - [Detalles del Evento](./US-6-event-details-api.md) — Ver información completa de un evento específico
 
 ---

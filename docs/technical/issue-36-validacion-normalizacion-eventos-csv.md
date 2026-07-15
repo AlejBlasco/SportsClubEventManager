@@ -5,7 +5,7 @@
 **Documento de diseño relacionado:** `.claude/docs/sdlc/design/issue-36-validacion-normalizacion-eventos-csv.md`
 **Resumen de implementación:** `.claude/docs/sdlc/development/issue-36-validacion-normalizacion-eventos-csv.md`
 **Feature previa relacionada:** #35 — Importación de Eventos desde CSV
-(`docs/technical/US-35-csv-event-import.md`)
+(`docs/technical/issue-35-csv-event-import.md`)
 **Estado:** Implementado, con tests unitarios y bUnit (fase de Testing/QA completada)
 
 ---

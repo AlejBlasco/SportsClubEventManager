@@ -77,7 +77,7 @@ Antes de que el flujo automático de las secciones 1 y 2 funcione de verdad, alg
 
 ### Known issue: Docker secrets file-based (`secrets: <nombre>: file: ...`) no llegan a la app en este Portainer
 
-Se intentó migrar estos 5 valores a Docker Compose "secrets" file-based (que la app ya sabe leer vía `AddDockerSecrets()`/`KeyPerFile` en `/run/secrets`, ver `docs/technical/US-38-secrets-management.md`), pero **no funcionó en la práctica contra este Portainer** y se revirtió a variables de entorno planas para desbloquear el despliegue:
+Se intentó migrar estos 5 valores a Docker Compose "secrets" file-based (que la app ya sabe leer vía `AddDockerSecrets()`/`KeyPerFile` en `/run/secrets`, ver `docs/technical/issue-38-secrets-management.md`), pero **no funcionó en la práctica contra este Portainer** y se revirtió a variables de entorno planas para desbloquear el despliegue:
 
 - `secrets: <nombre>: environment: VAR` (secret alimentado desde una variable de entorno) se comprobó que **no se monta en absoluto**: el motor de compose embebido en Portainer (Business Edition 2.39.2, `docker/cli` vendorizado, distinto del `docker compose` del sistema) acepta la sintaxis sin error pero `docker inspect` mostraba `.Mounts: []` en el contenedor `api`.
 - `secrets: <nombre>: file: <ruta>` con una ruta solo visible dentro del contenedor `portainer` (p. ej. `/data/...`) falla con un error explícito del daemon (`invalid mount config for type "bind": bind source path does not exist`), porque los bind mounts los resuelve el daemon de Docker contra el filesystem del **host real**, no contra la vista del contenedor `portainer`.

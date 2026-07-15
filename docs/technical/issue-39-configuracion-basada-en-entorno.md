@@ -12,7 +12,7 @@ que se valida **una sola vez, de forma agregada, durante el arranque del
 host** (`IHost.StartAsync()`), antes de que se acepte ninguna petición HTTP.
 
 No introduce gestión de secretos (ya resuelta por la issue #38, ver
-`docs/technical/US-38-secrets-management.md`) ni toca de dónde vienen los
+`docs/technical/issue-38-secrets-management.md`) ni toca de dónde vienen los
 valores (User Secrets, variables de entorno, Docker secrets); solo valida que,
 vengan de donde vengan, estén presentes y sean válidos antes de servir
 tráfico.
@@ -279,7 +279,7 @@ Para añadir una nueva sección de configuración crítica a un host:
    custom).
 4. Añadir la variable de entorno correspondiente a `.env.example` y, si es
    sensible, seguir el flujo de Docker secrets ya documentado en
-   `docs/technical/US-38-secrets-management.md`.
+   `docs/technical/issue-38-secrets-management.md`.
 5. Escribir tests siguiendo el patrón de
    `tests/SportsClubEventManager.Api/Configuration/` /
    `tests/SportsClubEventManager.Web.Tests/Configuration/` (ver Testing

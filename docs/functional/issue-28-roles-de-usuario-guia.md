@@ -331,7 +331,7 @@ Si tienes preguntas sobre roles de usuario, permisos o necesitas asistencia para
 - Email: admin@sportsclub.local
 
 **Documentación Adicional:**
-- Documentación técnica para desarrolladores: `/docs/technical/US-28-autorizacion-basada-en-roles.md`
+- Documentación técnica para desarrolladores: `/docs/technical/issue-28-autorizacion-basada-en-roles.md`
 - Guía de instalación: `/docs/deployment/installation-guide.md` (próximamente)
 
 ---

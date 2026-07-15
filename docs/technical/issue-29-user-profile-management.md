@@ -20,7 +20,7 @@ La implementación distingue entre usuarios con autenticación local (credencial
 > `AmbiguousMatchException` al navegar a "My Profile". Se eliminó `Profile.razor` / `Profile.razor.cs`,
 > dejando `UserProfile.razor` como implementación única. Además, `UserProfileService` recibía 401
 > Unauthorized en todas sus llamadas porque el Web nunca reenviaba el JWT a la Api — ver
-> [Reenvío del Token de la Web a la Api](../technical/US-27-oauth2-authentication.md#reenvío-del-token-de-la-web-a-la-api-authtokenhandler)
+> [Reenvío del Token de la Web a la Api](../technical/issue-27-oauth2-authentication.md#reenvío-del-token-de-la-web-a-la-api-authtokenhandler)
 > en el documento técnico de US-27 para el detalle completo de la causa raíz y el fix (`AuthTokenHandler`).
 
 ---

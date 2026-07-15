@@ -268,7 +268,7 @@ Aquí encontrarás:
 
 ## Recursos Relacionados
 
-- [Documentación Técnica](../technical/US-5-event-listing-api.md) — Para desarrolladores
+- [Documentación Técnica](../technical/issue-7-event-listing-api.md) — Para desarrolladores
 - API Documentation (Swagger) — `https://localhost:5001/swagger`
 - Repositorio del Proyecto — https://github.com/AlejBlasco/SportsClubEventManager
 

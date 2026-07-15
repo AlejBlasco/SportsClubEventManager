@@ -95,7 +95,7 @@ dotnet user-secrets set "Authentication:Google:ClientSecret" "<google-client-sec
 dotnet user-secrets set "AdminUser:Password" "<contraseña-admin>" --project src/SportsClubEventManager.Infrastructure
 ```
 
-Un fichero de referencia con todos los secretos necesarios está disponible en [`.secrets-template.json`](../../.secrets-template.json). Para el inventario completo de secretos y el procedimiento de alta/rotación de cada uno, ver [`docs/technical/US-38-secrets-management.md`](../technical/US-38-secrets-management.md).
+Un fichero de referencia con todos los secretos necesarios está disponible en [`.secrets-template.json`](../../.secrets-template.json). Para el inventario completo de secretos y el procedimiento de alta/rotación de cada uno, ver [`docs/technical/issue-38-secrets-management.md`](../technical/issue-38-secrets-management.md).
 
 ### Paso 2 — Aplicar las migraciones de base de datos
 
@@ -190,4 +190,4 @@ Errores esperados según el estado de la configuración:
 |---|---|
 | `Error 401: invalid_client — The OAuth client was not found` | `GOOGLE_CLIENT_ID` sigue siendo el placeholder de `.env.example`, o no corresponde a ningún cliente OAuth real |
 | `redirect_uri_mismatch` | El `client_id` usado es válido pero no tiene `http://localhost:5240/signin-google` en sus "Authorized redirect URIs" (típicamente por reutilizar el cliente de producción, cuyos redirect URIs solo cubren el dominio público) |
-| Tras el login, `https://localhost:7123/oauth-callback?...` → "No se pudo acceder a este sitio web" | Falta `WebAppBaseUrl` en el servicio `api` del compose — debe apuntar a `http://localhost:${WEB_PORT:-5123}` (ya corregido en `infrastructure/docker-compose/docker-compose.yml`; ver detalle en [`docs/technical/US-27-oauth2-authentication.md`](../technical/US-27-oauth2-authentication.md#configuración-real-en-docker-compose-local-2026-07-15)) |
+| Tras el login, `https://localhost:7123/oauth-callback?...` → "No se pudo acceder a este sitio web" | Falta `WebAppBaseUrl` en el servicio `api` del compose — debe apuntar a `http://localhost:${WEB_PORT:-5123}` (ya corregido en `infrastructure/docker-compose/docker-compose.yml`; ver detalle en [`docs/technical/issue-27-oauth2-authentication.md`](../technical/issue-27-oauth2-authentication.md#configuración-real-en-docker-compose-local-2026-07-15)) |
