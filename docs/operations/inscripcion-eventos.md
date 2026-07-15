@@ -34,7 +34,7 @@ flowchart TD
     CancelHandler --> CancelSuccess["204 No Content"]
 ```
 
-> Para la interacción completa componente-a-componente (incluida la variante de cancelación por administrador), ver el [sequence diagram de cancelación](../technical/diagrams/sequence-cancellation.md).
+> Para la interacción completa componente-a-componente (incluida la variante de cancelación por administrador), ver el [sequence diagram de cancelación](../architecture/diagrams/sequence-cancellation.md).
 
 ## Explicación del flujo
 

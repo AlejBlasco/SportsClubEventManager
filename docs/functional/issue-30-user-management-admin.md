@@ -228,14 +228,6 @@ No hay límite técnico. Sin embargo, cambios masivos pueden afectar el rendimie
 
 ---
 
-## Funcionalidades relacionadas
-
-- [Perfil de Usuario](./user-profile.md) — Los usuarios pueden editar su propia información de perfil
-- [Control de Acceso Basado en Roles](./rbac.md) — Información técnica sobre cómo los roles controlan permisos
-- [Registro de Auditoría](./audit-log.md) — Ver historial completo de cambios (disponible en Administración)
-
----
-
 **Última actualización:** 2026-07-07  
 **Versión de funcionalidad:** 1.0  
 **Estado:** En producción (con pruebas manuales de seguridad pendientes)

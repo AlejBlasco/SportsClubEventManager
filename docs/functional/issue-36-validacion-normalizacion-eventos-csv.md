@@ -4,7 +4,7 @@
 **Aplicable a:** Sports Club Event Manager (Administración)
 **Issue relacionada:** #36
 **Funcionalidad relacionada:** Importación de Eventos desde CSV (#35) —
-`docs/functional/US-35-csv-event-import.md`
+`docs/functional/issue-35-csv-event-import.md`
 
 ---
 
@@ -152,7 +152,7 @@ Cosas a tener en cuenta:
   puede solicitarse al equipo técnico desactivar este ajuste automático.
 - Sigue vigente el resto de limitaciones ya conocidas de la importación CSV (solo formato CSV, sin
   soporte de secciones por mes, tamaño y número de filas limitados, etc.) — ver
-  `docs/functional/US-35-csv-event-import.md`.
+  `docs/functional/issue-35-csv-event-import.md`.
 
 ---
 

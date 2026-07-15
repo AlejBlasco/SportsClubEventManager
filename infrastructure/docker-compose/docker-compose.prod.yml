@@ -37,7 +37,7 @@ services:
       # separate variable, since it's the same "public URL of the web frontend" value already
       # used for CORS above.
       WebAppBaseUrl: ${WEB_EXTERNAL_URL:-https://localhost:7123}
-      # Plain environment variables, not Docker secrets - see DEPLOYMENT_RUNBOOK.md
+      # Plain environment variables, not Docker secrets - see docs/deployment/homelab-deployment.md
       # "Known issue" note for why the file-based secrets approach was reverted.
       ConnectionStrings__DefaultConnection: ${CONNECTION_STRING}
       Authentication__JwtSettings__SecretKey: ${JWT_SECRET_KEY}
@@ -47,8 +47,8 @@ services:
       # n8n workflow notifications (issue #37) — reuses the shared homelab n8n instance, no
       # project-owned n8n container here either. WebhookToken travels as a plain environment
       # variable, not a file-based secret, same known gap already documented in
-      # DEPLOYMENT_RUNBOOK.md for the rest of api's credentials in this file (file-based secrets
-      # don't reach the real homelab Portainer). Activated only after the manual runbook in the
+      # docs/deployment/homelab-deployment.md for the rest of api's credentials in this file
+      # (file-based secrets don't reach the real homelab Portainer). Activated only after the manual runbook in the
       # design doc's "Apéndice A" has been executed.
       Notifications__N8n__Enabled: ${NOTIFICATIONS_N8N_ENABLED:-false}
       Notifications__N8n__RegistrationConfirmedWebhookUrl: ${NOTIFICATIONS_N8N_REGISTRATION_CONFIRMED_WEBHOOK_URL:-}

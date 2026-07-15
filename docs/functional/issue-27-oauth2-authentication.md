@@ -135,15 +135,5 @@ Tu sesión se cerró por inactividad o pasó 7 días desde tu último login. Sim
 
 ---
 
-## Funcionalidades Relacionadas
-
-- [Gestión de Perfil](./user-profile.md) — Actualiza tu nombre, correo y información personal
-- [Gestión de Eventos](./event-management.md) — Crea y gestiona eventos (requiere autenticación)
-- [Registraciones](./registrations.md) — Regístrate en eventos (requiere autenticación)
-- [Política de Privacidad](./privacy.md) — Lee cómo protegemos tu información
-- [Términos de Servicio](./terms.md) — Nuestros términos de uso
-
----
-
 **Última actualización:** 2026-06-30  
 **Próxima revisión:** 2026-07-31

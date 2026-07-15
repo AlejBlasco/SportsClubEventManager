@@ -37,7 +37,7 @@ flowchart TD
     DeleteOk --> Audit3["AuditLog: EventDeleted"]
 ```
 
-> Para la interacción completa componente-a-componente de las tres operaciones (Create/Update/Delete), ver el [sequence diagram de CRUD de eventos](../technical/diagrams/sequence-event-crud.md).
+> Para la interacción completa componente-a-componente de las tres operaciones (Create/Update/Delete), ver el [sequence diagram de CRUD de eventos](../architecture/diagrams/sequence-event-crud.md).
 
 ## Explicación del flujo
 

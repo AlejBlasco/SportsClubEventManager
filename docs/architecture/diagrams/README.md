@@ -9,7 +9,7 @@ No todos los diagramas viven físicamente en esta carpeta: dos de ellos (Registr
 | [C4 Context](c4-context.md) | C4 Context Diagram | Esta carpeta | Sistema + actores humanos + sistemas externos (Google, n8n, monitoring, Federación) |
 | [C4 Container](c4-container.md) | C4 Container Diagram | Esta carpeta | `Api`/`Web`/`SQL Server` + Google/n8n/Prometheus/Grafana, como unidades de despliegue reales |
 | [Diagrama ER](er-diagram.md) | ER diagram | Esta carpeta | Verificado línea a línea contra las 5 `IEntityTypeConfiguration<T>` reales |
-| [Sequence — Registro](../../architecture/architecture.md#9-flujo-end-to-end-inscribirse-a-un-evento) | Sequence diagram (registration) | `docs/architecture/architecture.md` §9 | Se queda in-situ: forma parte de la explicación de la arquitectura en capas |
+| [Sequence — Registro](../architecture.md#9-flujo-end-to-end-inscribirse-a-un-evento) | Sequence diagram (registration) | `docs/architecture/architecture.md` §9 | Se queda in-situ: forma parte de la explicación de la arquitectura en capas |
 | [Sequence — Cancelación](sequence-cancellation.md) | Sequence diagram (cancellation) | Esta carpeta | Cubre autoservicio y administrador (mismo *handler*, distinto flag) |
 | [Sequence — CRUD eventos (admin)](sequence-event-crud.md) | Sequence diagram (admin event CRUD) | Esta carpeta | Create/Update/Delete en un único diagrama con bloques `alt` |
 | [CI/CD pipeline](cicd-pipeline.md) | CI/CD pipeline flow diagram | Esta carpeta | Movido desde `docs/technical/issue-45-despliegue-automatizado-al-homelab.md` (única fuente de verdad) |
@@ -18,7 +18,7 @@ No todos los diagramas viven físicamente en esta carpeta: dos de ellos (Registr
 
 No forman parte de los ACs de la #51, pero cubren terreno adyacente y ya existían antes de esta issue — se mencionan aquí para que quien busque un diagrama concreto no tenga que adivinar en qué documento está:
 
-- [`docs/architecture/architecture.md`](../../architecture/architecture.md) — vista de capas Clean Architecture (§2), grafo de referencias entre proyectos (§3), estructura de carpetas (§4), CQRS (§5), pipeline de MediatR (§6), modelo de dominio rico (§7), persistencia (§8), manejo de errores (§10), `DelegatingHandlers` (§11), tareas en segundo plano (§12), composition root (§13).
+- [`docs/architecture/architecture.md`](../architecture.md) — vista de capas Clean Architecture (§2), grafo de referencias entre proyectos (§3), estructura de carpetas (§4), CQRS (§5), pipeline de MediatR (§6), modelo de dominio rico (§7), persistencia (§8), manejo de errores (§10), `DelegatingHandlers` (§11), tareas en segundo plano (§12), composition root (§13).
 - [`docs/observability/observability.md`](../../observability/observability.md) — arquitectura de observabilidad en producción (Prometheus + Grafana compartidos del homelab) y el diagrama del incidente real de *provisioning*.
 - Varios `docs/operations/*.md` y `docs/technical/*.md` tienen sus propios `flowchart` de lógica de negocio (decisiones/ramas), complementarios pero distintos en propósito a los `sequenceDiagram` de esta carpeta (interacción componente-a-componente en el tiempo).
 

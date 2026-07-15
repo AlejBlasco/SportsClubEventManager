@@ -15,7 +15,7 @@ Esta funcionalidad permite a los usuarios registrarse y cancelar su registro par
 > (OAuth2 / JWT, ver US-27), el registro usa siempre la identidad de la cuenta autenticada: el
 > servidor extrae al usuario del JWT y el formulario solo muestra su nombre y correo (de solo
 > lectura, prellenados) a modo de confirmación. Ver sección
-> [Formulario de Registro](#2-formulario-de-registro) más abajo.
+> [Formulario de Registro](#1-registro-para-eventos) más abajo.
 
 ---
 

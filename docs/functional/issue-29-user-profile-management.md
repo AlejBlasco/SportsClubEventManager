@@ -159,8 +159,8 @@ No, los cambios se aplican de inmediato. Si deseas deshacer un cambio, deberás 
 
 ## Funcionalidades Relacionadas
 
-- [Autenticación OAuth2 con Google](./US-27-oauth-authentication.md) — Cómo iniciar sesión con tu cuenta de Google
-- [Gestión de Roles y Permisos](./US-28-role-based-authorization.md) — Información sobre roles y permisos en el sistema
+- [Autenticación OAuth2 con Google](./issue-27-oauth2-authentication.md) — Cómo iniciar sesión con tu cuenta de Google
+- [Gestión de Roles y Permisos](./issue-28-roles-de-usuario-guia.md) — Información sobre roles y permisos en el sistema
 - (Próximamente) Verificación de Email — En una futura actualización, podrás verificar cambios de email con un código de confirmación
 
 ---

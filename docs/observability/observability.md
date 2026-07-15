@@ -70,7 +70,7 @@ Puntos clave del diagrama:
 - `api`/`web` no saben nada de Grafana ni de Cloudflare — solo exponen `/metrics`, issue #42, sin
   cambios para esta guía.
 - El datasource de Grafana se llama **`SportsClubEventManager - Prometheus`**, no `Prometheus` a
-  secas — motivo explicado en la sección [Incidente](#incidente-grafana-en-bucle-de-reinicio-datasource-provisioning-error).
+  secas — motivo explicado en la sección [Incidente](#incidente-grafana-en-bucle-de-reinicio-datasource-provisioning-error-data-source-not-found).
 - La ruta pública de Cloudflare no expone toda la Grafana compartida, solo las 3 rutas necesarias
   para renderizar el dashboard público — ver [Paso 5](#paso-5--ruta-pública-en-cloudflare-tunnel-con-restricción-por-path).
 
@@ -194,7 +194,7 @@ aplicaciones/funciones del homelab y no deben tocarse):
 solo el contenedor `grafana`).
 
 > ⚠️ **Antes de aplicar esto en un homelab distinto o en un `grafana_data` con historial**, lee
-> primero la sección [Incidente](#incidente-grafana-en-bucle-de-reinicio-datasource-provisioning-error)
+> primero la sección [Incidente](#incidente-grafana-en-bucle-de-reinicio-datasource-provisioning-error-data-source-not-found)
 > — este paso, tal cual, causó una caída completa de la Grafana compartida la primera vez que se
 > ejecutó.
 
@@ -386,6 +386,41 @@ concilia por nombre primero.
 
 ---
 
+## Incidente 2: `isDefault: true` cambió silenciosamente el datasource por defecto de la Grafana compartida (descubierto 2026-07-15)
+
+Al revisar este documento se detectó que
+[`infrastructure/grafana/provisioning/datasources/datasources.yaml`](../../infrastructure/grafana/provisioning/datasources/datasources.yaml)
+provisionaba `SportsClubEventManager - Prometheus` con `isDefault: true`, pese a que ni el dashboard
+de este proyecto ni sus reglas de alerta lo necesitan — ambos referencian el datasource por su
+`uid: prometheus` fijo, nunca por "el que sea el default".
+
+**Verificado contra la Grafana real** (mismo método de solo-lectura que el Incidente 1 — volumen
+`monitoring_grafana_data` montado `:ro` en un contenedor Alpine desechable, `sqlite3` instalado ahí,
+sin tocar el contenedor `grafana` en marcha):
+
+```
+id | uid            | name                                 | is_default
+1  | bfmqzj39p924gd  | Prometheus                          | 0
+2  | prometheus      | SportsClubEventManager - Prometheus | 1
+```
+
+Confirmado: provisionar con `isDefault: true` desmarcó automáticamente el datasource `Prometheus`
+preexistente (compartido con otras apps del homelab, antes `is_default=1`). Un efecto colateral real
+sobre infraestructura que no es solo de este proyecto — cualquier consulta ad-hoc en **Explore**, o
+cualquier panel de otra app que dependa del datasource por defecto sin fijar un `uid` explícito, pasó
+a apuntar a nuestro datasource sin que nadie lo pidiera.
+
+**Solución aplicada (en código):** `isDefault: false` en `datasources.yaml`.
+
+**Pendiente (no aplicado todavía, deliberadamente):** el cambio de código anterior evita que esto
+vuelva a pasar en el **próximo** redeploy del *provisioning*, pero **no revierte** el estado actual
+de la Grafana real — el datasource `Prometheus` preexistente sigue con `is_default=0` ahora mismo.
+Restaurarlo a `is_default=1` requiere una acción manual (UI: **Connections → Data sources →
+Prometheus → Default**, o volver a aplicar el *provisioning* corregido) — pendiente de coordinar con
+el propietario del homelab antes de tocar la instancia compartida real.
+
+---
+
 ## Troubleshooting
 
 ### `/public-dashboards/<uid>` da 404 tras configurar la ruta de Cloudflare
@@ -409,7 +444,7 @@ editar `prometheus.yml` a mano.
 
 ### Grafana no arranca tras tocar el *provisioning* (bucle de reinicio)
 
-Ver la sección completa [Incidente](#incidente-grafana-en-bucle-de-reinicio-datasource-provisioning-error)
+Ver la sección completa [Incidente](#incidente-grafana-en-bucle-de-reinicio-datasource-provisioning-error-data-source-not-found)
 de este mismo documento. Resumen de la acción inmediata: **revertir primero** (quitar los volúmenes
 nuevos en Portainer y redeploy) para restaurar el servicio compartido, y solo después diagnosticar
 con calma en un contenedor Grafana aislado — nunca depurar en caliente sobre la instancia

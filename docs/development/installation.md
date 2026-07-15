@@ -95,7 +95,7 @@ dotnet user-secrets set "Authentication:Google:ClientSecret" "<google-client-sec
 dotnet user-secrets set "AdminUser:Password" "<contraseña-admin>" --project src/SportsClubEventManager.Infrastructure
 ```
 
-Un fichero de referencia con todos los secretos necesarios está disponible en [`.secrets-template.json`](../../.secrets-template.json). Para el inventario completo de secretos y el procedimiento de alta/rotación de cada uno, ver [`docs/technical/US-38-secrets-management.md`](../technical/US-38-secrets-management.md).
+Un fichero de referencia con todos los secretos necesarios está disponible en [`.secrets-template.json`](../../.secrets-template.json). Para el inventario completo de secretos y el procedimiento de alta/rotación de cada uno, ver [`docs/technical/issue-38-secrets-management.md`](../technical/issue-38-secrets-management.md).
 
 ### Paso 2 — Aplicar las migraciones de base de datos
 
@@ -139,12 +139,6 @@ Error response from daemon: path / is mounted on / but it is not a shared or sla
 
 **Causa:** `node-exporter` monta `/:/host:ro,rslave` — la propagación `rslave` exige explícitamente que el mount de origen ya sea `shared`/`slave` en el host, y WSL2 monta `/` como privada por defecto. No es un problema del stack, sino del entorno WSL2. `cadvisor` monta `/:/rootfs:ro` sin flag de propagación, por lo que **no** se ve afectado por este mismo error; si en algún momento sí lo estuviera, la solución es idéntica.
 
-Si solo se necesita la aplicación en sí (sin `prometheus`/`grafana`/`node-exporter`/`cadvisor`), se puede evitar el problema arrancando únicamente los servicios necesarios:
-
-```bash
-docker compose up -d sqlserver api web
-```
-
 **Solución**, dentro de una terminal WSL2 (no PowerShell):
 
 ```bash
@@ -159,6 +153,12 @@ command = "mount --make-rshared /"
 ```
 
 y reiniciar WSL2 desde PowerShell con `wsl --shutdown`.
+
+**Alternativa**, si no se necesita tocar la configuración de WSL2: arrancar solo los servicios imprescindibles de la aplicación (sin `prometheus`/`grafana`/`node-exporter`/`cadvisor`):
+
+```bash
+docker compose up -d sqlserver api web
+```
 
 ### El contenedor `api` o `web` no arranca y el log muestra una excepción de configuración
 
@@ -190,4 +190,4 @@ Errores esperados según el estado de la configuración:
 |---|---|
 | `Error 401: invalid_client — The OAuth client was not found` | `GOOGLE_CLIENT_ID` sigue siendo el placeholder de `.env.example`, o no corresponde a ningún cliente OAuth real |
 | `redirect_uri_mismatch` | El `client_id` usado es válido pero no tiene `http://localhost:5240/signin-google` en sus "Authorized redirect URIs" (típicamente por reutilizar el cliente de producción, cuyos redirect URIs solo cubren el dominio público) |
-| Tras el login, `https://localhost:7123/oauth-callback?...` → "No se pudo acceder a este sitio web" | Falta `WebAppBaseUrl` en el servicio `api` del compose — debe apuntar a `http://localhost:${WEB_PORT:-5123}` (ya corregido en `infrastructure/docker-compose/docker-compose.yml`; ver detalle en [`docs/technical/US-27-oauth2-authentication.md`](../technical/US-27-oauth2-authentication.md#configuración-real-en-docker-compose-local-2026-07-15)) |
+| Tras el login, `https://localhost:7123/oauth-callback?...` → "No se pudo acceder a este sitio web" | Falta `WebAppBaseUrl` en el servicio `api` del compose — debe apuntar a `http://localhost:${WEB_PORT:-5123}` (ya corregido en `infrastructure/docker-compose/docker-compose.yml`; ver detalle en [`docs/technical/issue-27-oauth2-authentication.md`](../technical/issue-27-oauth2-authentication.md#configuración-real-en-docker-compose-local-2026-07-15)) |

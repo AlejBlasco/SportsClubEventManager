@@ -63,6 +63,6 @@ sequenceDiagram
 ## Notas
 
 - **Sin auditoría en autoservicio**: `AuditService.LogAsync` solo se invoca cuando `IsAdministrator == true` — un socio cancelando su propia inscripción no genera entrada de auditoría (ver [`administracion-inscripciones.md`](../../operations/administracion-inscripciones.md)).
-- **Eliminación física, no *soft-delete***: `Registrations.Remove(registration)` borra la fila; no hay una columna `IsDeleted`. La decisión de diseño y su justificación están en `docs/technical/US-32-administracion-gestion-inscripciones.md`, tabla "Decisiones de Diseño".
+- **Eliminación física, no *soft-delete***: `Registrations.Remove(registration)` borra la fila; no hay una columna `IsDeleted`. La decisión de diseño y su justificación están en `docs/technical/issue-32-administracion-gestion-inscripciones.md`, tabla "Decisiones de Diseño".
 - **Un administrador puede cancelar inscripciones de eventos ya ocurridos**; un socio no — es la única rama del `alt` que depende de `IsAdministrator`, aparte del registro de auditoría.
 - **Concurrencia**: aunque `Registration` no tiene `RowVersion` propio, `SaveChangesAsync` puede lanzar `DbUpdateConcurrencyException` si la fila fue borrada por otro proceso entre el `SELECT` y el `DELETE` (por ejemplo, si el evento se elimina — cascada — justo mientras el socio cancela su inscripción).

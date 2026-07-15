@@ -119,13 +119,5 @@ Consulta el endpoint `GET /api/v1/events/{id}` para ver los detalles del evento,
 
 ---
 
-## Características relacionadas
-
-- [Inscripción a Eventos](/docs/functional/us-7-event-registration.md) — Cómo inscribirse en un evento
-- [Detalles del Evento](/docs/functional/us-4-event-details.md) — Ver información completa de un evento
-- [Listado de Eventos](/docs/functional/us-5-event-listing.md) — Explorar eventos disponibles
-
----
-
 **Versión del documento:** 2026-06-25  
 **Próxima revisión esperada:** 2026-07-15 (después de Sprint 2 cuando se agregue autenticación)

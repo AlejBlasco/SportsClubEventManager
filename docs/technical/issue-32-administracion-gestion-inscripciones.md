@@ -15,7 +15,7 @@ Este trabajo implementa un sistema completo de gestión de inscripciones a nivel
 > `Admin/RegistrationManagement.razor` recibían 401 Unauthorized en todas sus llamadas porque el Web
 > nunca reenviaba el JWT a los endpoints `[Authorize]` de `RegistrationsController` /
 > `AdminRegistrationsController`. Ver
-> [Reenvío del Token de la Web a la Api](../technical/US-27-oauth2-authentication.md#reenvío-del-token-de-la-web-a-la-api-authtokenhandler)
+> [Reenvío del Token de la Web a la Api](../technical/issue-27-oauth2-authentication.md#reenvío-del-token-de-la-web-a-la-api-authtokenhandler)
 > en el documento técnico de US-27 para el detalle completo de la causa raíz y el fix (`AuthTokenHandler`).
 
 > **Corrección post-implementación (2026-07-08):** `MyRegistrations.razor` no declaraba
