@@ -1,8 +1,8 @@
 # Despliegue automático al homelab
 
-Guía paso a paso para configurar y ejecutar el despliegue continuo de **SportsClubEventManager** al homelab. Para el procedimiento operativo día a día (camino feliz + rollback + fallbacks manuales desde la UI de Portainer) ver también [`infrastructure/deploy/DEPLOYMENT_RUNBOOK.md`](../../infrastructure/deploy/DEPLOYMENT_RUNBOOK.md).
+Guía operativa completa — única fuente de verdad — para configurar, ejecutar, verificar y revertir el despliegue continuo de **SportsClubEventManager** al homelab. Antes vivía repartida entre este documento y `infrastructure/deploy/DEPLOYMENT_RUNBOOK.md`; se fusionaron en uno solo (2026-07-15) para eliminar la duplicación entre ambos — `infrastructure/deploy/` conserva únicamente los scripts (`smoke-test.sh`, `find-last-good-tag.sh`, `portainer-rollback.sh`) y un índice mínimo que apunta aquí.
 
-El despliegue se apoya en **Docker Compose + Portainer** sobre un homelab personal (no hay Kubernetes), accesible **exclusivamente por Tailscale** — no hay ninguna ruta pública a Portainer. Existen dos flujos: la **configuración inicial** (solo la primera vez que se conecta un homelab) y **hacer un despliegue** (cada vez que se publica una nueva versión). Sigue el que corresponda.
+El despliegue se apoya en **Docker Compose + Portainer** sobre un homelab personal (no hay Kubernetes), accesible **exclusivamente por Tailscale** — no hay ninguna ruta pública a Portainer. Existen tres flujos: la **configuración inicial** (solo la primera vez que se conecta un homelab), **hacer un despliegue** (cada vez que se publica una nueva versión) y **rollback** (si algo sale mal). Sigue el que corresponda.
 
 ## Requisitos previos
 
@@ -129,12 +129,14 @@ gh pr merge release/vX.Y.Z --squash --delete-branch
 
 El `push` a `master` dispara `cd.yml` completo, sin intervención manual:
 
-1. **`validate`** — reconstruye y escanea (Trivy) las imágenes `api`/`web`, y las somete a un smoke test local.
+1. **`validate`** — reconstruye y escanea (Trivy) las imágenes `api`/`web`, y las somete a un smoke test local. Si falla, el pipeline se detiene aquí — no se publica ni despliega nada.
 2. **`build-and-push`** — publica ambas imágenes en GHCR con las etiquetas `latest`, `sha-<hash-corto>` y `X.Y.Z`.
-3. **`deploy`** — llama al webhook de Portainer, que vuelve a hacer `pull` y recrea los contenedores.
-4. **`post-deploy-smoke-test`** — comprueba `GET /health/live` y `GET /health/ready` contra la URL real del homelab.
-5. **`tag-deployed-version`** — crea el tag `deployed/homelab/<sha-corto>`, fuente de verdad de qué versión está desplegada.
+3. **`deploy`** — llama al **webhook de GitOps de Portainer** (`secrets.PORTAINER_WEBHOOK_URL`), que hace que Portainer vuelva a hacer `pull` de las imágenes (`pull_policy: always`) y recree los contenedores `api`/`web`.
+4. **`post-deploy-smoke-test`** — espera a que el despliegue esté realmente sano contra la URL pública real (`secrets.HOMELAB_WEB_URL`, entorno `homelab-production`): `GET /health/live` y `GET /health/ready` (bloqueantes, hasta 6 intentos cada 15s, ~90s máx. cada uno — `/health/ready` valida `Api` de forma transitiva, ver `ApiAvailabilityHealthCheck`, issue #41). Si cualquiera de los dos falla, el job ejecuta `find-last-good-tag.sh`, escribe el tag `sha-*` correcto anterior y las instrucciones de rollback en el resumen del job (`$GITHUB_STEP_SUMMARY`) con `::error::`, y falla — lo que marca el `Deployment` de `homelab-production` como `failure`, visible en la pestaña **Environments** del repositorio.
+5. **`tag-deployed-version`** — si el smoke test pasa, crea y empuja el tag ligero `deployed/homelab/<sha-corto>` sobre el commit desplegado, usando el `GITHUB_TOKEN` de la propia ejecución. Este tag es la fuente de verdad de "qué se ha desplegado con éxito y cuándo", y es lo que consume el rollback automático como valores válidos de `version`.
 6. **`tag-release-version`** — si `Directory.Build.props` tiene una versión que todavía no tiene su tag `vX.Y.Z` (el caso normal tras seguir el Paso 2), crea y empuja ese tag automáticamente, lo que dispara `release.yml` sin ninguna acción manual — ver [Paso 6](#paso-6-automático—el-tag-semver-y-la-github-release) más abajo.
+
+En ningún punto de este flujo se necesita abrir la UI de Portainer ni ejecutar nada a mano — es el comportamiento esperado una vez cargados los secretos/variables del [Paso 1](#paso-1--crear-el-github-environment-homelab-production).
 
 Sigue el progreso con:
 
@@ -191,15 +193,47 @@ docker inspect --format='{{json .Config.Healthcheck.Test}}' sportsclub-api-1
 
 ## Rollback
 
-Ver [`DEPLOYMENT_RUNBOOK.md`, sección 2](../../infrastructure/deploy/DEPLOYMENT_RUNBOOK.md#2-rollback-automático-rollbackyml) para el procedimiento completo. Resumen:
+### Rollback automático (`rollback.yml`)
+
+Si un despliegue queda en mal estado (o simplemente se quiere volver a una versión anterior), el rollback es automático, sin tocar la UI de Portainer:
 
 ```bash
+# Ver qué versiones se han desplegado con éxito (más reciente primero):
 git fetch --tags
-git tag -l 'deployed/homelab/*' --sort=-creatordate   # versiones ya desplegadas con éxito
-gh workflow run rollback.yml -f version=<hash-corto>  # sin el prefijo "sha-"
+git tag -l 'deployed/homelab/*' --sort=-creatordate
+
+# Lanzar el rollback a una de esas versiones (usar solo el hash corto,
+# SIN el prefijo "sha-" — el workflow lo añade internamente):
+gh workflow run rollback.yml -f version=abc1234
 ```
 
-`rollback.yml` valida que el tag exista, actualiza `APP_VERSION` en el stack de Portainer vía su API (sin reconstruir nada, la imagen ya existe en GHCR) y vuelve a comprobar `/health/live`/`/health/ready`. Si la API de Portainer no está disponible, el runbook documenta el fallback manual paso a paso desde la UI.
+También puede lanzarse desde la pestaña **Actions → Rollback Homelab Deployment → Run workflow** de GitHub, indicando el mismo valor en el campo `version`.
+
+`rollback.yml` ejecuta, en orden:
+
+1. **`validate-version`**: comprueba que existe el tag `deployed/homelab/<version>`. Si no existe, falla con un mensaje explícito en vez de intentar desplegar un commit que nunca llegó a desplegarse con éxito.
+2. **`portainer-rollback`**: llama a `infrastructure/deploy/portainer-rollback.sh "sha-<version>"`, que se autentica contra la API de Portainer (`X-API-Key`), localiza el stack de producción por nombre y hace `PUT /api/stacks/{id}` fijando la variable de entorno de stack `APP_VERSION=sha-<version>` y forzando `pullImage: true`. La imagen con ese tag ya existe en GHCR — no se reconstruye nada.
+3. **`post-rollback-smoke-test`**: reutiliza `infrastructure/deploy/smoke-test.sh` (los mismos checks de `/health/live` y `/health/ready` que el despliegue normal). Si falla, el job falla con una alerta explícita — **no hay reintento automático adicional ni "rollback del rollback"**; en ese caso hay que seguir el [procedimiento manual paso a paso](#fallback-manual-rollback-paso-a-paso-en-portainer) de más abajo.
+
+### Fallback manual: "Pull and redeploy" desde la UI de Portainer
+
+Si el **webhook** de Portainer no está disponible (secreto no cargado, API/host inalcanzable, etc.), el despliegue normal puede hacerse a mano:
+
+1. Entrar en Portainer → seleccionar el **Environment** del nodo del homelab.
+2. Ir a **Stacks** → abrir el stack de producción (por defecto `sportsclubeventmanager-prod`; si el nombre real difiere, `rollback.yml` lo lee de la variable `PORTAINER_STACK_NAME` — ver [Paso 1](#paso-1--crear-el-github-environment-homelab-production)).
+3. Pulsar **"Pull and redeploy"** (o **"Update the stack"** con la opción **"Re-pull image"** activada, según la versión de Portainer). Esto vuelve a hacer `pull` de la imagen `:${APP_VERSION:-latest}` configurada actualmente y recrea los contenedores `api`/`web`.
+4. Verificar manualmente `GET https://<HOMELAB_WEB_URL>/health/live` y `GET https://<HOMELAB_WEB_URL>/health/ready` para confirmar que el despliegue quedó sano (los mismos checks que hace `smoke-test.sh`).
+
+### Fallback manual: rollback paso a paso en Portainer
+
+Si la **API** de Portainer no está disponible (p. ej. porque no es alcanzable desde runners de GitHub-hosted), el rollback puede hacerse a mano con el mismo resultado final que `rollback.yml`:
+
+1. Elegir a qué versión volver a partir de los tags `deployed/homelab/*` (ver comando `git tag -l` de más arriba), o ejecutando `infrastructure/deploy/find-last-good-tag.sh <sha-actual>` para obtener automáticamente el último tag correcto anterior.
+2. En Portainer → **Stacks** → abrir el stack de producción → sección de **variables de entorno del stack**.
+3. Fijar (o editar) la variable `APP_VERSION` al valor `sha-<hash-corto>` elegido en el paso 1.
+4. Pulsar **"Update the stack"** con la opción **"Re-pull image"** activada — la imagen con ese tag ya existe en GHCR, así que no hace falta reconstruir nada.
+5. Verificar manualmente `/health/live` y `/health/ready` como en el punto 4 del fallback anterior.
+6. Una vez confirmado que el rollback fue efectivo, documentar el incidente y, si procede, dejar `APP_VERSION` fijada a ese valor hasta que se publique una corrección — el siguiente `push` a `master` que pase el smoke test volverá a mover el despliegue hacia adelante de forma automática.
 
 ## Troubleshooting
 
@@ -253,9 +287,13 @@ gh workflow run rollback.yml -f version=<hash-corto>  # sin el prefijo "sha-"
 
 ### Docker secrets de fichero (`secrets: <nombre>: file: ...`) no llegan a la app en Portainer
 
-**Causa (no resuelta):** se intentó migrar los 5 secretos de aplicación a Docker Compose "secrets" de fichero (que la app ya sabe leer vía `AddDockerSecrets()`/`KeyPerFile`), pero contra este Portainer concreto (Business Edition, motor de compose vendorizado) el mount y el contenido del fichero eran correctos (confirmado con `docker inspect`/`docker exec`), y aun así la Api seguía arrancando con el connection string de fallback de `appsettings.json`, como si `AddDockerSecrets()` no incorporara `/run/secrets` a la configuración final.
+**Causa (no resuelta):** se intentó migrar los 5 secretos de aplicación a Docker Compose "secrets" file-based (que la app ya sabe leer vía `AddDockerSecrets()`/`KeyPerFile` en `/run/secrets`, ver [`docs/technical/issue-38-secrets-management.md`](../technical/issue-38-secrets-management.md)), pero **no funcionó en la práctica contra este Portainer** y se revirtió a variables de entorno planas para desbloquear el despliegue:
 
-**Solución (workaround actual):** los 5 secretos se pasan como variables de entorno normales del stack, no como Docker secrets. El detalle completo de qué se probó está en el ["Known issue" de `DEPLOYMENT_RUNBOOK.md`](../../infrastructure/deploy/DEPLOYMENT_RUNBOOK.md#known-issue-docker-secrets-file-based-secrets-nombre-file--no-llegan-a-la-app-en-este-portainer). Pendiente de retomar — ver [`docs/technical/seguimiento-pendientes-cicd-homelab.md`](../technical/seguimiento-pendientes-cicd-homelab.md).
+- `secrets: <nombre>: environment: VAR` (secret alimentado desde una variable de entorno) se comprobó que **no se monta en absoluto**: el motor de compose embebido en Portainer (Business Edition 2.39.2, `docker/cli` vendorizado, distinto del `docker compose` del sistema) acepta la sintaxis sin error pero `docker inspect` mostraba `.Mounts: []` en el contenedor `api`.
+- `secrets: <nombre>: file: <ruta>` con una ruta solo visible dentro del contenedor `portainer` (p. ej. `/data/...`) falla con un error explícito del daemon (`invalid mount config for type "bind": bind source path does not exist`), porque los bind mounts los resuelve el daemon de Docker contra el filesystem del **host real**, no contra la vista del contenedor `portainer`.
+- `secrets: <nombre>: file: <ruta-real-del-host>` (p. ej. `/home/adminlab/sportsclub-secrets/...`) sí monta correctamente — confirmado con `docker inspect <contenedor> --format '{{json .Mounts}}'` mostrando los 5 binds, y confirmado leyendo el contenido del fichero desde dentro del contenedor (`docker exec ... cat /run/secrets/...`), con el valor correcto. **Aun así, la Api seguía arrancando con el connection string de fallback de `appsettings.json` (LocalDB)**, como si `AddDockerSecrets()` no estuviera incorporando `/run/secrets` a la configuración final. No se llegó a la causa raíz (requeriría depurar el proceso .NET en marcha, no solo el filesystem del contenedor).
+
+**Solución (workaround actual):** los 5 secretos se pasan como variables de entorno normales del stack, no como Docker secrets. Pendiente de retomar en una tarea aparte, sin bloquear despliegues mientras tanto: por qué `KeyPerFile` no sobrescribe `appsettings.json` en este entorno concreto, a pesar de que el mount y el contenido del fichero son correctos y hay tests unitarios (`SecretsConfigurationExtensionsTests.cs`) que cubren la lógica de mapeo de claves.
 
 ### Editar `stack.env`/`docker-compose.yml` directamente en el volumen de Portainer no es duradero
 
@@ -283,7 +321,7 @@ gh workflow run rollback.yml -f version=<hash-corto>  # sin el prefijo "sha-"
 
 ## Referencias
 
-- [`infrastructure/deploy/DEPLOYMENT_RUNBOOK.md`](../../infrastructure/deploy/DEPLOYMENT_RUNBOOK.md) — procedimiento de referencia (camino feliz, rollback, fallbacks manuales).
+- [`infrastructure/deploy/README.md`](../../infrastructure/deploy/README.md) — índice de los scripts (`smoke-test.sh`, `find-last-good-tag.sh`, `portainer-rollback.sh`) que este documento describe en uso.
 - [`CHANGELOG.md`](../../CHANGELOG.md) — historial real de versiones publicadas (Keep a Changelog / SemVer).
 - [`.github/workflows/release.yml`](../../.github/workflows/release.yml) — publica la GitHub Release al empujar el tag `vX.Y.Z`.
 - `.claude/docs/sdlc/design/issue-45-despliegue-automatizado-al-homelab.md` — diseño original de la issue #45 (incluye el Apéndice A con los pasos exactos para generar cada secreto/token).

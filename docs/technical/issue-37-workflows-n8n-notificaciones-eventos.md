@@ -236,7 +236,7 @@ viaja como secreto de fichero (`n8n__webhooktoken`, bloque `secrets:`), mismo me
 resto de secretos de la issue #38 — aunque en la práctica no tiene uso real mientras
 `Enabled = false`. En producción (`docker-compose.prod.yml`), viaja como variable de entorno en
 texto plano (`Notifications__N8n__WebhookToken: ${N8N_WEBHOOK_TOKEN}`), siguiendo el hueco ya
-conocido y documentado en `DEPLOYMENT_RUNBOOK.md` (los secretos de fichero no llegan al Portainer
+conocido y documentado en [`docs/deployment/homelab-deployment.md`](../deployment/homelab-deployment.md#docker-secrets-de-fichero-secrets-nombre-file--no-llegan-a-la-app-en-portainer) (los secretos de fichero no llegan al Portainer
 real del homelab). **No se añade ningún servicio `n8n` a ninguno de los dos ficheros Compose.**
 
 ## Edge Cases & Error Handling

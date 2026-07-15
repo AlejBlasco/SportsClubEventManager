@@ -27,7 +27,7 @@ Puntos clave del diagrama:
 | `infrastructure/deploy/portainer-rollback.sh` | `infrastructure/deploy/portainer-rollback.sh` | Recibe `sha-<hash>` como argumento. Se autentica contra `$PORTAINER_API_URL` con `$PORTAINER_API_KEY` (header `X-API-Key`), localiza el stack de producción por nombre (`GET /api/stacks`, nombre configurable vía `PORTAINER_STACK_NAME`, por defecto `sportsclubeventmanager-prod`) y hace `PUT /api/stacks/{id}` fijando la variable de entorno de stack `APP_VERSION` al valor recibido y forzando `pullImage: true` — esto dispara el redeploy en la misma llamada, preservando el resto de la configuración del stack (referencias a secretos, puertos, etc.). |
 | `.github/workflows/rollback.yml` | `.github/workflows/rollback.yml` | Workflow nuevo, `workflow_dispatch` con input obligatorio `version` (hash corto **sin** prefijo `sha-`, p. ej. `abc1234`). Tres jobs encadenados: `validate-version` → `portainer-rollback` → `post-rollback-smoke-test`. |
 | `docker/docker-compose.prod.yml` (modificado) | `docker/docker-compose.prod.yml` | Único cambio: `image: ghcr.io/alejblasco/sportsclubeventsmanager-{api,web}:${APP_VERSION:-latest}` en los servicios `api` y `web` (antes, `:latest` fijo). Sin `APP_VERSION` fijada en Portainer, el comportamiento es idéntico al actual. Resto del fichero (secrets, healthcheck de `sqlserver`, `depends_on`, `restart`) sin cambios. |
-| `infrastructure/deploy/DEPLOYMENT_RUNBOOK.md` | `infrastructure/deploy/DEPLOYMENT_RUNBOOK.md` | Runbook operativo: flujo automático completo, rollback automático, *fallback* manual "Pull and redeploy" en la UI de Portainer, rollback manual paso a paso, y la lista de prerrequisitos operativos pendientes. |
+| `infrastructure/deploy/DEPLOYMENT_RUNBOOK.md` (histórico — fusionado en [`docs/deployment/homelab-deployment.md`](../deployment/homelab-deployment.md) el 2026-07-15) | *(eliminado, ver enlace)* | Runbook operativo: flujo automático completo, rollback automático, *fallback* manual "Pull and redeploy" en la UI de Portainer, rollback manual paso a paso, y la lista de prerrequisitos operativos pendientes. |
 
 ## Por qué `/health/live` y `/health/ready` son bloqueantes aquí (a diferencia de la issue #44)
 
@@ -95,7 +95,7 @@ sequenceDiagram
 
 1. **`validate-version`**: comprueba con `git ls-remote --exit-code --tags origin deployed/homelab/<version>` que ese tag existe antes de continuar. Si no existe, falla con un mensaje explícito en vez de intentar desplegar un commit que nunca llegó a desplegarse con éxito.
 2. **`portainer-rollback`** (`needs: validate-version`, `environment: homelab-production`): llama a `infrastructure/deploy/portainer-rollback.sh "sha-${{ inputs.version }}"`. El script fusiona `APP_VERSION=sha-<version>` con el resto de variables de entorno ya configuradas en el stack (preservando referencias a secretos, puertos, etc.) y hace `PUT /api/stacks/{id}` con `pullImage: true`. La imagen con ese tag ya existe en GHCR (publicada por una ejecución anterior de `build-and-push`) — este script nunca construye ni publica nada.
-3. **`post-rollback-smoke-test`** (`needs: portainer-rollback`): reutiliza `smoke-test.sh`, los mismos checks bloqueantes de `/health/live` y `/health/ready`. Si falla, el job falla con una alerta explícita. **No hay reintento automático ni "rollback del rollback"** — en ese caso el runbook (`infrastructure/deploy/DEPLOYMENT_RUNBOOK.md`, sección 4) documenta el procedimiento manual paso a paso en la UI de Portainer.
+3. **`post-rollback-smoke-test`** (`needs: portainer-rollback`): reutiliza `smoke-test.sh`, los mismos checks bloqueantes de `/health/live` y `/health/ready`. Si falla, el job falla con una alerta explícita. **No hay reintento automático ni "rollback del rollback"** — en ese caso el runbook ([`docs/deployment/homelab-deployment.md`](../deployment/homelab-deployment.md#fallback-manual-rollback-paso-a-paso-en-portainer)) documenta el procedimiento manual paso a paso en la UI de Portainer.
 
 ### Por qué la API REST de Portainer y no el webhook de GitOps
 
@@ -114,7 +114,7 @@ Tanto `post-deploy-smoke-test`/`tag-deployed-version` (en `cd.yml`) como los tre
 
 Nota: el campo `environment.url` de un job en GitHub Actions no admite el contexto `secrets` (solo `env`, `github`, `inputs`, `job`, `matrix`, `needs`, `runner`, `steps`, `strategy`, `vars`), verificado con `actionlint`. Por eso `post-deploy-smoke-test` referencia `url: ${{ vars.HOMELAB_WEB_URL }}` en ese campo concreto, mientras que el step real de smoke test lee `${{ vars.HOMELAB_WEB_URL || secrets.HOMELAB_WEB_URL }}` — si `HOMELAB_WEB_URL` solo se carga como *secret*, el smoke test funciona igual, pero el enlace visible en la pestaña "Environments" queda vacío.
 
-Sin estos cuatro valores cargados en el entorno `homelab-production` (`Settings → Environments → homelab-production` del repositorio), el flujo automático descrito en este documento no está activo todavía — ver `infrastructure/deploy/DEPLOYMENT_RUNBOOK.md`, sección 5, y el `## Apéndice A` del [documento de diseño](../../.claude/docs/sdlc/design/issue-45-despliegue-automatizado-al-homelab.md) para los pasos exactos de generación de cada secreto.
+Sin estos cuatro valores cargados en el entorno `homelab-production` (`Settings → Environments → homelab-production` del repositorio), el flujo automático descrito en este documento no está activo todavía — ver [`docs/deployment/homelab-deployment.md`](../deployment/homelab-deployment.md#configuración-inicial-solo-la-primera-vez), y el `## Apéndice A` del [documento de diseño](../../.claude/docs/sdlc/design/issue-45-despliegue-automatizado-al-homelab.md) para los pasos exactos de generación de cada secreto.
 
 ## Cómo disparar un rollback
 
@@ -131,7 +131,7 @@ gh workflow run rollback.yml -f version=abc1234
 
 También puede lanzarse desde **Actions → Rollback Homelab Deployment → Run workflow** en GitHub, indicando el mismo valor en el campo `version`.
 
-Para el procedimiento completo (incluyendo los *fallbacks* manuales si la API de Portainer no fuera alcanzable desde runners GitHub-hosted), ver `infrastructure/deploy/DEPLOYMENT_RUNBOOK.md`.
+Para el procedimiento completo (incluyendo los *fallbacks* manuales si la API de Portainer no fuera alcanzable desde runners GitHub-hosted), ver [`docs/deployment/homelab-deployment.md`](../deployment/homelab-deployment.md#rollback).
 
 ## Edge Cases & Error Handling
 

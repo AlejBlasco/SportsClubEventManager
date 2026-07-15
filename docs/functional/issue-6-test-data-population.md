@@ -202,5 +202,3 @@ Si encuentras problemas con los datos de prueba:
 ## Funcionalidades Relacionadas
 
 - [US-3: Configuración de Base de Datos y Migraciones](./issue-5-database-setup-migrations.md) — Prerequisito para datos de seed
-- [Guía de Eventos](./eventos.md) — Cómo gestionar eventos en la aplicación (pendiente)
-- [Guía de Inscripciones](./inscripciones.md) — Cómo inscribirse en eventos (pendiente)

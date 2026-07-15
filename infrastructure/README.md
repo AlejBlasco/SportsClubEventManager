@@ -9,7 +9,7 @@ Esta carpeta es la ubicación única y versionada de toda la infraestructura com
 | Carpeta | Contenido |
 |---|---|
 | [`docker-compose/`](docker-compose/README.md) | Orquestación Docker Compose: stack de desarrollo local (`docker-compose.yml`) y stack de producción/homelab (`docker-compose.prod.yml`), ambos con la red interna `sportsclub-network`. |
-| [`deploy/`](deploy/README.md) | Automatización de despliegue/rollback al homelab (issue #45, ya implementada): scripts de smoke test, cálculo del último tag correcto y rollback vía API de Portainer, más el runbook operativo completo. |
+| [`deploy/`](deploy/README.md) | Automatización de despliegue/rollback al homelab (issue #45, ya implementada): scripts de smoke test, cálculo del último tag correcto y rollback vía API de Portainer. El runbook operativo completo vive en [`docs/deployment/homelab-deployment.md`](../docs/deployment/homelab-deployment.md), no en esta carpeta. |
 
 Los `Dockerfile.api`/`Dockerfile.web` (recetas de construcción de imagen) **no** viven aquí — permanecen en [`/docker/`](../docker/), ya que son una preocupación de *build* de aplicación, no de orquestación/despliegue de infraestructura.
 
@@ -26,7 +26,8 @@ Ver [`docker-compose/README.md`](docker-compose/README.md) para el detalle de am
 El despliegue a producción se realiza vía Portainer, apuntando al stack `infrastructure/docker-compose/docker-compose.prod.yml`, y se automatiza completamente desde CI/CD (`.github/workflows/cd.yml` + `rollback.yml`). Ver:
 
 - [`docker-compose/README.md`](docker-compose/README.md) — diferencias entre el stack de desarrollo y el de producción.
-- [`deploy/README.md`](deploy/README.md) y el [runbook de despliegue](deploy/DEPLOYMENT_RUNBOOK.md) — flujo automático completo, rollback y *fallbacks* manuales.
+- [`deploy/README.md`](deploy/README.md) — índice de los scripts de despliegue/rollback.
+- [`docs/deployment/homelab-deployment.md`](../docs/deployment/homelab-deployment.md) — flujo automático completo, rollback y *fallbacks* manuales.
 
 ## Qué NO cubre este IaC (alcance explícitamente fuera de esta issue)
 
