@@ -7,6 +7,9 @@ using Microsoft.AspNetCore.Mvc;
 using SportsClubEventManager.Application.Authentication.Commands.Login;
 using SportsClubEventManager.Application.Authentication.Commands.Logout;
 using SportsClubEventManager.Application.Authentication.Commands.RefreshToken;
+using SportsClubEventManager.Application.Authentication.Common;
+using SportsClubEventManager.Application.Common.Interfaces;
+using SportsClubEventManager.Domain.Enums;
 using SportsClubEventManager.Shared.DTOs;
 using System.Security.Claims;
 
@@ -20,14 +23,20 @@ namespace SportsClubEventManager.Api.Controllers;
 public class AuthenticationController : ControllerBase
 {
     private readonly ISender _sender;
+    private readonly IOAuthExchangeCodeStore _oAuthExchangeCodeStore;
+    private readonly IConfiguration _configuration;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AuthenticationController"/> class.
     /// </summary>
     /// <param name="sender">The MediatR sender for command dispatching.</param>
-    public AuthenticationController(ISender sender)
+    /// <param name="oAuthExchangeCodeStore">Store used to hand off Google OAuth2 tokens to Web via a one-time code.</param>
+    /// <param name="configuration">The application configuration.</param>
+    public AuthenticationController(ISender sender, IOAuthExchangeCodeStore oAuthExchangeCodeStore, IConfiguration configuration)
     {
         _sender = sender;
+        _oAuthExchangeCodeStore = oAuthExchangeCodeStore;
+        _configuration = configuration;
     }
 
     /// <summary>
@@ -160,9 +169,13 @@ public class AuthenticationController : ControllerBase
     }
 
     /// <summary>
-    /// Handles the Google OAuth2 callback after successful authentication.
+    /// Handles the Google OAuth2 callback after successful authentication. Rather than establishing
+    /// a session directly (the browser is talking to the Api's origin here, not Web's), it mints a
+    /// one-time exchange code and redirects to Web's own callback page, which redeems it
+    /// server-to-server (see <see cref="OAuthExchange"/>) — the same "authorization code" hand-off
+    /// pattern OAuth2 itself uses, so the real tokens never appear in a URL (issue #125).
     /// </summary>
-    /// <returns>A redirect to the web application with authentication tokens.</returns>
+    /// <returns>A redirect to the web application's OAuth callback page with a one-time exchange code.</returns>
     [HttpGet("google/callback")]
     [AllowAnonymous]
     public async Task<IActionResult> GoogleCallback()
@@ -179,22 +192,73 @@ public class AuthenticationController : ControllerBase
             return Redirect($"{GetWebAppBaseUrl()}/login?error=oauth_failed");
         }
 
-        var accessToken = authenticateResult.Principal?.FindFirstValue("access_token");
-        var refreshToken = authenticateResult.Principal?.FindFirstValue("refresh_token");
+        var principal = authenticateResult.Principal;
+        var accessToken = principal?.FindFirstValue("access_token");
+        var refreshToken = principal?.FindFirstValue("refresh_token");
+        var hasUserId = Guid.TryParse(principal?.FindFirstValue(ClaimTypes.NameIdentifier), out var userId);
+        var hasRole = Enum.TryParse<Role>(principal?.FindFirstValue(ClaimTypes.Role), out var role);
 
         // The Cookie scheme was only a temporary carrier for the Google ticket; the app's real
-        // session state is the access_token/refresh_token cookies set below, so this one is
-        // cleared once consumed rather than left behind unused.
+        // session lives in Web's own cookie once it redeems the exchange code below, so this one
+        // is cleared once read rather than left behind unused.
         await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
 
-        if (string.IsNullOrEmpty(accessToken) || string.IsNullOrEmpty(refreshToken))
+        if (string.IsNullOrEmpty(accessToken) || string.IsNullOrEmpty(refreshToken) || !hasUserId || !hasRole)
         {
             return Redirect($"{GetWebAppBaseUrl()}/login?error=token_missing");
         }
 
-        SetAuthCookies(accessToken, refreshToken);
+        var expiresIn = _configuration.GetValue<int>("Authentication:JwtSettings:AccessTokenExpirationMinutes", 30) * 60;
 
-        return Redirect($"{GetWebAppBaseUrl()}/");
+        var authenticationResult = new AuthenticationResult
+        {
+            UserId = userId,
+            Email = principal?.FindFirstValue(ClaimTypes.Email) ?? string.Empty,
+            Name = principal?.FindFirstValue(ClaimTypes.Name) ?? string.Empty,
+            Role = role,
+            AccessToken = accessToken,
+            RefreshToken = refreshToken,
+            ExpiresIn = expiresIn
+        };
+
+        var code = _oAuthExchangeCodeStore.CreateCode(authenticationResult);
+
+        return Redirect($"{GetWebAppBaseUrl()}/oauth-callback?code={Uri.EscapeDataString(code)}");
+    }
+
+    /// <summary>
+    /// Redeems a one-time OAuth2 exchange code (see <see cref="GoogleCallback"/>) for the real
+    /// tokens. Called server-to-server by Web's <c>/oauth-callback</c> page, exactly like
+    /// <see cref="Login"/> is called by local login — so Web can build its own session the same way
+    /// for both.
+    /// </summary>
+    /// <param name="request">The exchange request containing the one-time code.</param>
+    /// <returns>A login response containing access and refresh tokens.</returns>
+    [HttpPost("oauth-exchange")]
+    [AllowAnonymous]
+    [ProducesResponseType(typeof(LoginResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public IActionResult OAuthExchange([FromBody] OAuthExchangeRequest request)
+    {
+        var result = _oAuthExchangeCodeStore.ConsumeCode(request.Code);
+
+        if (result is null)
+        {
+            return Unauthorized(new { message = "Invalid or expired exchange code." });
+        }
+
+        var response = new LoginResponse
+        {
+            UserId = result.UserId,
+            Email = result.Email,
+            Name = result.Name,
+            Role = result.Role.ToString(),
+            AccessToken = result.AccessToken,
+            RefreshToken = result.RefreshToken,
+            ExpiresIn = result.ExpiresIn
+        };
+
+        return Ok(response);
     }
 
     /// <summary>
@@ -240,7 +304,6 @@ public class AuthenticationController : ControllerBase
     /// <returns>The web application base URL.</returns>
     private string GetWebAppBaseUrl()
     {
-        return HttpContext.RequestServices.GetRequiredService<IConfiguration>()
-            .GetValue<string>("WebAppBaseUrl") ?? "https://localhost:5001";
+        return _configuration.GetValue<string>("WebAppBaseUrl") ?? "https://localhost:5001";
     }
 }

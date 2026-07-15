@@ -100,7 +100,7 @@ Al ejecutar el entorno en modo `Development` (Docker con `ASPNETCORE_ENVIRONMENT
 | Socio | `laura.rodriguez@example.com` | `Password1!` |
 | Socio | `carlos.jimenez@example.com` | `Password1!` |
 
-> El acceso mediante **Google OAuth2** requiere registrar credenciales reales en [Google Cloud Console](https://console.cloud.google.com/apis/credentials); no existe un proveedor simulado para ese flujo.
+> El acceso mediante **Google OAuth2** requiere registrar credenciales reales en [Google Cloud Console](https://console.cloud.google.com/apis/credentials); no existe un proveedor simulado para ese flujo. Para probarlo en local, crear un OAuth Client dedicado a desarrollo (nunca reutilizar el de producción) — ver el troubleshooting de ["Login con Google no funciona"](docs/development/installation.md#login-con-google-no-funciona) en la guía de instalación.
 
 ### Gestión del administrador
 

@@ -4,7 +4,6 @@
 @using Microsoft.AspNetCore.Authentication
 @using Microsoft.AspNetCore.Authentication.Cookies
 @using Microsoft.AspNetCore.Authorization
-@using System.Security.Claims
 @inject IConfiguration Configuration
 @inject HttpClient HttpClient
 @inject NavigationManager Navigation
@@ -185,9 +184,21 @@
     [SupplyParameterFromForm(FormName = "LoginForm")]
     private LoginRequest? LoginRequest { get; set; }
 
+    [SupplyParameterFromQuery(Name = "error")]
+    private string? Error { get; set; }
+
     private string _errorMessage = string.Empty;
 
-    protected override void OnInitialized() => LoginRequest ??= new LoginRequest();
+    protected override void OnInitialized()
+    {
+        LoginRequest ??= new LoginRequest();
+        _errorMessage = Error switch
+        {
+            null or "" => string.Empty,
+            "oauth_failed" or "token_missing" => "Google sign-in failed. Please try again.",
+            _ => "Login failed. Please try again."
+        };
+    }
 
     private string GetGoogleOAuthUrl()
     {
@@ -214,17 +225,7 @@
 
                 if (loginResult is not null)
                 {
-                    var claims = new[]
-                    {
-                        new Claim(ClaimTypes.NameIdentifier, loginResult.UserId.ToString()),
-                        new Claim(ClaimTypes.Name, loginResult.Name),
-                        new Claim(ClaimTypes.Email, loginResult.Email),
-                        new Claim(ClaimTypes.Role, loginResult.Role),
-                        new Claim(AuthTokenHandler.AccessTokenClaimType, loginResult.AccessToken),
-                    };
-
-                    var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
-                    var principal = new ClaimsPrincipal(identity);
+                    var principal = AuthenticationClaimsFactory.Create(loginResult);
                     await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal);
                 }
 
