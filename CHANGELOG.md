@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-07-15
+
 ### Added
 
 - `cd.yml`: new `tag-release-version` job automatically creates and pushes the `vX.Y.Z` git tag after a successful homelab deploy, when `Directory.Build.props`'s version isn't tagged yet and `CHANGELOG.md` documents it — triggering `release.yml` (GitHub Release creation) with no manual step, for the normal release flow. Falls back to a `::warning::` (never fails the job) if `CHANGELOG.md` isn't ready yet, since the deploy itself already succeeded by that point
