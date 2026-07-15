@@ -294,3 +294,63 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git tag "$tag"
           git push origin "$tag"
+
+  tag-release-version:
+    name: Tag release version (if bumped)
+    runs-on: ubuntu-latest
+    needs: tag-deployed-version
+    if: success()
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          # Needed to know which vX.Y.Z tags already exist locally, below.
+          fetch-depth: 0
+
+      - name: Extract version from Directory.Build.props
+        id: version
+        run: |
+          version=$(grep -oP '(?<=<Version>)[^<]+' Directory.Build.props)
+          echo "value=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Skip if this version is already tagged
+        id: check
+        run: |
+          if git rev-parse "v${{ steps.version.outputs.value }}" >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Verify CHANGELOG documents this version
+        if: steps.check.outputs.exists == 'false'
+        id: changelog
+        run: |
+          chmod +x .github/scripts/extract-changelog-section.sh
+          if .github/scripts/extract-changelog-section.sh "${{ steps.version.outputs.value }}" CHANGELOG.md > /dev/null; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            # Deliberately a warning, not a job failure: the homelab deploy
+            # already succeeded (needs: tag-deployed-version), so this job
+            # going red would misleadingly suggest something broke in
+            # production. Directory.Build.props was bumped ahead of
+            # CHANGELOG.md being updated - fine, just tag v${{ steps.version.outputs.value }}
+            # manually once CHANGELOG.md has a real "## [${{ steps.version.outputs.value }}]" section,
+            # same manual process as before this job existed.
+            echo "::warning::Directory.Build.props tiene la versión ${{ steps.version.outputs.value }} pero CHANGELOG.md no documenta esa sección todavía — no se crea el tag v${{ steps.version.outputs.value }} automáticamente. Complétalo y crea el tag manualmente cuando esté listo."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create and push vX.Y.Z tag
+        if: steps.check.outputs.exists == 'false' && steps.changelog.outputs.ready == 'true'
+        run: |
+          # Pushing this tag triggers release.yml on its own, which
+          # re-validates version/CHANGELOG alignment and creates the GitHub
+          # Release - this job does not create the Release itself.
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag "v${{ steps.version.outputs.value }}"
+          git push origin "v${{ steps.version.outputs.value }}"

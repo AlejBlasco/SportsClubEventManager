@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `cd.yml`: new `tag-release-version` job automatically creates and pushes the `vX.Y.Z` git tag after a successful homelab deploy, when `Directory.Build.props`'s version isn't tagged yet and `CHANGELOG.md` documents it — triggering `release.yml` (GitHub Release creation) with no manual step, for the normal release flow. Falls back to a `::warning::` (never fails the job) if `CHANGELOG.md` isn't ready yet, since the deploy itself already succeeded by that point
+
 ### Fixed
 
 - Google OAuth2 login no longer desyncs Web's and the Api's sessions: `GoogleCallback` used to set the `access_token`/`refresh_token` cookies on the Api's own origin and redirect the browser to Web's root, but those cookies were never visible to Web (different origin/port), leaving the user seemingly logged in with no actual session. Replaced with a one-time exchange code hand-off — the Api redirects to Web's new `/oauth-callback` page (`OAuthCallback.razor`) with a short-lived code minted by the new `IOAuthExchangeCodeStore`, which Web redeems server-to-server (`POST /api/authentication/oauth-exchange`) to build its own session, the same way local email/password login already does (#125)
