@@ -850,21 +850,37 @@ Solo Google está implementado en US-27. Microsoft OAuth2 seguirá el mismo patr
 
 El sistema registra `LastLoginAt` pero no centraliza eventos de seguridad (intentos fallidos, logouts forzados, etc). Se recomienda agregar auditoría centralizada para monitoring en producción.
 
-### Logout del Web No Revoca el Refresh Token en el Servidor (descubierto 2026-07-15)
+### Corrección: Logout del Web Ahora Revoca el Refresh Token en el Servidor (2026-07-15)
 
-`GET /account/logout` (`Program.cs`, invocado desde `LoginDisplay.razor`) solo hace
-`HttpContext.SignOutAsync` sobre la cookie de sesión propia de Web — **nunca llama** a
+**Detectado:** `GET /account/logout` (`Program.cs`, invocado desde `LoginDisplay.razor`) solo hacía
+`HttpContext.SignOutAsync` sobre la cookie de sesión propia de Web — **nunca llamaba** a
 `POST /api/authentication/logout` (`LogoutCommand`), el único punto que revoca el `refresh_token`
 en base de datos. Consecuencia: tras un "logout" visible en la UI, el `refresh_token` emitido en su
-día sigue siendo válido contra `POST /api/authentication/refresh` hasta su expiración natural (7
-días) — el logout actual solo cierra la sesión de Web, no invalida las credenciales subyacentes de
-la Api. Detectado auditando el flujo de logout mientras se documentaba la corrección del hand-off
-Google↔Web (issue #125); no forma parte de esa corrección y queda pendiente de decidir su
-prioridad. Nótese además que la cookie de Web (`AuthenticationClaimsFactory`) hoy solo guarda el
-`access_token` como claim, no el `refresh_token` — un fix correcto necesitaría también añadirlo
-como claim (mismo patrón que el fix de `access_token` del 2026-07-08) para que
-`/account/logout` pueda llamar primero a `POST /api/authentication/logout` con él, antes de limpiar
-su propia cookie de sesión.
+día seguía siendo válido contra `POST /api/authentication/refresh` hasta su expiración natural (7
+días) — el logout solo cerraba la sesión de Web, sin invalidar las credenciales subyacentes de la
+Api. Detectado auditando el flujo de logout mientras se documentaba la corrección del hand-off
+Google↔Web (issue #125); no formaba parte de esa corrección.
+
+**Solución:** a diferencia de lo planteado inicialmente, **no hizo falta** añadir el `refresh_token`
+como claim en la cookie de Web — `POST /api/authentication/logout` está protegido con `[Authorize]`
+y obtiene el `UserId` del propio `access_token` (Bearer) del caller vía `ClaimTypes.NameIdentifier`,
+y Web ya adjunta ese `access_token` automáticamente a través de `AuthTokenHandler`. Se añadió:
+
+1. **`IAccountLogoutService`/`AccountLogoutService`** (`SportsClubEventManager.Web/Services/`) —
+   nuevo servicio tipado, mismo patrón que los 7 servicios existentes (`EventService`,
+   `UserProfileService`, etc.), que llama a `POST /api/authentication/logout` sin cuerpo.
+2. **`Program.cs`** — nuevo `HttpClient` tipado registrado con la misma cadena de handlers
+   (`AuthTokenHandler` → `CorrelationIdHandler` → `ApiCallLoggingHandler`) que el resto. El endpoint
+   `/account/logout` ahora llama a `IAccountLogoutService.LogoutAsync()` en un `try/catch` antes de
+   `SignOutAsync`: si la llamada falla (Api caída, o el `access_token` ya caducado — ver
+   "Sin Refresco Automático de Token desde el Web" más abajo, que sigue siendo una limitación
+   independiente), la sesión de Web se cierra igualmente — la revocación en la Api es best-effort,
+   nunca debe bloquear que el usuario pueda cerrar su sesión local.
+
+Verificado de punta a punta: login (Google) → clic en "Cerrar sesión" → `GET /account/logout` →
+`POST /api/authentication/logout` → `204` → `refresh_token` revocado en base de datos (confirmado
+también a nivel Api de forma aislada: un `refresh_token` usado contra
+`POST /api/authentication/refresh` tras el logout devuelve `401`).
 
 ---
 

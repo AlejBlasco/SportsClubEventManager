@@ -37,8 +37,13 @@ flowchart TD
     Fail401 --> Login
 
     Home --> LogoutAction["Usuario pulsa 'Cerrar sesión'"]
-    LogoutAction --> WebLogout["GET /account/logout (Web)<br/>SOLO limpia la cookie de sesión propia de Web"]
-    WebLogout --> Login
+    LogoutAction --> WebLogout["GET /account/logout (Web)<br/>IAccountLogoutService llama a<br/>POST /api/authentication/logout (best-effort)"]
+    WebLogout --> RevokeCheck{"¿Api respondió 204?"}
+    RevokeCheck -->|Sí| RevokeOk["refresh_token revocado en base de datos<br/>(LogoutCommand)"]
+    RevokeCheck -->|No, p. ej. access_token ya caducado| RevokeSkip["Se ignora el fallo:<br/>revocar en la Api es best-effort"]
+    RevokeOk --> WebSignOut["Se limpia la cookie de sesión propia de Web"]
+    RevokeSkip --> WebSignOut
+    WebSignOut --> Login
 ```
 
 ## Explicación del flujo
@@ -52,4 +57,4 @@ En ambos flujos, el resultado (`LoginResponse` con el JWT de acceso, el refresh 
 
 > **Limitación conocida — sin refresco automático:** aunque `POST /api/authentication/refresh` (`RefreshTokenCommand`) existe y funciona, **Web nunca lo invoca**. El `AccessToken` que `AuthTokenHandler` adjunta a las llamadas servidor-a-servidor hacia la Api caduca a los 30 minutos desde el login y no se renueva, aunque la cookie de sesión del propio Web siga viva más tiempo (`SlidingExpiration`). Pasado ese plazo, páginas como `/profile` o `/my-registrations` vuelven a fallar con 401 hasta que el usuario cierra sesión y vuelve a iniciarla. Ver el detalle en [`docs/technical/US-27-oauth2-authentication.md`](../technical/US-27-oauth2-authentication.md#sin-refresco-automático-de-token-desde-el-web).
 
-> **Limitación conocida — el logout no revoca nada en el servidor:** `GET /account/logout` en Web (`LoginDisplay.razor`) solo limpia la cookie de sesión propia de Web (`HttpContext.SignOutAsync`) — **nunca llama** a `POST /api/authentication/logout` (`LogoutCommand`), así que el `refresh_token` emitido en el login sigue siendo válido en base de datos hasta su expiración natural (7 días), aunque Web ni siquiera lo conserve tras el login (solo guarda el `access_token` como claim). Si ese `refresh_token` hubiera sido interceptado en algún momento (p. ej. en la propia respuesta de `POST /api/authentication/login`, antes de que Web lo descarte), seguiría siendo válido contra `POST /api/authentication/refresh` durante los 7 días completos aunque el usuario ya haya pulsado "Cerrar sesión". Ver [`docs/technical/US-27-oauth2-authentication.md`](../technical/US-27-oauth2-authentication.md#limitaciones-conocidas).
+`GET /account/logout` en Web (`LoginDisplay.razor`) ya no se limita a limpiar la cookie de sesión propia de Web: primero llama a `POST /api/authentication/logout` a través de `IAccountLogoutService` (usando el `access_token` que `AuthTokenHandler` ya adjunta), que ejecuta `LogoutCommand` y revoca el `refresh_token` en base de datos — un `refresh_token` usado después del logout es rechazado con `401` inmediatamente, en vez de seguir siendo válido hasta su expiración natural (7 días). La llamada es *best-effort*: si falla (Api caída, o el `access_token` ya caducado — ver la limitación de "sin refresco automático" justo arriba), la sesión de Web se cierra igualmente; revocar en la Api nunca debe bloquear que el usuario pueda cerrar su sesión local. Ver el detalle de la corrección en [`docs/technical/US-27-oauth2-authentication.md`](../technical/US-27-oauth2-authentication.md#corrección-logout-del-web-ahora-revoca-el-refresh-token-en-el-servidor-2026-07-15).
