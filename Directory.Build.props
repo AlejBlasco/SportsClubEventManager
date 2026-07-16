@@ -7,7 +7,7 @@
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <Company>BlitzSliceForge</Company>
     <Authors>BlitzSliceForge Team</Authors>
-    <Version>0.4.1</Version>
+    <Version>1.0.0</Version>
   </PropertyGroup>
 
   <!-- Suppress known EF Core and OpenTelemetry transitive dependency advisories until patched versions ship -->
