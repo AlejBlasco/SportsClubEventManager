@@ -3,6 +3,15 @@
 **Versión:** 2026-06-24  
 **Aplicable a:** SportsClubEventManager
 
+> **Nota de vigencia (2026-07-15):** El "Paso 2" de esta guía (enviar `userId` en el cuerpo de la
+> solicitud) quedó obsoleto tras añadirse autorización basada en JWT (US-28, 2026-07-06): el
+> `userId` ya no se lee del cuerpo de la solicitud, se obtiene automáticamente del token de sesión
+> de quien esté autenticado — solo puede registrarse a sí mismo por esta vía. Si desea registrar a
+> otro usuario (solo administradores), vea
+> [docs/operations/inscripcion-eventos.md](../operations/inscripcion-eventos.md) y
+> [docs/operations/administracion-inscripciones.md](../operations/administracion-inscripciones.md)
+> para el comportamiento vigente.
+
 ---
 
 ## ¿Qué es esta funcionalidad?

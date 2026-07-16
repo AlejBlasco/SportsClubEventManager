@@ -174,7 +174,7 @@ public class MigrationAndConfigurationIntegrationTests
             adminUser.Should().NotBeNull();
             adminUser!.PasswordHash.Should().NotBeNullOrEmpty("Admin should have password hash");
             // Verify it's BCrypt hash format (starts with $2a$, $2b$, or $2x$)
-            adminUser.PasswordHash.Should().Match(@"\$2[aby]\$.*", "Should be valid BCrypt hash");
+            adminUser.PasswordHash.Should().MatchRegex(@"\$2[aby]\$.*", "Should be valid BCrypt hash");
         }
 
         /// <summary>
@@ -209,9 +209,11 @@ public class MigrationAndConfigurationIntegrationTests
             var dataType = await GetRoleColumnDataTypeAsync();
 
             // Assert
-            // Role is stored as string/nvarchar in database for human readability
+            // Role is stored as string/nvarchar in database for human readability. Should().Match()
+            // only supports "*"/"?" wildcards, not "|" alternation like a regex - "*nvarchar*|*varchar*"
+            // was a false negative, always failing even when dataType was exactly "nvarchar".
             dataType.Should().NotBeNullOrEmpty();
-            dataType.Should().Match("*nvarchar*|*varchar*",
+            dataType.Should().MatchRegex("nvarchar|varchar",
                 "Role column should use string type (nvarchar) for database storage");
         }
 

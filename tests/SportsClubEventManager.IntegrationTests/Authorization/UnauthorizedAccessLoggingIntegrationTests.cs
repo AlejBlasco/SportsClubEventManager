@@ -105,8 +105,8 @@ public class UnauthorizedAccessLoggingIntegrationTests : IClassFixture<DatabaseF
         public async Task UnauthorizedAccess_WithUserRole_LogsAttemptWithUserIdentity()
         {
             // Arrange
-            var userId = await SeedUserWithPasswordAsync("testuser@example.com", "User123", Role.User);
-            var jwtToken = await LoginAndGetTokenAsync("testuser@example.com", "User123");
+            var userId = await SeedUserWithPasswordAsync("testuser@example.com", "User1234", Role.User);
+            var jwtToken = await LoginAndGetTokenAsync("testuser@example.com", "User1234");
 
             _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", jwtToken);
 
@@ -161,8 +161,8 @@ public class UnauthorizedAccessLoggingIntegrationTests : IClassFixture<DatabaseF
         public async Task UnauthorizedAccess_WithInsufficientRolePrivileges_LogsAuthorizationFailure()
         {
             // Arrange
-            var userId = await SeedUserWithPasswordAsync("regularuser@example.com", "User123", Role.User);
-            var jwtToken = await LoginAndGetTokenAsync("regularuser@example.com", "User123");
+            var userId = await SeedUserWithPasswordAsync("regularuser@example.com", "User1234", Role.User);
+            var jwtToken = await LoginAndGetTokenAsync("regularuser@example.com", "User1234");
 
             _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", jwtToken);
 
@@ -203,8 +203,8 @@ public class UnauthorizedAccessLoggingIntegrationTests : IClassFixture<DatabaseF
         {
             // Arrange
             var jwtToken = await LoginAndGetTokenAsync(
-                await CreateUserAndReturnEmailAsync("tampereduser@example.com", "User123", Role.User),
-                "User123");
+                await CreateUserAndReturnEmailAsync("tampereduser@example.com", "User1234", Role.User),
+                "User1234");
 
             // Tamper with the token by changing a character
             var tamperedToken = jwtToken.Substring(0, jwtToken.Length - 5) + "XXXXX";
@@ -241,8 +241,8 @@ public class UnauthorizedAccessLoggingIntegrationTests : IClassFixture<DatabaseF
         public async Task SuccessfulAccess_WithProperAuthorization_DoesNotLogUnauthorizedAccess()
         {
             // Arrange
-            await SeedUserWithPasswordAsync("authorizeduser@example.com", "User123", Role.User);
-            var jwtToken = await LoginAndGetTokenAsync("authorizeduser@example.com", "User123");
+            await SeedUserWithPasswordAsync("authorizeduser@example.com", "User1234", Role.User);
+            var jwtToken = await LoginAndGetTokenAsync("authorizeduser@example.com", "User1234");
 
             _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", jwtToken);
 

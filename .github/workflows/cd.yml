@@ -302,6 +302,13 @@ jobs:
     if: success()
     permissions:
       contents: write
+      # Needed to dispatch release.yml explicitly below - a tag pushed with the default
+      # GITHUB_TOKEN does NOT trigger other workflows' "push: tags:" listeners (GitHub doesn't
+      # cascade workflow runs from GITHUB_TOKEN-authored events, to prevent infinite loops).
+      # Confirmed missing in production for v0.4.1 before this fix: the tag was pushed correctly
+      # but release.yml never ran. "gh workflow run" is a direct API dispatch, not a push event,
+      # so it isn't subject to that restriction.
+      actions: write
 
     steps:
       - name: Checkout
@@ -347,10 +354,19 @@ jobs:
       - name: Create and push vX.Y.Z tag
         if: steps.check.outputs.exists == 'false' && steps.changelog.outputs.ready == 'true'
         run: |
-          # Pushing this tag triggers release.yml on its own, which
-          # re-validates version/CHANGELOG alignment and creates the GitHub
-          # Release - this job does not create the Release itself.
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git tag "v${{ steps.version.outputs.value }}"
           git push origin "v${{ steps.version.outputs.value }}"
+
+      - name: Dispatch release.yml for the new tag
+        if: steps.check.outputs.exists == 'false' && steps.changelog.outputs.ready == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # The tag push above won't trigger release.yml's "push: tags:" listener on its own
+          # (GITHUB_TOKEN-authored pushes don't cascade to other workflows) - dispatch it
+          # explicitly instead, against the tag we just pushed, which re-validates
+          # version/CHANGELOG alignment and creates the GitHub Release. This job does not create
+          # the Release itself.
+          gh workflow run release.yml --ref "v${{ steps.version.outputs.value }}"

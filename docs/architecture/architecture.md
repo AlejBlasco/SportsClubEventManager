@@ -394,7 +394,7 @@ sequenceDiagram
 
     Socio->>Comp: Clic en "Inscribirme"
     Comp->>Svc: RegisterAsync(eventId)
-    Svc->>H1: HTTP POST /api/events/{id}/register
+    Svc->>H1: HTTP POST /api/v1/events/{id}/register
     H1->>H1: Añade header Authorization: Bearer {JWT}
     H1->>H2: next()
     H2->>H2: Añade header X-Correlation-Id
@@ -409,7 +409,7 @@ sequenceDiagram
     Handler->>Handler: Valida fecha futura, duplicados, aforo
     alt Aforo completo o ya inscrito
         Handler-->>Ctrl: throw CapacityExceededException / DuplicateRegistrationException
-        Ctrl-->>Socio: 500 / ProblemDetails (ver sección 10)
+        Ctrl-->>Socio: 409 Conflict / ProblemDetails (ver sección 10)
     else Inscripción válida
         Handler->>Db: Registrations.Add(registration)
         Handler->>Db: SaveChangesAsync()
@@ -427,22 +427,39 @@ Este flujo ilustra por qué las métricas y las notificaciones se disparan **des
 
 ## 10. Manejo centralizado de errores
 
-Ningún controlador de la Api contiene bloques `try/catch`: todas las excepciones (de validación, de negocio o inesperadas) atraviesan sin capturar el pipeline de MediatR y llegan hasta `ExceptionHandlingMiddleware`, que las traduce a una respuesta `ProblemDetails` (RFC 7807), centralizando en un único punto la política de errores de toda la Api.
+El manejo de errores tiene dos niveles. Los controladores de la Api (`EventsController`,
+`RegistrationsController`, `AdminRegistrationsController`, `AdminEventsController`,
+`UsersController`, `AuthenticationController`, `AdminImportController`) **sí** contienen bloques
+`try/catch`: cada acción captura explícitamente las excepciones de dominio que puede lanzar su
+propio handler (`EntityNotFoundException`, `DuplicateRegistrationException`,
+`CapacityExceededException`, `DomainException`, etc.) y las traduce al código HTTP correspondiente
+(404, 409, 400...) con un `ProblemDetails` específico para ese caso. Solo dos categorías de
+excepción llegan sin capturar hasta `ExceptionHandlingMiddleware`: `ValidationException` de
+FluentValidation (lanzada por `ValidationBehavior` en el pipeline de MediatR, antes de que el
+handler se ejecute) y cualquier excepción verdaderamente inesperada que ningún controlador supiera
+mapear. El middleware centraliza así el manejo del "resto" — no todas las excepciones — evitando
+que un error no anticipado filtre detalles internos al cliente.
 
 ```mermaid
 flowchart LR
-    Handler["Command/Query Handler<br/>throw DomainException / ValidationException / ..."]
-    Behaviors["Pipeline de MediatR<br/>(no captura, solo registra el log)"]
+    Val["ValidationBehavior<br/>throw ValidationException"]
+    Handler["Command/Query Handler<br/>throw EntityNotFoundException / DuplicateRegistrationException / ..."]
+    Ctrl["Controller<br/>try/catch por tipo de excepción de dominio"]
     MW["ExceptionHandlingMiddleware"]
     Resp["HTTP Response<br/>application/problem+json"]
 
-    Handler -->|excepción sin capturar| Behaviors
-    Behaviors -->|excepción sin capturar| MW
+    Val -->|excepción sin capturar por el controlador| MW
+    Handler -->|excepción de dominio conocida| Ctrl
+    Ctrl -->|mapeo explícito| Resp404["404 / 409 / 400<br/>ProblemDetails específico"]
+    Handler -->|excepción no anticipada por el controlador| MW
     MW -->|ValidationException| Resp400["400 Bad Request<br/>+ errores agrupados por campo"]
     MW -->|cualquier otra excepción| Resp500["500 Internal Server Error"]
 ```
 
-Este es el mismo patrón (**Chain of Responsibility** vía middleware de ASP.NET Core) que ASP.NET Core aplica de forma nativa a toda la *request pipeline*: cada middleware decide si maneja la petición/excepción o la delega en el siguiente. `CorrelationIdMiddleware`, `RequestUserLogContextMiddleware` y `UnauthorizedAccessLoggingMiddleware` siguen la misma filosofía para enriquecer cada log con contexto (ID de correlación, usuario autenticado) sin acoplar esa responsabilidad a los controladores.
+`CorrelationIdMiddleware`, `RequestUserLogContextMiddleware` y `UnauthorizedAccessLoggingMiddleware`
+siguen la misma filosofía de **Chain of Responsibility** que `ExceptionHandlingMiddleware` — nativa
+del pipeline de middleware de ASP.NET Core — para enriquecer cada log con contexto (ID de
+correlación, usuario autenticado) sin acoplar esa responsabilidad a los controladores.
 
 ## 11. Comunicación Web → API: cadena de DelegatingHandlers
 

@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.RegularExpressions;
 using FluentAssertions;
@@ -9,6 +10,7 @@ using SportsClubEventManager.Api.Models;
 using SportsClubEventManager.Domain.Entities;
 using SportsClubEventManager.Domain.Enums;
 using SportsClubEventManager.Infrastructure.Persistence;
+using SportsClubEventManager.Shared.DTOs;
 
 namespace SportsClubEventManager.IntegrationTests.Metrics;
 
@@ -198,6 +200,7 @@ public class MetricsEndpointIntegrationTests : IClassFixture<DatabaseFixture>, I
             // Arrange
             var eventId = await SeedEventAsync("Basketball Tournament", 100);
             var userId = await SeedUserAsync("John Doe", "john.metrics@test.com");
+            await AuthenticateAsAsync("john.metrics@test.com");
 
             var valueBefore = await ReadCounterValueAsync(
                 "sportsclubeventmanager_event_registrations_total", "source", "self-service");
@@ -226,6 +229,7 @@ public class MetricsEndpointIntegrationTests : IClassFixture<DatabaseFixture>, I
             // Arrange
             var eventId = await SeedPastEventAsync("Past Event", 50);
             var userId = await SeedUserAsync("Frank Miller", "frank.metrics@test.com");
+            await AuthenticateAsAsync("frank.metrics@test.com");
 
             var valueBefore = await ReadCounterValueAsync(
                 "sportsclubeventmanager_event_registrations_total", "source", "self-service");
@@ -270,6 +274,7 @@ public class MetricsEndpointIntegrationTests : IClassFixture<DatabaseFixture>, I
             var eventId = await SeedEventAsync("Volleyball Match", 50);
             var userId = await SeedUserAsync("Jane Smith", "jane.metrics@test.com");
             await SeedRegistrationAsync(eventId, userId);
+            await AuthenticateAsAsync("jane.metrics@test.com");
 
             var valueBefore = await ReadCounterValueAsync(
                 "sportsclubeventmanager_registration_cancellations_total", "source", "self-service");
@@ -379,7 +384,15 @@ public class MetricsEndpointIntegrationTests : IClassFixture<DatabaseFixture>, I
     }
 
     /// <summary>
-    /// Seeds a user into the test database.
+    /// Password shared by every user this class seeds - registration/cancellation endpoints are
+    /// [Authorize]-protected and derive the acting UserId from the caller's JWT, not from the
+    /// request body, so every test needs a real, authenticatable user (see AuthenticateAsAsync).
+    /// </summary>
+    private const string TestPassword = "TestPass123!";
+
+    /// <summary>
+    /// Seeds a user into the test database, with a hashed password so it can log in via
+    /// AuthenticateAsAsync.
     /// </summary>
     /// <param name="name">The user name.</param>
     /// <param name="email">The user email.</param>
@@ -393,13 +406,30 @@ public class MetricsEndpointIntegrationTests : IClassFixture<DatabaseFixture>, I
         {
             Name = name,
             Email = email,
-            Gender = Gender.Male
+            Gender = Gender.Male,
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword(TestPassword),
+            ProviderName = "Local"
         };
 
         context.Users.Add(user);
         await context.SaveChangesAsync();
 
         return user.Id;
+    }
+
+    /// <summary>
+    /// Logs in as the given user and attaches the resulting JWT to <see cref="_client"/> as a
+    /// Bearer token, so subsequent requests are authenticated as that user.
+    /// </summary>
+    /// <param name="email">The email of a user previously seeded via <see cref="SeedUserAsync"/>.</param>
+    private async Task AuthenticateAsAsync(string email)
+    {
+        var loginRequest = new LoginRequest { Email = email, Password = TestPassword };
+        var response = await _client.PostAsJsonAsync("/api/authentication/login", loginRequest);
+        response.StatusCode.Should().Be(HttpStatusCode.OK, "test setup requires a valid login");
+
+        var loginResponse = await response.Content.ReadFromJsonAsync<LoginResponse>();
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", loginResponse!.AccessToken);
     }
 
     /// <summary>

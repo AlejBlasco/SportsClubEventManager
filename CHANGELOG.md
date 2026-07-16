@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-07-16
+
+### Added
+
+- Project presentation slides (`docs/presentation/SportsClubEventManager-TFM.pptx`), linked from the README (#130)
+- Link to the project's explanatory video in the README's "Enlaces de interés" section (#131)
+- Warning in the README noting that the production demo runs on a personal homelab server and 99.99% uptime cannot be guaranteed, directing anyone hitting issues to contact the author
+
+### Fixed
+
+- `cd.yml`'s `tag-release-version` job pushed the `vX.Y.Z` tag using the default `GITHUB_TOKEN`, which does **not** trigger other workflows' `push: tags:` listeners (GitHub deliberately doesn't cascade workflow runs from `GITHUB_TOKEN`-authored events, to prevent infinite loops) — confirmed in production: the `v0.4.1` tag was created and pushed correctly, but `release.yml` never ran, and no `Release` run had occurred since the last manually-pushed tag (`v0.3.0`). Added `workflow_dispatch` to `release.yml` and a new step in `tag-release-version` that explicitly dispatches it (`gh workflow run release.yml --ref vX.Y.Z`) right after pushing the tag — a direct API dispatch, not a push event, so it isn't subject to the same restriction. `v0.4.1`'s missing GitHub Release was created manually in the meantime with the same notes `release.yml` would have generated
+- Integration test suite: `DatabaseFixture`'s Respawn reset was also wiping the `__EFMigrationsHistory` table after every test, so the second test in any class that spun up a fresh `WebApplicationFactory` re-ran `Program.cs`'s real `MigrateDatabaseAsync()` against an apparently-unmigrated database, crashing with "There is already an object named 'Events' in the database." Excluded `__EFMigrationsHistory` from the Respawn reset, plus assorted follow-on fixes across `AppDbContextIntegrationTests`, `AuthorizationFlowsIntegrationTests`, `EventsControllerAuthorizationIntegrationTests`, `MigrationAndConfigurationIntegrationTests`, `UnauthorizedAccessLoggingIntegrationTests`, `EventCancellationIntegrationTests`, `EventRegistrationIntegrationTests`, `GetEventByIdEndpointTests` and `MetricsEndpointIntegrationTests`
+- Broken/missing cross-references in `docs/architecture/architecture.md` and several `docs/functional`/`docs/technical` issue docs, found while fixing the integration tests above
+
 ## [0.4.1] - 2026-07-15
 
 ### Added
@@ -144,6 +158,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Docker Compose containerization for local development
 - CI (build and test) and CD (build/push images, Portainer webhook) pipelines
 
-[Unreleased]: https://github.com/AlejBlasco/SportsClubEventManager/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/AlejBlasco/SportsClubEventManager/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/AlejBlasco/SportsClubEventManager/compare/v0.4.1...v1.0.0
+[0.4.1]: https://github.com/AlejBlasco/SportsClubEventManager/compare/v0.4.0...v0.4.1
+[0.4.0]: https://github.com/AlejBlasco/SportsClubEventManager/compare/v0.3.0...v0.4.0
+[0.3.0]: https://github.com/AlejBlasco/SportsClubEventManager/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/AlejBlasco/SportsClubEventManager/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/AlejBlasco/SportsClubEventManager/releases/tag/v0.1.0

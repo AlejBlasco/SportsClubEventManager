@@ -342,6 +342,21 @@ migrationBuilder.AddColumn<string>(
 
 ---
 
+> **Nota de vigencia (2026-07-15):** La lógica de autorización descrita a continuación para
+> `POST` / `DELETE /api/v1/events/{id}/register` (UserId recibido en el cuerpo de la solicitud,
+> con un administrador pudiendo registrar/cancelar en nombre de otro usuario por esta misma ruta)
+> quedó obsoleta un día después con US-32 (2026-07-07): `EventsController` ya no acepta ningún
+> cuerpo de solicitud en estos dos endpoints — el `UserId` se extrae exclusivamente del claim de
+> identidad del JWT, y son ahora endpoints puramente de autoservicio (un usuario solo puede
+> registrarse/cancelarse a sí mismo). La capacidad de administrar inscripciones de otros usuarios
+> se trasladó a `RegistrationsController` / `AdminRegistrationsController`
+> (`POST /api/admin/registrations`, `DELETE /api/v1/registrations/{id}`,
+> `DELETE /api/admin/registrations/{id}`), documentados en
+> [issue-32](issue-32-administracion-gestion-inscripciones.md). Además, un `id` con formato de GUID
+> inválido en la ruta ya no produce 400 Bad Request: la restricción de ruta `{id:guid}` hace que el
+> endpoint ni siquiera coincida, devolviendo 404 Not Found. El resto de este documento (roles,
+> políticas, JWT, middleware de auditoría) sigue vigente.
+
 ### POST /api/v1/events/{id}/register
 
 **Descripción:** Registra un usuario para un evento específico

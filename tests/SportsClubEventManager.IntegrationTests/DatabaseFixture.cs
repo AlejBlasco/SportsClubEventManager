@@ -71,7 +71,13 @@ public sealed class DatabaseFixture : IAsyncLifetime
         await connection.OpenAsync();
         _respawner = await Respawner.CreateAsync(connection, new RespawnerOptions
         {
-            DbAdapter = DbAdapter.SqlServer
+            DbAdapter = DbAdapter.SqlServer,
+            // Without this, ResetAsync() (called after every test) also wipes this table. The
+            // second test in any class that spins up a fresh WebApplicationFactory then triggers
+            // Program.cs's real MigrateDatabaseAsync() again, which - seeing an empty history -
+            // tries to recreate tables that still physically exist ("There is already an object
+            // named 'Events' in the database."), crashing every test after the first in that class.
+            TablesToIgnore = [new Respawn.Graph.Table("__EFMigrationsHistory")]
         });
     }
 

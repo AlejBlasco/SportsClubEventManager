@@ -14,6 +14,8 @@
 
 El **origen de este proyecto** es completamente práctico: nace de una necesidad real detectada en el club de tiro deportivo del que el autor es socio. Hasta ahora, la gestión de las inscripciones a las competiciones —cuyo calendario publica la federación en un fichero CSV— se realizaba **de forma totalmente manual**. Una semana antes de cada competición, cada socio interesado debía enviar un WhatsApp **al móvil personal del secretario del club** indicando sus datos, la competición y el horario en el que deseaba participar. El secretario revisaba uno a uno esos mensajes, introducía los datos a mano, comprobaba si quedaban plazas disponibles y respondía individualmente a cada socio, ya fuera para confirmar la inscripción o para avisar de que la competición estaba completa. Tras plantear este problema a la junta directiva del club, surgió la idea de explorar cómo se podría modernizar y digitalizar el proceso, dando origen al presente **prototipo**, desarrollado como Trabajo de Fin de Máster.
 
+> ⚠️ **Aviso**: la demo en producción se ejecuta en un servidor doméstico (homelab personal), por lo que no se puede garantizar una disponibilidad del 99,99%. Si detectas algún problema de acceso o funcionamiento, escribe al correo del alumno para solucionarlo lo antes posible.
+
 ## Índice
 
 - [a. Descripción general del proyecto](#a-descripción-general-del-proyecto)
@@ -25,6 +27,7 @@ El **origen de este proyecto** es completamente práctico: nace de una necesidad
 - [g. Funcionalidades principales](#g-funcionalidades-principales)
 - [h. Usuario y contraseña de prueba](#h-usuario-y-contraseña-de-prueba)
 - [i. Proyectos personales empleados en su construcción](#i-proyectos-personales-empleados-en-su-construcción)
+- [Enlaces de interés](#enlaces-de-interés)
 
 ## a. Descripción general del proyecto
 
@@ -115,3 +118,9 @@ Este TFM se ha apoyado en varias herramientas y proyectos personales desarrollad
 - 🏠 **Homelab casero** — infraestructura propia (Docker, Portainer) usada para el despliegue continuo de la aplicación.
 - ⚙️ [**claude-sdlc-kit**](https://github.com/AlejBlasco/claude-sdlc-kit) — kit de agentes de IA que automatiza el ciclo de vida completo de desarrollo de software (análisis, diseño, implementación, testing, documentación y revisión), utilizado durante todo el proyecto (ver carpeta `.claude/`).
 - 🔨 [**BlitzSliceForge**](https://github.com/AlejBlasco/BlitzSliceForge) — plantilla de generación de soluciones .NET en Clean Architecture, empleada como punto de partida de este repositorio.
+
+## Enlaces de interés
+
+- 🌐 [**Aplicación en producción**](https://sportsclub.ablasco.com) — instancia real desplegada en el homelab. El calendario de eventos es visible sin necesidad de iniciar sesión; para probar el resto de funcionalidades, inicia sesión con tu propia cuenta de Google (los usuarios de prueba de la sección [h](#h-usuario-y-contraseña-de-prueba) solo existen en local/desarrollo, no en esta instancia).
+- 📊 [**Presentación del TFM**](docs/presentation/SportsClubEventManager-TFM.pptx) — diapositivas del proyecto.
+- 🎥 [**Vídeo explicativo del proyecto**](https://youtu.be/v2CTdBoNDU0?si=L3L2QCNq7JdYoU4y) — presentación en vídeo del TFM.

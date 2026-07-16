@@ -13,6 +13,21 @@ US-7 implementa un endpoint POST que permite a los usuarios registrarse en event
 
 La implementación sigue la arquitectura limpia del proyecto (CQRS + MediatR), con validación en dos niveles: FluentValidation para la estructura de la solicitud y lógica de dominio para las reglas de negocio. Un mecanismo de retry automático de EF Core maneja los conflictos de concurrencia cuando múltiples usuarios intentan registrarse simultáneamente en los últimos lugares disponibles.
 
+> **Nota de vigencia (2026-07-15):** El diseño original de esta página (`userId` recibido en el
+> cuerpo de la solicitud y validado con FluentValidation, ver sección
+> [Referencia de API](#referencia-de-api) más abajo) quedó obsoleto tras US-28
+> (autorización basada en roles, 2026-07-06): `EventsController.RegisterForEvent` ya no acepta
+> ningún cuerpo de solicitud — el `UserId` se extrae exclusivamente del claim de identidad del JWT
+> autenticado, y el registro de un usuario en nombre de otro (antes reservado a administradores por
+> esta misma ruta) se realiza ahora mediante `POST /api/admin/registrations`
+> (`AdminRegistrationsController`), documentado en
+> [issue-32](issue-32-administracion-gestion-inscripciones.md). Como consecuencia, un `EventId` con
+> formato de GUID inválido en la ruta ya no produce 400 Bad Request: la restricción de ruta
+> `{id:guid}` hace que el endpoint ni siquiera coincida, devolviendo 404 Not Found. Esta página se
+> conserva como registro histórico del diseño original de US-7; el comportamiento vigente está en
+> [issue-32](issue-32-administracion-gestion-inscripciones.md) y
+> [docs/operations/inscripcion-eventos.md](../operations/inscripcion-eventos.md).
+
 ---
 
 ## Arquitectura

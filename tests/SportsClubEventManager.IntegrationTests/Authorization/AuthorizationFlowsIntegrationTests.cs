@@ -201,8 +201,8 @@ public class AuthorizationFlowsIntegrationTests : IClassFixture<DatabaseFixture>
         public async Task AccessProtectedUserEndpoint_WithUserRole_Returns200OK()
         {
             // Arrange
-            var userId = await SeedUserWithPasswordAsync("user@example.com", "User123", Role.User);
-            var jwtToken = await LoginAndGetTokenAsync("user@example.com", "User123");
+            var userId = await SeedUserWithPasswordAsync("user@example.com", "User1234", Role.User);
+            var jwtToken = await LoginAndGetTokenAsync("user@example.com", "User1234");
 
             // Add authorization header
             _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", jwtToken);
@@ -222,8 +222,8 @@ public class AuthorizationFlowsIntegrationTests : IClassFixture<DatabaseFixture>
         public async Task AccessAdminOnlyEndpoint_WithUserRole_Returns403Forbidden()
         {
             // Arrange
-            await SeedUserWithPasswordAsync("regularuser@example.com", "User123", Role.User);
-            var jwtToken = await LoginAndGetTokenAsync("regularuser@example.com", "User123");
+            await SeedUserWithPasswordAsync("regularuser@example.com", "User1234", Role.User);
+            var jwtToken = await LoginAndGetTokenAsync("regularuser@example.com", "User1234");
 
             _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", jwtToken);
 
@@ -311,8 +311,8 @@ public class AuthorizationFlowsIntegrationTests : IClassFixture<DatabaseFixture>
             // Arrange
             // Generate a token that's immediately expired (this requires special handling in token generation)
             // For now, we'll verify that the system validates token expiration
-            await SeedUserWithPasswordAsync("expiretest@example.com", "Test123", Role.User);
-            var loginResponse = await LoginAsync("expiretest@example.com", "Test123");
+            await SeedUserWithPasswordAsync("expiretest@example.com", "Test1234", Role.User);
+            var loginResponse = await LoginAsync("expiretest@example.com", "Test1234");
 
             // Simulate token expiration by manually manipulating time (would need time provider mock)
             // For this test, we'll use an expired token structure
@@ -348,8 +348,8 @@ public class AuthorizationFlowsIntegrationTests : IClassFixture<DatabaseFixture>
         public async Task RefreshToken_WithUserRole_ReturnsNewTokenWithUserRolePreserved()
         {
             // Arrange
-            await SeedUserWithPasswordAsync("refreshuser@example.com", "User123", Role.User);
-            var initialLogin = await LoginAsync("refreshuser@example.com", "User123");
+            await SeedUserWithPasswordAsync("refreshuser@example.com", "User1234", Role.User);
+            var initialLogin = await LoginAsync("refreshuser@example.com", "User1234");
 
             var refreshRequest = new RefreshTokenRequest
             {
