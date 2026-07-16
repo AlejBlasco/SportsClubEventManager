@@ -121,3 +121,4 @@ Este TFM se ha apoyado en varias herramientas y proyectos personales desarrollad
 
 - 🌐 [**Aplicación en producción**](https://sportsclub.ablasco.com) — instancia real desplegada en el homelab. El calendario de eventos es visible sin necesidad de iniciar sesión; para probar el resto de funcionalidades, inicia sesión con tu propia cuenta de Google (los usuarios de prueba de la sección [h](#h-usuario-y-contraseña-de-prueba) solo existen en local/desarrollo, no en esta instancia).
 - 📊 [**Presentación del TFM**](docs/presentation/SportsClubEventManager-TFM.pptx) — diapositivas del proyecto.
+- 🎥 [**Vídeo explicativo del proyecto**](https://youtu.be/v2CTdBoNDU0?si=L3L2QCNq7JdYoU4y) — presentación en vídeo del TFM.
