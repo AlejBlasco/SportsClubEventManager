@@ -14,6 +14,8 @@
 
 El **origen de este proyecto** es completamente práctico: nace de una necesidad real detectada en el club de tiro deportivo del que el autor es socio. Hasta ahora, la gestión de las inscripciones a las competiciones —cuyo calendario publica la federación en un fichero CSV— se realizaba **de forma totalmente manual**. Una semana antes de cada competición, cada socio interesado debía enviar un WhatsApp **al móvil personal del secretario del club** indicando sus datos, la competición y el horario en el que deseaba participar. El secretario revisaba uno a uno esos mensajes, introducía los datos a mano, comprobaba si quedaban plazas disponibles y respondía individualmente a cada socio, ya fuera para confirmar la inscripción o para avisar de que la competición estaba completa. Tras plantear este problema a la junta directiva del club, surgió la idea de explorar cómo se podría modernizar y digitalizar el proceso, dando origen al presente **prototipo**, desarrollado como Trabajo de Fin de Máster.
 
+> ⚠️ **Aviso**: la demo en producción se ejecuta en un servidor doméstico (homelab personal), por lo que no se puede garantizar una disponibilidad del 99,99%. Si detectas algún problema de acceso o funcionamiento, escribe al correo del alumno para solucionarlo lo antes posible.
+
 ## Índice
 
 - [a. Descripción general del proyecto](#a-descripción-general-del-proyecto)
